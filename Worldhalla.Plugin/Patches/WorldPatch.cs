@@ -23,21 +23,21 @@ public static class WorldPatch
      * - [int][4 bytes] .fwl size
      * ----------------- START OF CUSTOM HEADER -------------------
      * - [uint][4 bytes] worldhalla header (this is what the unmodded game reads as world version):
-     *   - [bit 31] custom worldgen flag, always set - it is the sign bit of the int the unmodded
-     *     game reads, so setting it is what makes that version invalid
+     *   - [bit 31] sign bit that doubles as the worldhalla world flag. Always on
      *   - [bits 30-8] padding
      *   - [bits 7-0] protocol version
-     * - [string][1-255 bytes] custom worldgen ID
      * ------------------ END OF CUSTOM HEADER --------------------
      * - [int][4 bytes] original world version
      * ---------------- START OF CUSTOM WORLD DATA ----------------
+     * - [string][1-255 bytes] custom worldgen ID
      * - [int][4 bytes] settings blob length
-     * - [variable] settings blob (see WorldSettingSerialization)
+     * - [variable] settings blob, opaque - written and read by the generator alone
      * ----------------- END OF CUSTOM WORLD DATA -----------------
-     *
-     * Worlds written before the protocol version byte existed carry 0xff in its place and hold
-     * the blob's contents inline, with no length in front of them - see ReadLegacySettings
      * - [...] original world data
+     *
+     * Worlds written before the protocol version byte existed carry 0xff in its place, hold the
+     * worldgen ID before the original world version rather than after it, and store the settings
+     * inline with no length in front of them - see RiverheimMigration
      */
 
     private const uint CUSTOM_WORLDGEN_FLAG = 0x80000000;
