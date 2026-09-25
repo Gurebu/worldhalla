@@ -9,7 +9,7 @@ public static class RiverheimMigration
     private const string SETTING_PRESET = "preset";
     private const string SETTING_PRESET_VERSION = "preset.version";
     
-    public static byte[] MigrateSettings(ZPackage package)
+    public static (string, byte[]) MigratoryRead(ZPackage package)
     {
         var count = package.ReadNumItems();
         if (count != SETTING_COUNT)
@@ -29,7 +29,7 @@ public static class RiverheimMigration
         settings.Write(SETTING_PRESET_VERSION);
         settings.Write(presetVersion);
 
-        return settings.GetArray();
+        return (GUID, settings.GetArray());
     }
 
     private static void ReadLegacySettingName(ZPackage package, string expected)

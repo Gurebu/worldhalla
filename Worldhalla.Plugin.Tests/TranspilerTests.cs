@@ -118,7 +118,7 @@ public class TranspilerTests
     }
 
     [Test, RequiresValheim]
-    public void WorldLoadCarriesTheProtocolVersionInAByteLocal()
+    public void WorldLoadCarriesTheProtocolInfoInALocal()
     {
         var generator = Generator();
         var original = Original(typeof(World), nameof(World.LoadWorld), generator: generator);
@@ -130,7 +130,7 @@ public class TranspilerTests
         Assert.That(written.opcode, Is.EqualTo(OpCodes.Ldloca));
         Assert.That(read.opcode, Is.EqualTo(OpCodes.Ldloc));
         Assert.That(written.operand, Is.SameAs(read.operand), "the two hooks are not talking through the same local");
-        Assert.That(((LocalBuilder)written.operand).LocalType, Is.EqualTo(typeof(byte)));
+        Assert.That(((LocalBuilder)written.operand).LocalType, Is.EqualTo(typeof(WorldPatch.ProtocolInfo)));
     }
 
     /*

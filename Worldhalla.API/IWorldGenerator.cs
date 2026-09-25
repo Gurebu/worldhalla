@@ -1,6 +1,5 @@
 namespace Worldhalla.API;
     
-// TODO public interface to produce IWorldState, get me a proper name
 public interface IWorldGenerator
 {
     enum Feature

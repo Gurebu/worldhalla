@@ -43,14 +43,13 @@ style rest fill:#eee,stroke:#000,color:#000
 
 ```mermaid
 block-beta
-columns 6
-  len["[int32] length"] hdr["[uint32] worldhalla header"] ver["[int32] world version"] guid["[string] worldgen guid"] blob["[bytes] settings"] rest["[varying] the rest of vanilla .fwl"]
+columns 5
+  len["[int32] length"] hdr["[uint32] worldhalla header"] ver["[int32] world version"] payload["[bytes] worldhalla payload"] rest["[varying] the rest of vanilla .fwl"]
 
 style len fill:#f8f8f8,stroke:#000,color:#000
 style hdr fill:#c5eec7,stroke:#000,color:#000
 style ver fill:#eee,stroke:#000,color:#000
-style guid fill:#c5eec7,stroke:#000,color:#000
-style blob fill:#c5eec7,stroke:#000,color:#000
+style payload fill:#c5eec7,stroke:#000,color:#000
 style rest fill:#eee,stroke:#000,color:#000
 ```
 
@@ -73,11 +72,24 @@ its least significant byte, which is `0`. A change to the format takes a new ver
 than a new meaning for an existing one, so worlds written by a newer Worldhalla are declined rather
 than misread.
 
-#### Rest of the payload
+#### Worldhalla payload
 
-For now the payload only contains the GUID of the generator that produced the world (for example,
-Riverheim) and a blob of settings data that is handed off to the generator to read and write. In the
-future the payload might contain generator-agnostic settings like world size multipliers.
+The payload is a `ZPackage` of its own, written into the `.fwl` as one length-prefixed `bytes`
+field. A tool that reads `.fwl` files but knows nothing about Worldhalla can therefore step over it
+with a single length-prefixed read, without parsing anything inside.
+
+```mermaid
+block-beta
+columns 2
+  guid["[string] worldgen guid"] blob["[bytes] settings"]
+
+style guid fill:#c5eec7,stroke:#000,color:#000
+style blob fill:#c5eec7,stroke:#000,color:#000
+```
+
+For now it only holds the GUID of the generator that produced the world (for example, Riverheim)
+and a blob of settings data that is handed off to the generator to read and write. In the future it
+might also carry generator-agnostic settings like world size multipliers.
 
 ## Modding instructions
 

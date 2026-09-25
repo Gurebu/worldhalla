@@ -154,6 +154,10 @@ vanilla. The layout is documented at the top of `Patches/WorldPatch.cs`; keep th
 - low byte — protocol version, currently `0x00`
 - `0xff` is reserved: pre-protocol Riverheim worlds, handled by `Compat/RiverheimMigration`
 
+Everything Worldhalla adds beyond the header goes into a single length-prefixed blob — itself a
+`ZPackage` holding the worldgen id and the generator's settings — so a third-party `.fwl` reader can
+step over it without parsing its contents. Legacy `0xff` worlds predate that and store both inline.
+
 A world written by a newer protocol than the installed one is declined, not misread. **Changing
 what an existing protocol version means breaks worlds that already exist on disk; add a version.**
 

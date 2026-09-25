@@ -29,11 +29,16 @@ public static class WorldPatch
      * ------------------ END OF CUSTOM HEADER --------------------
      * - [int][4 bytes] original world version
      * ---------------- START OF CUSTOM WORLD DATA ----------------
-     * - [string][1-255 bytes] custom worldgen ID
-     * - [int][4 bytes] settings blob length
-     * - [variable] settings blob, opaque - written and read by the generator alone
+     * - [int][4 bytes] payload length
+     * - [variable] payload, itself a ZPackage holding:
+     *   - [string][1-255 bytes] custom worldgen ID
+     *   - [int][4 bytes] settings blob length
+     *   - [variable] settings blob, opaque - written and read by the generator alone
      * ----------------- END OF CUSTOM WORLD DATA -----------------
      * - [...] original world data
+     *
+     * The payload is length-prefixed so a reader that does not care about its contents can skip it
+     * without parsing anything inside.
      *
      * Worlds written before the protocol version byte existed carry 0xff in its place, hold the
      * worldgen ID before the original world version rather than after it, and store the settings
@@ -44,11 +49,18 @@ public static class WorldPatch
     private const uint PROTOCOL_VERSION_MASK = 0x000000ff;
     internal const byte PROTOCOL_VERSION = 0x00;
 
-    private static void Log(string message) => Logger.LogInfo(message);
+    internal struct ProtocolInfo
+    {
+        public bool isModded;
+        public byte version;
+
+        public readonly bool IsLegacyRiverheim() => version == RiverheimMigration.PROTOCOL_VERSION;
+    }
 
     internal static void WriteHeader(ZPackage package, World world)
     {
-        // TODO handle vanilla world (need world instance lol)
+        if (world.IsVanillaWorld())
+            return;
         
         package.Write(CUSTOM_WORLDGEN_FLAG | PROTOCOL_VERSION);
     }
@@ -58,85 +70,106 @@ public static class WorldPatch
         if (world.IsVanillaWorld())
             return;
         
-        package.Write(world.GetWorldgen()!.Guid);
-        package.Write(world.GetSettings().Serialize());
+        var payload = new ZPackage();
+
+        payload.Write(world.GetWorldgen()!.Guid);
+        payload.Write(world.GetSettings().Serialize());
+
+        package.Write(payload.GetArray());
     }
 
-    internal static bool ReadHeader(string name, ZPackage package, out byte protocolVersion)
+    internal static bool ReadHeader(string name, ZPackage package, out ProtocolInfo protocolInfo)
     {
-        Log($"Reading world '{name}'");
-
         // TODO vanilla worlds
-        
-        protocolVersion = PROTOCOL_VERSION;
 
+        protocolInfo = new ProtocolInfo
+        {
+            isModded = false,
+            version = PROTOCOL_VERSION,
+        };
+        
         var header = package.ReadUInt();
-        Log($"header byte is {header}");
         if ((header & CUSTOM_WORLDGEN_FLAG) == 0)
         {
-            Log($"World '{name}' doesn't have the custom worldgen flag, instead got world version: {(int)header}, skipping");
+            Logger.LogInfo($"World '{name}' doesn't have the custom worldgen flag, instead got world version: {(int)header}, skipping");
             return false;
         }
 
-        protocolVersion = (byte)(header & PROTOCOL_VERSION_MASK);
-        if (protocolVersion == RiverheimMigration.PROTOCOL_VERSION)
+        protocolInfo.version = (byte)(header & PROTOCOL_VERSION_MASK);
+        if (protocolInfo.IsLegacyRiverheim())
         {
-            Log($"World '{name}' is a legacy riverheim world, preparing for migratory read");
+            Logger.LogInfo($"World '{name}' is a legacy riverheim world, preparing for migratory read");
             
             var worldgenGuid = package.ReadString();
             if (worldgenGuid != RiverheimMigration.GUID)
             {
-                Log($"Found a legacy world '{name}', but it has incorrect worldgen GUID '{worldgenGuid}'");
+                Logger.LogInfo($"Found a legacy world '{name}', but it has incorrect worldgen GUID '{worldgenGuid}'");
                 return false;
             }
 
             return true;
         }
 
-        if (protocolVersion > PROTOCOL_VERSION)
+        if (protocolInfo.version > PROTOCOL_VERSION)
         {
-            Log($"World '{name}': unsupported worldhalla protocol version {protocolVersion}, current version is {PROTOCOL_VERSION}");
+            Logger.LogInfo($"World '{name}': unsupported worldhalla protocol version {protocolInfo.version}, current version is {PROTOCOL_VERSION}");
             return false;
         }
         
         return true;
     }
 
-    internal static bool ReadWorldData(string name, ZPackage package, World world, byte protocolVersion)
+    internal static bool ReadWorldData(string name, ZPackage package, World world, ProtocolInfo protocolInfo)
     {
-        bool migrateRiverheimWorld = protocolVersion == RiverheimMigration.PROTOCOL_VERSION;
-        
         // TODO handle vanilla worlds
         
-        var worldgenGuid = migrateRiverheimWorld
-            ? RiverheimMigration.GUID
-            : package.ReadString();
-        
-        Log($"World '{name}' has worldgen guid '{worldgenGuid}'");
+        string worldgenGuid;
+        byte[] settings;
+
+        try
+        {
+#pragma warning disable Harmony003
+            var migrate = protocolInfo.IsLegacyRiverheim();
+#pragma warning restore Harmony003
+            (worldgenGuid, settings) = migrate
+                ? RiverheimMigration.MigratoryRead(package)
+                : ReadPayload(package);
+        }
+        catch (Exception e)
+        {
+            Logger.LogInfo($"Error reading world '{name}': {e.Message}, skipping");
+            return false;
+        }
         
         if (!Registry.FindByGuid(worldgenGuid, out var worldgen))
         {
-            Log($"Unknown worldgen guid '{worldgenGuid}', skipping");
+            Logger.LogInfo($"Unknown worldgen guid '{worldgenGuid}', skipping");
             return false;
         }
 
         try
         {
-            var payload = migrateRiverheimWorld
-                ? RiverheimMigration.MigrateSettings(package)
-                : package.ReadByteArray();
-
             // TODO maybe this is one method?
             world.SetWorldgen(worldgen);
-            world.SetSettings(worldgen.DeserializeSettings(payload, out var message));
+            world.SetSettings(worldgen.DeserializeSettings(settings, out var message));
         }
         catch (Exception e) // TODO ermmms
         {
-            Log($"World settings malformed or unsupported: {e.Message}, skipping");
+            Logger.LogInfo($"World settings malformed or unsupported: {e.Message}, skipping");
             return false;
         }
 
         return true;
+    }
+
+    private static (string, byte[]) ReadPayload(ZPackage package)
+    {
+        var payload = new ZPackage(package.ReadByteArray());
+        
+        var worldgenGuid = payload.ReadString();
+        var settings = payload.ReadByteArray();
+
+        return (worldgenGuid, settings);
     }
 
     [HarmonyTranspiler]
@@ -163,7 +196,7 @@ public static class WorldPatch
     [HarmonyPatch(nameof(World.LoadWorld))]
     internal static IEnumerable<CodeInstruction> TranspileWorldLoad(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
     {
-        var protocolVersion = generator.DeclareLocal(typeof(byte));
+        var protocolInfo = generator.DeclareLocal(typeof(ProtocolInfo));
         var worldName = generator.DeclareLocal(typeof(string));
         var ld_WorldName = new CodeInstruction(OpCodes.Ldloc, worldName);
 
@@ -172,19 +205,18 @@ public static class WorldPatch
             .Start()
             .AdvanceToAfterZPackageConstructor(out var ld_ZPackage)
             .InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_0))
-            .InsertAndAdvance(new CodeInstruction(OpCodes.Callvirt,
-                AccessTools.PropertyGetter(typeof(SaveWithBackups), nameof(SaveWithBackups.Name))))
+            .InsertAndAdvance(new CodeInstruction(OpCodes.Callvirt, AccessTools.PropertyGetter(typeof(SaveWithBackups), nameof(SaveWithBackups.Name))))
             .InsertAndAdvance(new CodeInstruction(OpCodes.Stloc, worldName))
             .InsertAndAdvance(ld_WorldName)
             .InsertAndAdvance(ld_ZPackage)
-            .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloca, protocolVersion))
+            .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloca, protocolInfo))
             .InsertAndAdvance(CodeInstruction.Call(typeof(WorldPatch), nameof(ReadHeader)))
             .InsertAndAdvance(new CodeInstruction(OpCodes.Brfalse_S, label))
             .AdvanceToAfterDefaultWorldConstructor(out var ld_World)
             .InsertAndAdvance(ld_WorldName)
             .InsertAndAdvance(ld_ZPackage)
             .InsertAndAdvance(ld_World)
-            .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloc, protocolVersion))
+            .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloc, protocolInfo))
             .InsertAndAdvance(CodeInstruction.Call(typeof(WorldPatch), nameof(ReadWorldData)))
             .InsertAndAdvance(new CodeInstruction(OpCodes.Brfalse_S, label))
             .InstructionEnumeration();
