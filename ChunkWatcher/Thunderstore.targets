@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Target Name="CleanThunderstore" BeforeTargets="PreBuildEvent">
+        <RemoveDir Directories="$(TargetDir)/thunderstore" />
+    </Target>
+
+    <Target Name="Thunderstore" AfterTargets="PostBuildEvent">
+        <PropertyGroup>
+            <ThunderstoreOutput>chunk-watcher</ThunderstoreOutput>
+        </PropertyGroup>
+        <ItemGroup>
+            <ThunderstoreFiles Include="$(ProjectDir)/thunderstore/manifest.json" />
+        </ItemGroup>
+        <Copy SourceFiles="@(ThunderstoreFiles)" DestinationFolder="$(TargetDir)/thunderstore" />
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TargetDir)/thunderstore/BepInEx/plugins" />
+        
+        <ZipDirectory Overwrite="true" SourceDirectory="$(TargetDir)/thunderstore" DestinationFile="$(TargetDir)/$(ThunderstoreOutput)-$(Configuration)-$(Version).zip" />
+        <RemoveDir Directories="$(TargetDir)/thunderstore" />
+    </Target>
+
+    <UsingTask
+        TaskName="UpdateVersion"
+        TaskFactory="RoslynCodeTaskFactory"
+        AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+        <ParameterGroup>
+            <Filename ParameterType="System.String" Required="true" />
+            <MatchExpression ParameterType="System.String" Required="true" />
+            <VersionText ParameterType="System.String" Required="true" />
+        </ParameterGroup>
+        <Task>
+            <Using Namespace="System"/>
+            <Using Namespace="System.IO"/>
+            <Using Namespace="System.Text.RegularExpressions" />
+            <Code Type="Fragment" Language="cs">
+                <![CDATA[
+          File.WriteAllText(
+            Filename,
+            Regex.Replace(File.ReadAllText(Filename), MatchExpression, VersionText));
+        ]]>
+            </Code>
+        </Task>
+    </UsingTask>
+</Project>

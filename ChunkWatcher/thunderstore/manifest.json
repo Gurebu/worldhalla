@@ -1,0 +1,9 @@
+{
+    "name": "ChunkWatcher",
+    "author": "Gurebu",
+    "version_number": "1.0.0",
+    "description": "Watches chunks",
+    "dependencies": [
+        "denikson-BepInExPack_Valheim-5.4.2202"
+    ]
+}

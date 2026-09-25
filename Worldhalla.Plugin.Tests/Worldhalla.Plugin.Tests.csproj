@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <LangVersion>12.0</LangVersion>
+        <IsPackable>false</IsPackable>
+        <IsTestProject>true</IsTestProject>
+        <ValheimLibsPrivate>true</ValheimLibsPrivate>
+        <NoWarn>$(NoWarn);MSB3277</NoWarn>
+    </PropertyGroup>
+    
+    <Import Project="$(MSBuildThisFileDirectory)../BuildTools/ValheimLibs.targets" Condition="Exists('$(ValheimDataPath)/Managed/assembly_valheim.dll') OR '$(ValheimDataPath)' == ''" />
+
+    <PropertyGroup>
+        <ValheimPresent Condition="Exists('$(ValheimDataPath)/Managed/assembly_valheim.dll')">true</ValheimPresent>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
+        <PackageReference Include="NUnit" Version="3.13.3" />
+        <PackageReference Include="NUnit3TestAdapter" Version="4.2.1" />
+        <PackageReference Include="NUnit.Analyzers" Version="3.6.1" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(ValheimPresent)' == 'true'">
+        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.5.0-beta.1">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="HarmonyX" Version="2.7.0" />
+
+        <!-- the game's real Unity assemblies, not the reference assemblies the plugin compiles against -->
+        <Reference Include="UnityEngine">
+            <HintPath>$(ValheimDataPath)/Managed/UnityEngine.dll</HintPath>
+            <Private>true</Private>
+        </Reference>
+        <Reference Include="UnityEngine.CoreModule">
+            <HintPath>$(ValheimDataPath)/Managed/UnityEngine.CoreModule.dll</HintPath>
+            <Private>true</Private>
+        </Reference>
+
+        <ProjectReference Include="..\Worldhalla.Plugin\Worldhalla.Plugin.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(ValheimPresent)' != 'true'">
+        <Compile Remove="**/*.cs" />
+    </ItemGroup>
+
+    <Target Name="WarnNoValheim" BeforeTargets="Build" Condition="'$(ValheimPresent)' != 'true'">
+        <Warning Text="No Valheim installation found - patching tests are not built. Pass -p:ValheimDataPath=... to build them." />
+    </Target>
+
+</Project>

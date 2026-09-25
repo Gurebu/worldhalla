@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <!--
+        Packaging is a publish step, not a build step:
+
+            dotnet publish Worldhalla.Plugin -c Release
+
+        Deliberately self-contained, including the UpdateVersion task Riverheim also defines: this
+        project is meant to lift out into its own repository, and the only build file it shares
+        with its neighbours is BuildTools/ValheimLibs.targets.
+    -->
+    <Target Name="Thunderstore" AfterTargets="Publish">
+        <PropertyGroup>
+            <ThunderstoreDir>$(ProjectDir)thunderstore/</ThunderstoreDir>
+            <ThunderstoreStaging>$(TargetDir)thunderstore/</ThunderstoreStaging>
+            <ThunderstorePackage>$(TargetDir)worldhalla-thunderstore-$(Configuration.ToLower())-$(Version).zip</ThunderstorePackage>
+        </PropertyGroup>
+
+        <Error Condition="!Exists('$(ThunderstoreDir)icon.png')"
+               Text="Thunderstore requires a 256x256 icon at $(ThunderstoreDir)icon.png" />
+
+        <ItemGroup>
+            <ThunderstoreFiles Include="$(ThunderstoreDir)manifest.json" />
+            <ThunderstoreFiles Include="$(ThunderstoreDir)icon.png" />
+            <ThunderstoreFiles Include="$(ThunderstoreDir)README.md" />
+        </ItemGroup>
+
+        <!--
+            Taken from $(TargetDir) rather than $(PublishDir): publish output also carries BepInEx,
+            HarmonyX and their dependencies, which the loader supplies at runtime and a plugin must
+            never ship. The API does ship, beside the plugin rather than merged into it - consumers
+            compile against that assembly, so a second copy anywhere would hand them a different
+            IWorldGenerator than the Registry they register into.
+        -->
+        <ItemGroup>
+            <PluginFiles Include="$(TargetPath)" />
+            <PluginFiles Include="$(TargetDir)Worldhalla.API.dll" />
+        </ItemGroup>
+
+        <RemoveDir Directories="$(ThunderstoreStaging)" />
+        <Copy SourceFiles="@(ThunderstoreFiles)" DestinationFolder="$(ThunderstoreStaging)" />
+        <Copy SourceFiles="@(PluginFiles)" DestinationFolder="$(ThunderstoreStaging)BepInEx/plugins/Worldhalla" />
+
+        <UpdateVersion Filename="$(ThunderstoreStaging)manifest.json" MatchExpression="\%VERSION\%" VersionText="$(Version)" />
+
+        <ZipDirectory Overwrite="true" SourceDirectory="$(ThunderstoreStaging)" DestinationFile="$(ThunderstorePackage)" />
+        <RemoveDir Directories="$(ThunderstoreStaging)" />
+
+        <Message Importance="high" Text="Thunderstore package: $(ThunderstorePackage)" />
+    </Target>
+
+    <UsingTask
+        TaskName="UpdateVersion"
+        TaskFactory="RoslynCodeTaskFactory"
+        AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+        <ParameterGroup>
+            <Filename ParameterType="System.String" Required="true" />
+            <MatchExpression ParameterType="System.String" Required="true" />
+            <VersionText ParameterType="System.String" Required="true" />
+        </ParameterGroup>
+        <Task>
+            <Using Namespace="System"/>
+            <Using Namespace="System.IO"/>
+            <Using Namespace="System.Text.RegularExpressions" />
+            <Code Type="Fragment" Language="cs">
+                <![CDATA[
+          File.WriteAllText(
+            Filename,
+            Regex.Replace(File.ReadAllText(Filename), MatchExpression, VersionText));
+        ]]>
+            </Code>
+        </Task>
+    </UsingTask>
+</Project>

@@ -1,0 +1,10 @@
+{
+    "name": "Worldhalla",
+    "author": "Gurebu",
+    "version_number": "%VERSION%",
+    "website_url": "TODO",
+    "description": "A framework for custom world generation in Valheim.",
+    "dependencies": [
+        "denikson-BepInExPack_Valheim-5.4.2202"
+    ]
+}

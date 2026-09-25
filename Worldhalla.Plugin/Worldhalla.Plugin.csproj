@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="Thunderstore.targets" />
+    <Import Project="$(MSBuildThisFileDirectory)../BuildTools/ValheimLibs.targets" />
+    
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <AssemblyName>Worldhalla</AssemblyName>
+        <Description>Custom world generation framework for Valheim</Description>
+        <Version>1.0.0</Version>
+        <LangVersion>12.0</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <!-- System.Net.Http version conflict between reference assemblies -->
+        <NoWarn>$(NoWarn);MSB3277</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="BepInEx.Analyzers" Version="1.0.8" PrivateAssets="all"/>
+        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.5.0-beta.1">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="BepInEx.BaseLib" Version="5.4.21" PrivateAssets="all" GeneratePathProperty="true"/>
+        <PackageReference Include="BepInEx.Core" Version="5.4.21" PrivateAssets="all"/>
+        <PackageReference Include="BepInEx.PluginInfoProps" Version="1.0.0"/>
+        <PackageReference Include="HarmonyX" Version="2.7.0" PrivateAssets="all" GeneratePathProperty="true"/>
+        <PackageReference Include="UnityEngine.Modules" Version="2022.3.17" IncludeAssets="compile" PrivateAssets="all" GeneratePathProperty="true"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Worldhalla.API\Worldhalla.API.csproj" />
+    </ItemGroup>
+
+</Project>

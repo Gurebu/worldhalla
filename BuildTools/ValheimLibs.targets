@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Choose>
+        <When Condition="($(OS) == 'Unix' OR $(OS) == 'OSX') AND $(ValheimDataPath) == ''">
+            <PropertyGroup>
+                <ValheimDataPath Condition="!Exists('$(ValheimDataPath)')">$(HOME)/snap/steam/common/.local/share/Steam/steamapps/common/Valheim/valheim_Data/</ValheimDataPath>
+                <ValheimDataPath Condition="!Exists('$(ValheimDataPath)')">$(HOME)/.steam/debian-installation/steamapps/common/Valheim/valheim_Data/</ValheimDataPath>
+                <ValheimDataPath Condition="!Exists('$(ValheimDataPath)')">$(HOME)/.steam/steam/steamapps/common/Valheim/valheim_Data/</ValheimDataPath>
+                <ValheimDataPath Condition="!Exists('$(ValheimDataPath)')">$(HOME)/Library/Application Support/Steam/steamapps/common/Valheim/Contents/MacOS/valheim_data</ValheimDataPath>
+                <ValheimDataPath Condition="!Exists('$(ValheimDataPath)')">$(HOME)/Library/Application Support/Steam/steamapps/common/Valheim/valheim.app/Contents/Resources/Data</ValheimDataPath>
+            </PropertyGroup>
+        </When>
+        <When Condition="($(OS) == 'Windows_NT') AND $(ValheimDataPath) == ''">
+            <PropertyGroup>
+                <ValheimDataPath Condition="!Exists('$(ValheimDataPath)')">$([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 892970', 'InstallLocation', null, RegistryView.Registry64, RegistryView.Registry32))\valheim_data</ValheimDataPath>
+                <_SteamLibraryPath>$([MSBuild]::GetRegistryValueFromView('HKEY_CURRENT_USER\SOFTWARE\Valve\Steam', 'SteamPath', null, RegistryView.Registry32))</_SteamLibraryPath>
+                <ValheimDataPath Condition="!Exists('$(ValheimDataPath)') AND '$(_SteamLibraryPath)' != ''">$(_SteamLibraryPath)\steamapps\common\Valheim\valheim_data</ValheimDataPath>
+                <ValheimDataPath Condition="!Exists('$(ValheimDataPath)')">C:\Program Files\Steam\steamapps\common\Valheim\valheim_data\</ValheimDataPath>
+                <ValheimDataPath Condition="!Exists('$(ValheimDataPath)')">C:\Program Files (x86)\Steam\steamapps\common\Valheim\valheim_data\</ValheimDataPath>
+            </PropertyGroup>
+        </When>
+        <Otherwise>
+            <PropertyGroup>
+                <ValheimDataPath Condition="!Exists('$(ValheimDataPath)')">$(HOME)/snap/steam/common/.local/share/Steam/steamapps/common/Valheim/valheim_data/</ValheimDataPath>
+            </PropertyGroup>
+        </Otherwise>
+    </Choose>
+
+    <!-- BepInEx supplies these at runtime, so they are not copied unless a consumer has to load them itself -->
+    <PropertyGroup>
+        <ValheimLibsPrivate Condition="'$(ValheimLibsPrivate)' == ''">false</ValheimLibsPrivate>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Reference Include="$(ValheimDataPath)/Managed/assembly_valheim.dll" Private="$(ValheimLibsPrivate)" Publicize="true" />
+        <Reference Include="$(ValheimDataPath)/Managed/assembly_utils.dll" Private="$(ValheimLibsPrivate)" Publicize="true" />
+    </ItemGroup>
+</Project>
