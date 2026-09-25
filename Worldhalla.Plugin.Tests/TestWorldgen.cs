@@ -19,6 +19,8 @@ internal sealed class TestWorldgen(string guid) : IWorldGenerator
 
     public string Moniker => "TEST";
 
+    public string Name => "Test";
+
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
 
     public ISettings DefaultSettings => new TestSettings("default");

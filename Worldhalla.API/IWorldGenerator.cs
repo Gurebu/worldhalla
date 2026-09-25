@@ -10,6 +10,8 @@ public interface IWorldGenerator
     string Guid { get; }
     
     string Moniker { get; }
+
+    string Name { get; }
     
     Feature[] Features { get; }
 

@@ -13,6 +13,8 @@ internal sealed class LabelledWorldgen : IWorldGenerator
 
     public string Moniker => "LABELLED";
 
+    public string Name => "Labelled";
+
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
 
     public ISettings DefaultSettings => new TestSettings("default");
@@ -35,6 +37,8 @@ internal sealed class UnlabelledWorldgen : IWorldGenerator
 
     public string Moniker => "UNLABELLED";
 
+    public string Name => "Unlabelled";
+
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
 
     public ISettings DefaultSettings => new TestSettings("default");
@@ -54,6 +58,8 @@ internal sealed class ThrowingWorldgen : IWorldGenerator
     public string Guid => GUID;
 
     public string Moniker => "THROWING";
+
+    public string Name => "Throwing";
 
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
 

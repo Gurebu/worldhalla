@@ -105,6 +105,7 @@ public class MyGenerator : IWorldGenerator
 {
     public string Guid => "dev.you.mygen";
     public string Moniker => "MG";
+    public string Name => "My Generator";
     public IWorldGenerator.Feature[] Features => [];
 
     public ISettings DefaultSettings => new MySettings();

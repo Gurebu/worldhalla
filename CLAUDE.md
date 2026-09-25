@@ -173,6 +173,23 @@ each has an anchor test.
 up to four times per vertex on a biome-border chunk and a generator doing its own blending would
 otherwise repeat the work.
 
+`Patches/FejdStartupPatch` adds a worldgen moniker column to the start menu's world list by cloning
+the `name` child of the row template and shrinking `name` to make room.
+
+### Inspecting game UI
+
+Scene and prefab layout is not in the decompiled code, but it can be read offline. The game's UI
+lives in asset bundles under `valheim_Data/StreamingAssets/SoftRef/Bundles`, which
+[UnityPy](https://github.com/K0lb3/UnityPy) opens and walks as GameObject/RectTransform trees (the
+start menu is in bundles `10ba9da1` and `b8689a71`; search by a known child name to find others).
+Scripted components such as `TMP_Text` can't be read that way, because the game ships without the
+type metadata needed to decode them — check those at runtime.
+
+Not every game type is in `assembly_valheim.dll`: UI helpers such as `UITooltip` live in
+`assembly_guiutils.dll`, and others are spread across the remaining `assembly_*.dll` files in
+`valheim_Data/Managed`. Reference such an assembly from `Worldhalla.Plugin.csproj` with
+`Private="false"`, as is done for `Unity.TextMeshPro.dll`.
+
 ### Multiplayer
 
 `ZNetPatch` registers an `AssertWorldhallaVersion` RPC on both handshakes. Peers are compatible
