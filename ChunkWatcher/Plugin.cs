@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using BepInEx;
@@ -21,6 +22,7 @@ public class Plugin : BaseUnityPlugin
     }
 }
 
+[SuppressMessage("ReSharper", "InconsistentNaming")]
 [HarmonyPatch(typeof(HeightmapBuilder))]
 public static class HeightmapBuilderPatch
 {
