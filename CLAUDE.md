@@ -14,6 +14,10 @@ mod registers.
 Worlds written through Worldhalla must stay loadable forever. The protocol version in the header
 is a public compatibility surface, not an implementation detail — see "World format" below.
 
+World persistency and plugin interface concerns are only valid after worldhalla's public release.
+That comes with version 1.0.0 and higher. Until then, versions start with 0. and we're free to change
+the interfaces and formats as we like. This clause must be removed with 1.0.0 release.
+
 ## Relationship to Riverheim
 
 This repository is consumed by Riverheim as a git submodule mounted at `external/worldhalla`.
@@ -26,6 +30,9 @@ moving the submodule pointer.
 - The basic workflow for this project is to produce a diff and wait for approval.
 - Don't bump versions or create any VCS artifacts (branches, commits, tags) unless explicitly prompted.
 - Upon encountering a correction or just any unusual insight make suggestions to improve this (CLAUDE.md) file.
+- Never ship game data, original or modified: no extracted assets, compiled shaders, or patched
+  copies of the game's bundles. Anything derived from game files is produced at runtime on the
+  player's machine from their own install. Rewriting the game's files on disk is a last resort.
 
 ## Code style
 
