@@ -10,6 +10,8 @@ internal static class Registry
 
     private static readonly string ApiAssemblyName = typeof(WorldhallaPluginAttribute).Assembly.GetName().Name;
 
+    public static IEnumerable<IWorldGenerator> Generators => WorldGenerators.Values;
+
     public static void DiscoverGenerators()
     {
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())

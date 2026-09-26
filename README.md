@@ -116,6 +116,18 @@ public class MyGenerator : IWorldGenerator
 
 Reference the API as compile-only and don't ship it.
 
+### Guidelines
+
+#### Stable output
+
+Valheim never saves a world's baseline terrain: every chunk is regenerated from the generator each
+time it loads. What it does save — objects placed when a zone was first generated, and terrain edits
+stored as offsets — is only valid against the terrain it was created on. A generator must therefore
+return the same output for the same seed and settings forever: across its own updates, across
+platforms and across runtimes.
+
+<!-- TODO -->
+
 ## Building
 
 Needs the .NET 8 SDK and a local Valheim install, which `BuildTools/ValheimLibs.targets`

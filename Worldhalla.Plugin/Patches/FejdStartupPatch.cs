@@ -71,9 +71,12 @@ public static class FejdStartupPatch
         if (worldgen == null || tooltip == null)
             return;
 
-        var text = $"{worldgen.Name}\nGuid: {worldgen.Guid}";
+        var text = $"Name: {worldgen.Name}\nGuid: {worldgen.Guid}";
         if (tooltip.m_text != "")
-            text += $"\n\n{FormatAsTopic(tooltip, tooltip.m_topic)}{tooltip.m_text}";
+        {
+            var header = tooltip.m_topic != "" ? FormatAsTopic(tooltip, tooltip.m_topic) : "";
+            text += $"\n\n{header}{tooltip.m_text}";
+        }
 
         var anchor = startup.m_worldSourceInfoPanel.activeSelf ? startup.m_tooltipSecondaryAnchor : startup.m_tooltipAnchor;
         tooltip.Set(WORLDGEN_TOOLTIP_TOPIC, text, anchor);
@@ -85,7 +88,7 @@ public static class FejdStartupPatch
         EnsureMonikerColumn(__instance.m_worldListElement);
     }
 
-    [HarmonyPostfix, HarmonyPatch(nameof(FejdStartup.UpdateWorldList))]
+    [HarmonyPostfix, HarmonyPriority(Priority.Last), HarmonyPatch(nameof(FejdStartup.UpdateWorldList))]
     private static void UpdateWorldListPostfix(FejdStartup __instance)
     {
         for (var i = 0; i < __instance.m_worlds.Count; i++)

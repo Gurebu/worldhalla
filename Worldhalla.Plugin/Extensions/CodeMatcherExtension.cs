@@ -143,6 +143,33 @@ public static class CodeMatcherExtension
         return matcher;
     }
 
+    public static CodeMatcher AdvanceToAfterNewWorldAssignment(this CodeMatcher matcher)
+    {
+        matcher.MatchForward(true,
+            new CodeMatch(instruction =>
+            {
+                if (instruction.opcode != OpCodes.Newobj)
+                    return false;
+
+                var info = (ConstructorInfo)instruction.operand;
+                if (info.DeclaringType != typeof(World))
+                    return false;
+
+                var parameters = info.GetParameters();
+
+                return parameters.Length == 2 && parameters.All(parameter => parameter.ParameterType == typeof(string));
+            }),
+            new CodeMatch(instruction => instruction.opcode == OpCodes.Stfld
+                                         && instruction.operand is FieldInfo field
+                                         && field.DeclaringType == typeof(FejdStartup)
+                                         && field.Name == nameof(FejdStartup.m_world)));
+
+        if (matcher.IsInvalid)
+            throw new InvalidOperationException("Error patching, unable to find new World assignment");
+
+        return matcher.Advance(1);
+    }
+
     public static CodeMatcher AdvanceToAfterDefaultWorldConstructor(this CodeMatcher matcher, out CodeInstruction ld_World)
     {
         matcher.MatchForward(true,

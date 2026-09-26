@@ -43,6 +43,7 @@ public class TranspilerTests
 
     private static Type WorldPatchType => typeof(WorldPatch);
     private static Type ZNetPatchType => typeof(ZNetPatch);
+    private static Type CreateWorldPanelPatchType => typeof(CreateWorldPanelPatch);
 
     [Test, RequiresValheim]
     public void WorldSaveInsertsBothHooksInOrder()
@@ -161,6 +162,25 @@ public class TranspilerTests
             "the local is not being filled from the save file's name");
         Assert.That(reads, Has.Count.EqualTo(2), "both hooks should read the world name through the same local");
         Assert.That(reads, Is.All.GreaterThan(store), "a hook reads the world name before it is stored");
+    }
+
+    /*
+     * The new world is saved a few instructions later, so the worldgen has to be on it before
+     * anything else in OnNewWorldDone gets to touch it.
+     */
+    [Test, RequiresValheim]
+    public void NewWorldDoneAssignsTheWorldgenRightAfterTheWorldIsCreated()
+    {
+        var original = Original(typeof(FejdStartup), nameof(FejdStartup.OnNewWorldDone));
+        var patched = CreateWorldPanelPatch.TranspileNewWorldDone(original).ToList();
+
+        Assert.That(CallCount(patched, CreateWorldPanelPatchType, "AssignSelectedWorldgen"), Is.EqualTo(1));
+        Assert.That(patched, Has.Count.EqualTo(original.Count + 2));
+
+        var hook = IndexOfCall(patched, CreateWorldPanelPatchType, "AssignSelectedWorldgen");
+        Assert.That(patched[hook - 1].opcode, Is.EqualTo(OpCodes.Ldarg_0));
+        Assert.That(patched[hook - 2].operand is FieldInfo { Name: nameof(FejdStartup.m_world) } && patched[hook - 2].opcode == OpCodes.Stfld,
+            Is.True, "the hook does not directly follow the m_world assignment");
     }
 
     [Test, RequiresValheim]

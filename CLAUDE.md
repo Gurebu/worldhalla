@@ -176,6 +176,33 @@ otherwise repeat the work.
 `Patches/FejdStartupPatch` adds a worldgen moniker column to the start menu's world list by cloning
 the `name` child of the row template and shrinking `name` to make room.
 
+`Patches/CreateWorldPanelPatch` adds the worldgen dropdown to the create-world dialog and, through a
+transpiler on `OnNewWorldDone`, assigns the selected generator right after `new World(name, seed)` —
+before the same method saves the `.fwl`, so a postfix would be too late.
+
+### What the game persists (and what it doesn't)
+
+Baseline terrain is never saved. `Heightmap.Regenerate` rebuilds every chunk through
+`HeightmapBuilder` → `WorldGenerator.GetBiomeHeight` each time it loads, so the generator is queried
+afresh on every load and a world can't contain "old" and "new" terrain side by side — no seams unless
+vanilla itself is bugged. What *is* saved is state built on top of the terrain:
+
+- terrain edits — `TerrainComp` stores per-vertex offsets (`m_levelDelta`/`m_smoothDelta`) in its ZDO,
+  re-applied over whatever baseline the generator returns now
+- zone generation — `ZoneSystem.m_generatedZones` marks zones as generated, and their vegetation and
+  locations are spawned once, as ZDOs at heights taken from the terrain at that moment
+
+So a world loaded with a different generator or different settings gets consistent new terrain
+everywhere, while saved objects and terrain edits no longer fit it (floating or buried objects, edits
+offset from a different baseline).
+
+### Extending game types
+
+`Extensions/WorldExtension` attaches Worldhalla's per-world state (worldgen, settings) to `World`
+through a `ConditionalWeakTable`. That is the intended way to add fields to a game type: treat them
+as first-class fields and set them where vanilla sets its own (e.g. next to the name and seed at
+construction), rather than carrying values across calls in temporary statics.
+
 ### Inspecting game UI
 
 Scene and prefab layout is not in the decompiled code, but it can be read offline. The game's UI

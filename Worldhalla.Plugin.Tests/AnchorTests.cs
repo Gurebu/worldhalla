@@ -102,6 +102,19 @@ public class AnchorTests
         Assert.DoesNotThrow(() => matcher.MatchBadVersionWorldConstructor(out _));
     }
 
+    [Test, RequiresValheim]
+    public void NewWorldAssignmentIsFoundInNewWorldDone()
+    {
+        var matcher = Matcher(typeof(FejdStartup), nameof(FejdStartup.OnNewWorldDone));
+
+        Assert.DoesNotThrow(() => matcher.AdvanceToAfterNewWorldAssignment());
+        AssertPreviousIs(matcher, instruction =>
+            instruction.opcode == OpCodes.Stfld
+            && instruction.operand is FieldInfo field
+            && field.DeclaringType == typeof(FejdStartup)
+            && field.Name == nameof(FejdStartup.m_world), "the m_world store");
+    }
+
     /*
      * Also unguarded: a failed match here reaches MatchStoreWithLoad, which reports whatever
      * instruction it happened to land on rather than the anchor that moved.

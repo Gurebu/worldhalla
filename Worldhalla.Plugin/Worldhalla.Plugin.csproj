@@ -31,6 +31,7 @@
         <Reference Include="$(ValheimDataPath)/Managed/Unity.TextMeshPro.dll" Private="false" />
         <Reference Include="$(ValheimDataPath)/Managed/assembly_guiutils.dll" Private="false" />
         <Reference Include="$(ValheimDataPath)/Managed/UnityEngine.UI.dll" Private="false" />
+        <Reference Include="$(ValheimDataPath)/Managed/gui_framework.dll" Private="false" />
     </ItemGroup>
 
     <ItemGroup>
