@@ -11,6 +11,28 @@ the wrong mod setup and wrecking builds due to changed terrain.
 The save file format also guarantees that a vanilla client can't accidentally load modded worlds and
 wreck them the same way: vanilla sees all Worldhalla worlds as `[BAD_VERSION]`.
 
+## Dedicated servers
+
+A dedicated server creates the world named by `-world` when it doesn't exist yet. By default that
+world is vanilla; to have a generator create it instead, pass its GUID:
+
+```
+valheim_server -world MyWorld -wh guid dev.gurebu.riverheim.stable
+```
+
+Settings for the new world are passed as a single string, whose format is up to the generator
+(`IWorldGenerator.ParseCommandLineSettings`); without it the generator's defaults are used:
+
+```
+valheim_server -world MyWorld -wh guid dev.gurebu.riverheim.stable -wh settings "preset builtin.amur"
+```
+
+These options only apply to worlds being created: an existing world keeps the generator it was made
+with, and the server logs a warning if that differs from the one requested. The server refuses to
+start, rather than falling back to vanilla, if the GUID belongs to no installed generator, if the generator rejects the settings, or if a
+world with that name exists but can't be loaded — vanilla would silently replace such a world with
+a new one.
+
 ## Save file format
 
 Worldhalla writes its world information into the game's own `.fwl` world header, using a transpiler
@@ -110,6 +132,7 @@ public class MyGenerator : IWorldGenerator
 
     public ISettings DefaultSettings => new MySettings();
     public ISettings DeserializeSettings(byte[] data, out string error) { ... }
+    public ISettings? ParseSettings(string settings, out string error) { ... }
     public IWorldState Generate(int seed, ISettings settings) { ... }
 }
 ```

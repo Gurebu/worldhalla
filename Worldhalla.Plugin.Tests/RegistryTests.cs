@@ -26,6 +26,8 @@ internal sealed class LabelledWorldgen : IWorldGenerator
         return new TestSettings(System.Text.Encoding.UTF8.GetString(data));
     }
 
+    public ISettings ParseCommandLineSettings(string settings, out string errorMessage) => throw new System.NotImplementedException();
+
     public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
 }
 
@@ -44,6 +46,8 @@ internal sealed class UnlabelledWorldgen : IWorldGenerator
     public ISettings DefaultSettings => new TestSettings("default");
 
     public ISettings DeserializeSettings(byte[] data, out string errorMessage) => throw new System.NotImplementedException();
+
+    public ISettings ParseCommandLineSettings(string settings, out string errorMessage) => throw new System.NotImplementedException();
 
     public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
 }
@@ -67,6 +71,8 @@ internal sealed class ThrowingWorldgen : IWorldGenerator
 
     public ISettings DeserializeSettings(byte[] data, out string errorMessage) => throw new System.NotImplementedException();
 
+    public ISettings ParseCommandLineSettings(string settings, out string errorMessage) => throw new System.NotImplementedException();
+
     public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
 }
 
@@ -77,8 +83,8 @@ internal sealed class LabelledNonGenerator
 
 /*
  * Discovery runs once per assembly for the life of the process, so these assert only what holds
- * however the suite is ordered. The fixture stands in for WorldhallaPlugin.Start, which is the only
- * thing that runs discovery in the game.
+ * however the suite is ordered. The fixture stands in for WorldhallaPlugin.Start and the dedicated
+ * server's startup, which are what run discovery in the game.
  */
 public class RegistryTests
 {

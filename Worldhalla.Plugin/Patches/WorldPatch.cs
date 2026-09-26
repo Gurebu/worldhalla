@@ -221,19 +221,4 @@ public static class WorldPatch
             .InsertAndAdvance(new CodeInstruction(OpCodes.Brfalse_S, label))
             .InstructionEnumeration();
     }
-    
-    // TODO you're suspicious
-    
-    [HarmonyPrefix, HarmonyPatch(nameof(World.GetCreateWorld))]
-    private static void GetCreateWorld(ref World __result, string name, FileHelpers.FileSource source)
-    {
-        if (!SaveSystem.TryGetSaveByName(name, SaveDataType.World, out var save) || save.IsDeleted)
-            return;
-
-        __result = World.LoadWorld(save);
-        if (__result.m_dataError == World.SaveDataError.None)
-            return;
-
-        throw new Exception($"Failed to load world with name \"{name}\", data error {__result.m_dataError}.");
-    }
 }

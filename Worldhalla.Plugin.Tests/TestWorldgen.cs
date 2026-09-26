@@ -36,5 +36,12 @@ internal sealed class TestWorldgen(string guid) : IWorldGenerator
         return new TestSettings(payload);
     }
 
+    public ISettings ParseCommandLineSettings(string settings, out string errorMessage)
+    {
+        errorMessage = null;
+
+        return new TestSettings(settings);
+    }
+
     public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
 }

@@ -44,6 +44,7 @@ public class TranspilerTests
     private static Type WorldPatchType => typeof(WorldPatch);
     private static Type ZNetPatchType => typeof(ZNetPatch);
     private static Type CreateWorldPanelPatchType => typeof(CreateWorldPanelPatch);
+    private static Type ServerStartupPatchType => typeof(ServerStartupPatch);
 
     [Test, RequiresValheim]
     public void WorldSaveInsertsBothHooksInOrder()
@@ -181,6 +182,25 @@ public class TranspilerTests
         Assert.That(patched[hook - 1].opcode, Is.EqualTo(OpCodes.Ldarg_0));
         Assert.That(patched[hook - 2].operand is FieldInfo { Name: nameof(FejdStartup.m_world) } && patched[hook - 2].opcode == OpCodes.Stfld,
             Is.True, "the hook does not directly follow the m_world assignment");
+    }
+
+    /*
+     * GetCreateWorld saves the new world's metadata before returning it, so the worldgen has to be
+     * on it by then or the first .fwl on disk is a vanilla one.
+     */
+    [Test, RequiresValheim]
+    public void GetCreateWorldPreparesTheWorldBeforeSavingIt()
+    {
+        var original = Original(typeof(World), nameof(World.GetCreateWorld));
+        var patched = ServerStartupPatch.TranspileGetCreateWorld(original).ToList();
+
+        Assert.That(CallCount(patched, ServerStartupPatchType, "PrepareCreatedWorld"), Is.EqualTo(1));
+        Assert.That(patched, Has.Count.EqualTo(original.Count + 2));
+
+        var hook = IndexOfCall(patched, ServerStartupPatchType, "PrepareCreatedWorld");
+        Assert.That(patched[hook - 1].IsLdloc(), Is.True);
+        Assert.That(patched[hook - 2].IsStloc(), Is.True, "the hook does not directly follow the new World store");
+        Assert.That(hook, Is.LessThan(IndexOfCall(patched, typeof(World), nameof(World.SaveWorldFWLData))));
     }
 
     [Test, RequiresValheim]

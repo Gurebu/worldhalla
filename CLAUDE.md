@@ -137,7 +137,9 @@ The type needs a parameterless constructor.
 plugin's assembly when it instantiates that plugin, and every mod depending on Worldhalla is
 instantiated after it — during `Awake` the assemblies worth scanning are exactly the ones not
 loaded yet. BepInEx 5 has no chainloader-finished event, but it adds every plugin component in one
-synchronous pass and Unity runs every `Awake` from that pass before any `Start`.
+synchronous pass and Unity runs every `Awake` from that pass before any `Start`. The dedicated
+server also runs discovery from `FejdStartup.ParseServerArguments`, which isn't guaranteed to come
+after that `Start`; discovery is idempotent, so running it early there is safe.
 
 `Registry` scans only assemblies that reference the API assembly, which skips the game, Unity and
 the BCL without enumerating a type, and it isolates failures: a `ReflectionTypeLoadException` or a
@@ -179,6 +181,15 @@ the `name` child of the row template and shrinking `name` to make room.
 `Patches/CreateWorldPanelPatch` adds the worldgen dropdown to the create-world dialog and, through a
 transpiler on `OnNewWorldDone`, assigns the selected generator right after `new World(name, seed)` —
 before the same method saves the `.fwl`, so a postfix would be too late.
+
+`Patches/ServerStartupPatch` is the dedicated server's side of world creation, which never passes
+through that dialog: `World.GetCreateWorld` (called only from `FejdStartup.ParseServerArguments`)
+gets the generator named by `-wh guid <guid>` right after `new World(name, seed)`, for the same
+reason, with settings from `IWorldGenerator.ParseSettings` over the opaque `-wh settings <string>`
+(or `DefaultSettings` without it). `Internal/CommandLine` parses `-wh <command> <value>` pairs, and
+a new command is one entry in its table. Anything that should stop the server throws
+`ServerStartupException`, which a finalizer on `ParseServerArguments` turns into vanilla's own
+failure path (log, `Application.Quit`, return false) — the same one a bad password takes.
 
 ### What the game persists (and what it doesn't)
 

@@ -115,6 +115,15 @@ public class AnchorTests
             && field.Name == nameof(FejdStartup.m_world), "the m_world store");
     }
 
+    [Test, RequiresValheim]
+    public void NewWorldStoreIsFoundInGetCreateWorld()
+    {
+        var matcher = Matcher(typeof(World), nameof(World.GetCreateWorld));
+
+        Assert.DoesNotThrow(() => matcher.AdvanceToAfterNewWorldStore(out _));
+        AssertPreviousIs(matcher, instruction => instruction.IsStloc(), "the World local store");
+    }
+
     /*
      * Also unguarded: a failed match here reaches MatchStoreWithLoad, which reports whatever
      * instruction it happened to land on rather than the anchor that moved.

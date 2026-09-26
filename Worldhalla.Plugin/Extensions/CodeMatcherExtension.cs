@@ -84,8 +84,8 @@ public static class CodeMatcherExtension
     {
         return instruction.opcode == opcode
                && instruction.operand is FieldInfo field
-               && field.DeclaringType == typeof(global::World)
-               && field.Name == nameof(global::World.m_worldGenVersion);
+               && field.DeclaringType == typeof(World)
+               && field.Name == nameof(World.m_worldGenVersion);
     }
 
     public static CodeMatcher AdvanceToAfterWorldGenVersionWrite(this CodeMatcher matcher)
@@ -125,14 +125,14 @@ public static class CodeMatcherExtension
                     return false;
 
                 var info = (ConstructorInfo)instruction.operand;
-                if (info.DeclaringType != typeof(global::World))
+                if (info.DeclaringType != typeof(World))
                     return false;
 
                 var parameters = info.GetParameters();
                 if (parameters.Length != 2)
                     return false;
 
-                return parameters[0].ParameterType == typeof(SaveWithBackups) && parameters[1].ParameterType == typeof(global::World.SaveDataError);
+                return parameters[0].ParameterType == typeof(SaveWithBackups) && parameters[1].ParameterType == typeof(World.SaveDataError);
             }));
 
         if (matcher.IsInvalid)
@@ -143,22 +143,24 @@ public static class CodeMatcherExtension
         return matcher;
     }
 
+    private static bool IsNewWorldConstructor(CodeInstruction instruction)
+    {
+        if (instruction.opcode != OpCodes.Newobj)
+            return false;
+
+        var info = (ConstructorInfo)instruction.operand;
+        if (info.DeclaringType != typeof(World))
+            return false;
+
+        var parameters = info.GetParameters();
+
+        return parameters.Length == 2 && parameters.All(parameter => parameter.ParameterType == typeof(string));
+    }
+
     public static CodeMatcher AdvanceToAfterNewWorldAssignment(this CodeMatcher matcher)
     {
         matcher.MatchForward(true,
-            new CodeMatch(instruction =>
-            {
-                if (instruction.opcode != OpCodes.Newobj)
-                    return false;
-
-                var info = (ConstructorInfo)instruction.operand;
-                if (info.DeclaringType != typeof(World))
-                    return false;
-
-                var parameters = info.GetParameters();
-
-                return parameters.Length == 2 && parameters.All(parameter => parameter.ParameterType == typeof(string));
-            }),
+            new CodeMatch(IsNewWorldConstructor),
             new CodeMatch(instruction => instruction.opcode == OpCodes.Stfld
                                          && instruction.operand is FieldInfo field
                                          && field.DeclaringType == typeof(FejdStartup)
@@ -166,6 +168,20 @@ public static class CodeMatcherExtension
 
         if (matcher.IsInvalid)
             throw new InvalidOperationException("Error patching, unable to find new World assignment");
+
+        return matcher.Advance(1);
+    }
+
+    public static CodeMatcher AdvanceToAfterNewWorldStore(this CodeMatcher matcher, out CodeInstruction ld_World)
+    {
+        matcher.MatchForward(true,
+            new CodeMatch(IsNewWorldConstructor),
+            new CodeMatch(instruction => instruction.IsStloc()));
+
+        if (matcher.IsInvalid)
+            throw new InvalidOperationException("Error patching, unable to find new World store");
+
+        ld_World = MatchStoreWithLoad(matcher.Instruction);
 
         return matcher.Advance(1);
     }
@@ -179,7 +195,7 @@ public static class CodeMatcherExtension
                     return false;
 
                 var info = (ConstructorInfo)instruction.operand;
-                if (info.DeclaringType != typeof(global::World))
+                if (info.DeclaringType != typeof(World))
                     return false;
                 
                 return info.GetParameters().Length == 0;

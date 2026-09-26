@@ -18,6 +18,8 @@ public interface IWorldGenerator
     ISettings DefaultSettings { get; }
 
     ISettings DeserializeSettings(byte[] data, out string errorMessage);
+
+    ISettings? ParseCommandLineSettings(string settings, out string errorMessage);
     
     IWorldState Generate(int seed, ISettings settings);
         
