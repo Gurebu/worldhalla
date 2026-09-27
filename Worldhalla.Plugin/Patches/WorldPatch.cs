@@ -80,19 +80,17 @@ public static class WorldPatch
 
     internal static bool ReadHeader(string name, ZPackage package, out ProtocolInfo protocolInfo)
     {
-        // TODO vanilla worlds
-
-        protocolInfo = new ProtocolInfo
-        {
-            isModded = false,
-            version = PROTOCOL_VERSION,
-        };
+        protocolInfo = new ProtocolInfo { isModded = true, version = PROTOCOL_VERSION };
+        var headerStart = package.GetPos();
         
         var header = package.ReadUInt();
         if ((header & CUSTOM_WORLDGEN_FLAG) == 0)
         {
-            Logger.LogInfo($"World '{name}' doesn't have the custom worldgen flag, instead got world version: {(int)header}, skipping");
-            return false;
+            package.SetPos(headerStart);
+            protocolInfo.isModded = false;
+            
+            Logger.LogInfo($"World '{name}' seems to be a vanilla world");
+            return true;
         }
 
         protocolInfo.version = (byte)(header & PROTOCOL_VERSION_MASK);
@@ -116,21 +114,22 @@ public static class WorldPatch
             return false;
         }
         
+        Logger.LogInfo($"World '{name}': reading as a worldhalla world");
+        
         return true;
     }
 
-    internal static bool ReadWorldData(string name, ZPackage package, World world, ProtocolInfo protocolInfo)
+    internal static bool ReadWorldData(string name, ZPackage package, World world, in ProtocolInfo protocolInfo)
     {
-        // TODO handle vanilla worlds
+        if (!protocolInfo.isModded)
+            return true;
         
         string worldgenGuid;
         byte[] settings;
 
         try
         {
-#pragma warning disable Harmony003
             var migrate = protocolInfo.IsLegacyRiverheim();
-#pragma warning restore Harmony003
             (worldgenGuid, settings) = migrate
                 ? RiverheimMigration.MigratoryRead(package)
                 : ReadPayload(package);
@@ -197,6 +196,7 @@ public static class WorldPatch
     internal static IEnumerable<CodeInstruction> TranspileWorldLoad(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
     {
         var protocolInfo = generator.DeclareLocal(typeof(ProtocolInfo));
+        var ld_ProtocolInfo = new CodeInstruction(OpCodes.Ldloca, protocolInfo);
         var worldName = generator.DeclareLocal(typeof(string));
         var ld_WorldName = new CodeInstruction(OpCodes.Ldloc, worldName);
 
@@ -209,14 +209,14 @@ public static class WorldPatch
             .InsertAndAdvance(new CodeInstruction(OpCodes.Stloc, worldName))
             .InsertAndAdvance(ld_WorldName)
             .InsertAndAdvance(ld_ZPackage)
-            .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloca, protocolInfo))
+            .InsertAndAdvance(ld_ProtocolInfo)
             .InsertAndAdvance(CodeInstruction.Call(typeof(WorldPatch), nameof(ReadHeader)))
             .InsertAndAdvance(new CodeInstruction(OpCodes.Brfalse_S, label))
             .AdvanceToAfterDefaultWorldConstructor(out var ld_World)
             .InsertAndAdvance(ld_WorldName)
             .InsertAndAdvance(ld_ZPackage)
             .InsertAndAdvance(ld_World)
-            .InsertAndAdvance(new CodeInstruction(OpCodes.Ldloc, protocolInfo))
+            .InsertAndAdvance(ld_ProtocolInfo)
             .InsertAndAdvance(CodeInstruction.Call(typeof(WorldPatch), nameof(ReadWorldData)))
             .InsertAndAdvance(new CodeInstruction(OpCodes.Brfalse_S, label))
             .InstructionEnumeration();

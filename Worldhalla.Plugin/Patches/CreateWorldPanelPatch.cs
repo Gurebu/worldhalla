@@ -17,7 +17,7 @@ public static class CreateWorldPanelPatch
     private const string WORLDGEN_DROPDOWN = "WorldgenDropdown";
     private const string WORLDGEN_LABEL = "worldgen";
     private const string WORLDGEN_LABEL_TEXT = "Worldgen";
-    private const string VANILLA_OPTION = "Vanilla";
+    private const string VANILLA_OPTION = "Valheim";
 
     private static RectTransform GetPanel(FejdStartup startup)
     {

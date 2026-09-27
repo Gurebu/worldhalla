@@ -135,14 +135,39 @@ public class WorldDataTests
     }
 
     [Test, RequiresValheim]
-    public void UnmoddedWorldIsSkipped()
+    public void VanillaWorldIsReadAsVanilla()
     {
         var package = new ZPackage();
 
         package.Write((int)Version.World.DeepNorth);
+        package.Write(VANILLA_DATA);
         package.SetPos(0);
 
-        Assert.That(WorldPatch.ReadHeader("world_name", package, out _), Is.False);
+        var world = NewWorld(custom: false);
+
+        Assert.That(WorldPatch.ReadHeader("world_name", package, out var protocolInfo), Is.True);
+        Assert.That(protocolInfo.isModded, Is.False);
+        Assert.That(package.ReadInt(), Is.EqualTo((int)Version.World.DeepNorth));
+
+        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, protocolInfo), Is.True);
+        Assert.That(world.IsVanillaWorld(), Is.True);
+        Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
+    }
+
+    [Test, RequiresValheim]
+    public void VanillaWorldIsWrittenWithoutWorldhallaData()
+    {
+        var world = NewWorld(custom: false);
+        var package = new ZPackage();
+
+        WorldPatch.WriteHeader(package, world);
+        package.Write((int)Version.World.DeepNorth);
+        WorldPatch.WriteWorldData(package, world);
+        package.Write(VANILLA_DATA);
+        package.SetPos(0);
+
+        Assert.That(package.ReadInt(), Is.EqualTo((int)Version.World.DeepNorth));
+        Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 
     [Test, RequiresValheim]

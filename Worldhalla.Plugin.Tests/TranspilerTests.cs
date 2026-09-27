@@ -130,7 +130,7 @@ public class TranspilerTests
         var read = patched[IndexOfCall(patched, WorldPatchType, "ReadWorldData") - 1];
 
         Assert.That(written.opcode, Is.EqualTo(OpCodes.Ldloca));
-        Assert.That(read.opcode, Is.EqualTo(OpCodes.Ldloc));
+        Assert.That(read.opcode, Is.EqualTo(OpCodes.Ldloca));
         Assert.That(written.operand, Is.SameAs(read.operand), "the two hooks are not talking through the same local");
         Assert.That(((LocalBuilder)written.operand).LocalType, Is.EqualTo(typeof(WorldPatch.ProtocolInfo)));
     }
