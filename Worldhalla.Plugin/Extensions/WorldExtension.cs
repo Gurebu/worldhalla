@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Worldhalla.API;
+using Worldhalla.API.Settings;
 
 namespace Worldhalla.Plugin.Extensions;
 
@@ -18,14 +19,19 @@ public static class WorldExtension
         return DataStore.GetValue(world, _ => new ExtensionData());
     }
     
-    public static ISettings GetSettings(this World world)
+    public static ISettings? GetSettings(this World world)
     {
-        return world.GetData().settings ?? world.GetData().worldgen?.DefaultSettings;
+        return world.GetData().settings ?? world.GetData().worldgen?.GetDefaultSettings();
     }
-    
-    public static void SetSettings(this World world, ISettings settings)
+
+    public static void SetSettings(this World world, ISettings? settings)
     {
         world.GetData().settings = settings;
+    }
+
+    public static byte[] SaveSettings(this World world)
+    {
+        return world.GetSettings()?.SaveToBinaryBlob() ?? Array.Empty<byte>();
     }
     
     public static void SetWorldgen(this World world, IWorldGenerator worldgen)

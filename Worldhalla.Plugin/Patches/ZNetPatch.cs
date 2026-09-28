@@ -3,6 +3,7 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
 using Worldhalla.API;
+using Worldhalla.API.Settings;
 using Worldhalla.Plugin.Extensions;
 using Worldhalla.Plugin.Internal;
 
@@ -109,7 +110,7 @@ public static class ZNetPatch
             return;
 
         package.Write(worldgen.Guid);
-        package.Write(world.GetSettings().Serialize());
+        package.Write(world.SaveSettings());
     }
 
     private static bool ReadWorldData(ZPackage package, ZRpc rpc)
@@ -131,16 +132,19 @@ public static class ZNetPatch
 
         Logger.LogInfo($"Joining world '{world.m_name}' created with '{worldgen.Guid}'");
 
-        ISettings settings;
-        
+        ISettings? settings;
+
         try
         {
-            // TODO exception or message?????
-            settings = worldgen.DeserializeSettings(package.ReadByteArray(), out _);
+            settings = worldgen.LoadSettings(package.ReadByteArray());
+        }
+        catch (SettingsException e)
+        {
+            return RefuseWorld(rpc, $"World settings rejected by '{worldgen.Guid}': {e.Message}");
         }
         catch (Exception e)
         {
-            return RefuseWorld(rpc, $"World settings malformed or unsupported: {e.Message}");
+            return RefuseWorld(rpc, $"'{worldgen.Guid}' failed to load the world settings: {e}");
         }
 
         world.SetWorldgen(worldgen);

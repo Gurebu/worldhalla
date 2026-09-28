@@ -1,6 +1,6 @@
 using JetBrains.Annotations;
 
-namespace Worldhalla.API;
+namespace Worldhalla.API.Attributes;
 
 [MeansImplicitUse]
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]

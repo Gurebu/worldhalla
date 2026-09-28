@@ -1,4 +1,6 @@
 using Worldhalla.API;
+using Worldhalla.API.Settings;
+using Worldhalla.API.World;
 
 namespace Worldhalla.Plugin.Tests;
 
@@ -8,10 +10,25 @@ namespace Worldhalla.Plugin.Tests;
  */
 internal sealed record TestSettings(string Payload) : ISettings
 {
-    public byte[] Serialize() => System.Text.Encoding.UTF8.GetBytes(Payload);
+    public byte[] SaveToBinaryBlob() => System.Text.Encoding.UTF8.GetBytes(Payload);
+
+    public string Summary() => Payload;
 }
 
-internal sealed class TestWorldgen(string guid) : IWorldGenerator
+internal sealed class SettinglessTestWorldgen(string guid) : IWorldGenerator
+{
+    public string Guid { get; } = guid;
+
+    public string Moniker => "BARE";
+
+    public string Name => "Settingless test";
+
+    public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
+
+    public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
+}
+
+internal sealed class TestWorldgen(string guid) : IWorldGenerator, ISettingsHandler
 {
     public const string MALFORMED = "malformed";
 
@@ -25,23 +42,18 @@ internal sealed class TestWorldgen(string guid) : IWorldGenerator
 
     public ISettings DefaultSettings => new TestSettings("default");
 
-    public ISettings DeserializeSettings(byte[] data, out string errorMessage)
+    public ISettings BuildSettingsFromBinaryBlob(byte[] data)
     {
         var payload = System.Text.Encoding.UTF8.GetString(data);
         if (payload == MALFORMED)
-            throw new System.Exception("settings are malformed");
-
-        errorMessage = null;
+            throw new SettingsException("settings are malformed");
 
         return new TestSettings(payload);
     }
 
-    public ISettings ParseCommandLineSettings(string settings, out string errorMessage)
-    {
-        errorMessage = null;
+    public ISettings BuildSettingsFromCommandLine(string settings) => new TestSettings(settings);
 
-        return new TestSettings(settings);
-    }
+    public string CommandLineUsage => "any string";
 
     public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
 }

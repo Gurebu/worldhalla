@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Emit;
 using HarmonyLib;
+using Worldhalla.API.Settings;
 using Worldhalla.Plugin.Compat;
 using Worldhalla.Plugin.Extensions;
 using Worldhalla.Plugin.Internal;
@@ -73,7 +74,7 @@ public static class WorldPatch
         var payload = new ZPackage();
 
         payload.Write(world.GetWorldgen()!.Guid);
-        payload.Write(world.GetSettings().Serialize());
+        payload.Write(world.SaveSettings());
 
         package.Write(payload.GetArray());
     }
@@ -148,13 +149,17 @@ public static class WorldPatch
 
         try
         {
-            // TODO maybe this is one method?
             world.SetWorldgen(worldgen);
-            world.SetSettings(worldgen.DeserializeSettings(settings, out var message));
+            world.SetSettings(worldgen.LoadSettings(settings));
         }
-        catch (Exception e) // TODO ermmms
+        catch (SettingsException e)
         {
-            Logger.LogInfo($"World settings malformed or unsupported: {e.Message}, skipping");
+            Logger.LogInfo($"World '{name}': settings rejected by '{worldgen.Guid}': {e.Message}, skipping");
+            return false;
+        }
+        catch (Exception e)
+        {
+            Logger.LogError($"World '{name}': '{worldgen.Guid}' failed to load its settings, skipping: {e}");
             return false;
         }
 

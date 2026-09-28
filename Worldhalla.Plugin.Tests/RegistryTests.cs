@@ -1,5 +1,8 @@
 using NUnit.Framework;
 using Worldhalla.API;
+using Worldhalla.API.Attributes;
+using Worldhalla.API.Settings;
+using Worldhalla.API.World;
 using Worldhalla.Plugin.Internal;
 
 namespace Worldhalla.Plugin.Tests;
@@ -17,17 +20,6 @@ internal sealed class LabelledWorldgen : IWorldGenerator
 
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
 
-    public ISettings DefaultSettings => new TestSettings("default");
-
-    public ISettings DeserializeSettings(byte[] data, out string errorMessage)
-    {
-        errorMessage = null;
-
-        return new TestSettings(System.Text.Encoding.UTF8.GetString(data));
-    }
-
-    public ISettings ParseCommandLineSettings(string settings, out string errorMessage) => throw new System.NotImplementedException();
-
     public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
 }
 
@@ -42,12 +34,6 @@ internal sealed class UnlabelledWorldgen : IWorldGenerator
     public string Name => "Unlabelled";
 
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
-
-    public ISettings DefaultSettings => new TestSettings("default");
-
-    public ISettings DeserializeSettings(byte[] data, out string errorMessage) => throw new System.NotImplementedException();
-
-    public ISettings ParseCommandLineSettings(string settings, out string errorMessage) => throw new System.NotImplementedException();
 
     public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
 }
@@ -66,12 +52,6 @@ internal sealed class ThrowingWorldgen : IWorldGenerator
     public string Name => "Throwing";
 
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
-
-    public ISettings DefaultSettings => throw new System.NotImplementedException();
-
-    public ISettings DeserializeSettings(byte[] data, out string errorMessage) => throw new System.NotImplementedException();
-
-    public ISettings ParseCommandLineSettings(string settings, out string errorMessage) => throw new System.NotImplementedException();
 
     public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
 }

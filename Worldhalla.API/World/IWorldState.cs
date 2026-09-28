@@ -1,4 +1,4 @@
-namespace Worldhalla.API;
+namespace Worldhalla.API.World;
 
 public interface IWorldState
 {
@@ -12,13 +12,9 @@ public interface IWorldState
         public float dirt;
         public float pave;
     }
-        
-    // TODO various global things (ashlands & deepnorth etc)
-        
-    float WorldSize { get; }
-        
+    
     Biome GetBiome(float x, float y);
-        
+
     float GetForestation(float x, float y);
 
     PointData RenderPoint(float x, float y);

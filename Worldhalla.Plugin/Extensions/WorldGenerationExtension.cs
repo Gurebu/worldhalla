@@ -1,5 +1,5 @@
 using System.Runtime.CompilerServices;
-using Worldhalla.API;
+using Worldhalla.API.World;
 
 namespace Worldhalla.Plugin.Extensions;
 

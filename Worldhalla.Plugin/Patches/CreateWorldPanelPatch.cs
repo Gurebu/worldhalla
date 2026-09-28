@@ -130,7 +130,7 @@ public static class CreateWorldPanelPatch
             return;
 
         startup.m_world.SetWorldgen(worldgen);
-        startup.m_world.SetSettings(worldgen.DefaultSettings);
+        startup.m_world.SetSettings(worldgen.GetDefaultSettings());
     }
 
     [HarmonyPostfix, HarmonyPatch(nameof(FejdStartup.OnWorldNew))]

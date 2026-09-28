@@ -1,7 +1,8 @@
-namespace Worldhalla.API;
+namespace Worldhalla.API.World;
 
-// verbatim match of valheim biomes, no-cost translation
-
+/**
+ * These biomes will match 1-1 to the game's biomes
+ */
 public enum Biome
 {
     None        = 0x000,

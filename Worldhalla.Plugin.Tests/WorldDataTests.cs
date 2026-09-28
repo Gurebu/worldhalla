@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Worldhalla.API;
+using Worldhalla.API.Settings;
 using Worldhalla.Plugin.Compat;
 using Worldhalla.Plugin.Extensions;
 using Worldhalla.Plugin.Internal;
@@ -10,6 +11,7 @@ namespace Worldhalla.Plugin.Tests;
 public class WorldDataTests
 {
     private const string WORLDGEN = "dev.test.worldgen";
+    private const string SETTINGLESS_WORLDGEN = "dev.test.settingless";
     private const string LEGACY_WORLDGEN = "dev.gurebu.riverheim.stable";
     private const string VANILLA_DATA = "the world name vanilla reads next";
 
@@ -22,6 +24,7 @@ public class WorldDataTests
 
     private static readonly TestWorldgen Generator = new(WORLDGEN);
     private static readonly TestWorldgen LegacyGenerator = new(LEGACY_WORLDGEN);
+    private static readonly SettinglessTestWorldgen SettinglessGenerator = new(SETTINGLESS_WORLDGEN);
 
     private static string Hex(byte[] data) => System.BitConverter.ToString(data).Replace("-", "");
 
@@ -30,6 +33,7 @@ public class WorldDataTests
     {
         Registry.RegisterGenerator(WORLDGEN, Generator);
         Registry.RegisterGenerator(LEGACY_WORLDGEN, LegacyGenerator);
+        Registry.RegisterGenerator(SETTINGLESS_WORLDGEN, SettinglessGenerator);
     }
 
     [TearDown]
@@ -93,7 +97,7 @@ public class WorldDataTests
             var payload = new ZPackage();
 
             payload.Write(worldgenId);
-            payload.Write(world.GetSettings().Serialize());
+            payload.Write(world.GetSettings().SaveToBinaryBlob());
 
             package.Write(payload.GetArray());
         }
@@ -181,6 +185,31 @@ public class WorldDataTests
 
         Assert.That(WorldPatch.ReadWorldData("world_name", package, world, protocolInfo), Is.True);
         Assert.That(world.GetSettings(), Is.EqualTo(new TestSettings("round tripped")));
+        Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
+    }
+
+    [Test, RequiresValheim]
+    public void SettinglessWorldRoundTripsAndLeavesTheCursorOnVanillaData()
+    {
+        var written = new World { m_name = "test" };
+        written.SetWorldgen(SettinglessGenerator);
+
+        var package = new ZPackage();
+
+        WorldPatch.WriteHeader(package, written);
+        package.Write((int)Version.World.DeepNorth);
+        WorldPatch.WriteWorldData(package, written);
+        package.Write(VANILLA_DATA);
+        package.SetPos(0);
+
+        var world = new World { m_name = "test" };
+
+        Assert.That(WorldPatch.ReadHeader("world_name", package, out var protocolInfo), Is.True);
+        package.ReadInt();
+
+        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, protocolInfo), Is.True);
+        Assert.That(world.GetWorldgen(), Is.SameAs(SettinglessGenerator));
+        Assert.That(world.GetSettings(), Is.Null);
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 

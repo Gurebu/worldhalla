@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using HarmonyLib;
 using UnityEngine;
-using Worldhalla.API;
+using Worldhalla.API.World;
 using Worldhalla.Plugin.Extensions;
 
 namespace Worldhalla.Plugin.Patches;
@@ -17,15 +17,15 @@ public static class WorldGeneratorPatch
     private static bool Pregenerate(WorldGenerator __instance)
     {
         var world = __instance.m_world;
-        if (world.m_menu || world.IsVanillaWorld())
+        if (world.m_menu || world.GetWorldgen() is not { } worldgen)
             return true;
         
         if (world.m_seed == 0)
             throw new InvalidOperationException($"Seed is 0 for world '{world.m_name}', but it is not a menu world");
+        
+        var worldState = worldgen.Generate(world.m_seed, world.GetSettings());
 
-        var worldgen = world.GetWorldgen()!;
-
-        __instance.SetState(worldgen.Generate(world.m_seed, world.GetSettings()));
+        __instance.SetState(worldState);
 
         return false;
     }
@@ -108,6 +108,50 @@ public static class WorldGeneratorPatch
             return true;
         
         __result = FOREST_FACTOR_MULTIPLIER * (1 - state.GetForestation(pos.x, pos.z));
+
+        return false;
+    }
+
+    [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.IsAshlands))]
+    private static bool IsAshlands(float x, float y, ref bool __result)
+    {
+        if (WorldGenerator.instance.GetState() is not IWorldGeography geography)
+            return true;
+
+        __result = geography.IsAshlands(x, y);
+
+        return false;
+    }
+
+    [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.IsDeepnorth))]
+    private static bool IsDeepnorth(float x, float y, ref bool __result)
+    {
+        if (WorldGenerator.instance.GetState() is not IWorldGeography geography)
+            return true;
+
+        __result = geography.IsDeepNorth(x, y);
+
+        return false;
+    }
+
+    [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.GetAshlandsOceanGradient), typeof(float), typeof(float))]
+    private static bool GetAshlandsOceanGradient(float x, float y, ref float __result)
+    {
+        if (WorldGenerator.instance.GetState() is not IWorldGeography geography)
+            return true;
+
+        __result = geography.GetAshlandsOceanGradient(x, y);
+
+        return false;
+    }
+
+    [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.DeepNorthWaveFade))]
+    private static bool DeepNorthWaveFade(float wx, float wy, ref double __result)
+    {
+        if (WorldGenerator.instance.GetState() is not IWorldGeography geography)
+            return true;
+
+        __result = geography.GetDeepNorthWaveFade(wx, wy);
 
         return false;
     }

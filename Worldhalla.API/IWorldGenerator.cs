@@ -1,3 +1,6 @@
+using Worldhalla.API.Settings;
+using Worldhalla.API.World;
+
 namespace Worldhalla.API;
     
 public interface IWorldGenerator
@@ -8,20 +11,12 @@ public interface IWorldGenerator
     }
     
     string Guid { get; }
-    
-    string Moniker { get; }
 
     string Name { get; }
     
+    string Moniker { get; }
+
     Feature[] Features { get; }
-
-    ISettings DefaultSettings { get; }
-
-    ISettings DeserializeSettings(byte[] data, out string errorMessage);
-
-    ISettings? ParseCommandLineSettings(string settings, out string errorMessage);
     
-    IWorldState Generate(int seed, ISettings settings);
-        
-    // TODO setting menu manipulation
+    IWorldState Generate(int seed, ISettings? settings);
 }

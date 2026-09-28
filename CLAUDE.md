@@ -50,8 +50,9 @@ arrived at.
 
 `Worldhalla.sln` contains:
 
-- **Worldhalla.API** — the contract a worldgen mod implements: `IWorldGenerator`, `ISettings`,
-  `IWorldState`, `Biome`, and the `[WorldhallaPlugin]` attribute generators are discovered by.
+- **Worldhalla.API** — the contract a worldgen mod implements: `IWorldGenerator`, `IWorldState`,
+  `Biome`, and the `[WorldhallaPlugin]` attribute generators are discovered by, plus the optional
+  `ISettingsHandler`/`ISettings` (for generators that take settings) and `IWorldGeography`.
   Deliberately free of game, Unity and BepInEx dependencies so a consumer needs nothing else.
 - **Worldhalla.Plugin** (assembly name **`Worldhalla`**) — the BepInEx plugin. `WorldhallaPlugin`
   wires logging and `PatchAll` in `Awake`, runs generator discovery in `Start`, and unpatches in
@@ -192,9 +193,12 @@ before the same method saves the `.fwl`, so a postfix would be too late.
 `Patches/ServerStartupPatch` is the dedicated server's side of world creation, which never passes
 through that dialog: `World.GetCreateWorld` (called only from `FejdStartup.ParseServerArguments`)
 gets the generator named by `-wh guid <guid>` right after `new World(name, seed)`, for the same
-reason, with settings from `IWorldGenerator.ParseSettings` over the opaque `-wh settings <string>`
-(or `DefaultSettings` without it). `Internal/CommandLine` parses `-wh <command> <value>` pairs, and
-a new command is one entry in its table. Anything that should stop the server throws
+reason, with settings from `ISettingsHandler.BuildSettingsFromCommandLine` over the opaque
+`-wh settings <string>` (or `ISettingsHandler.DefaultSettings` without it). A generator that doesn't
+implement `ISettingsHandler` takes no settings, so passing `-wh settings` to it stops the server, and
+a `SettingsException` from the handler is reported along with its `CommandLineUsage`.
+`Internal/CommandLine` parses `-wh <command> <value>` pairs, and a new command is one entry in its
+table. Anything that should stop the server throws
 `ServerStartupException`, which a finalizer on `ParseServerArguments` turns into vanilla's own
 failure path (log, `Application.Quit`, return false) — the same one a bad password takes.
 

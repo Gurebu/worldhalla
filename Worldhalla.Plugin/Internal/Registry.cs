@@ -1,5 +1,6 @@
 using System.Reflection;
 using Worldhalla.API;
+using Worldhalla.API.Attributes;
 
 namespace Worldhalla.Plugin.Internal;
 

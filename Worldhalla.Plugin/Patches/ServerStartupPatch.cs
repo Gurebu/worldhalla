@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using HarmonyLib;
 using UnityEngine;
 using Worldhalla.API;
+using Worldhalla.API.Settings;
 using Worldhalla.Plugin.Extensions;
 using Worldhalla.Plugin.Internal;
 using Logger = Worldhalla.Plugin.Internal.Logger;
@@ -14,7 +15,7 @@ public static class ServerStartupPatch
 {
     private static CommandLineOptions ParseCommandLine() => CommandLine.Parse(Environment.GetCommandLineArgs());
 
-    private static (IWorldGenerator worldgen, ISettings settings)? ResolveRequest(CommandLineOptions options)
+    private static (IWorldGenerator worldgen, ISettings? settings)? ResolveRequest(CommandLineOptions options)
     {
         if (options.worldgenGuid == null)
             return null;
@@ -28,24 +29,30 @@ public static class ServerStartupPatch
         return (worldgen, ParseSettings(worldgen, options.settings));
     }
 
-    private static ISettings ParseSettings(IWorldGenerator worldgen, string? text)
+    private static ISettings? ParseSettings(IWorldGenerator worldgen, string? text)
     {
-        if (text == null)
-            return worldgen.DefaultSettings;
+        if (worldgen is not ISettingsHandler handler)
+        {
+            return text == null
+                ? null
+                : throw new ServerStartupException($"Worldgen '{worldgen.Guid}' takes no settings, but '{CommandLine.PREFIX} settings' was given");
+        }
 
-        ISettings? settings;
-        string errorMessage;
+        if (text == null)
+            return handler.DefaultSettings;
 
         try
         {
-            settings = worldgen.ParseCommandLineSettings(text, out errorMessage);
+            return handler.BuildSettingsFromCommandLine(text);
+        }
+        catch (SettingsException e)
+        {
+            throw new ServerStartupException($"Invalid settings '{text}' for worldgen '{worldgen.Guid}': {e.Message}\n{handler.CommandLineUsage}");
         }
         catch (Exception e)
         {
-            throw new ServerStartupException($"Worldgen '{worldgen.Guid}' failed to parse settings '{text}': {e.Message}");
+            throw new ServerStartupException($"Worldgen '{worldgen.Guid}' failed to parse settings '{text}': {e}");
         }
-
-        return settings ?? throw new ServerStartupException($"Invalid settings '{text}' for worldgen '{worldgen.Guid}': {errorMessage}");
     }
 
     internal static void PrepareCreatedWorld(World world)

@@ -72,6 +72,8 @@ public static class FejdStartupPatch
             return;
 
         var text = $"Name: {worldgen.Name}\nGuid: {worldgen.Guid}";
+        if (world.GetSettings() is { } settings)
+            text += $"\n{settings.Summary().TrimEnd()}";
         if (tooltip.m_text != "")
         {
             var header = tooltip.m_topic != "" ? FormatAsTopic(tooltip, tooltip.m_topic) : "";
