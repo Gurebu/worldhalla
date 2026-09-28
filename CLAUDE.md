@@ -33,6 +33,8 @@ moving the submodule pointer.
 - Never ship game data, original or modified: no extracted assets, compiled shaders, or patched
   copies of the game's bundles. Anything derived from game files is produced at runtime on the
   player's machine from their own install. Rewriting the game's files on disk is a last resort.
+- Riverheim is a private repository: don't reference its contents (tools, classes, config) in this repository's code,
+  comments or docs, even when an idea is ported from there. Describe what Worldhalla does in its own terms.
 
 ## Code style
 
@@ -186,9 +188,20 @@ otherwise repeat the work.
 `Patches/FejdStartupPatch` adds a worldgen moniker column to the start menu's world list by cloning
 the `name` child of the row template and shrinking `name` to make room.
 
-`Patches/CreateWorldPanelPatch` adds the worldgen dropdown to the create-world dialog and, through a
-transpiler on `OnNewWorldDone`, assigns the selected generator right after `new World(name, seed)` —
-before the same method saves the `.fwl`, so a postfix would be too late.
+`Patches/CreateWorldPanelPatch` replaces the create-world dialog with `UI/WorldCreationDialog` (specified in
+`Specs/CREATE_WORLD_DIALOG.md`) and, through a transpiler on `OnNewWorldDone`, assigns the selected generator
+right after `new World(name, seed)` — before the same method saves the `.fwl`, so a postfix would be too late.
+The dialog is built in `FejdStartup.Awake` inside the vanilla `m_createWorldPanel`, whose own inner panel is hidden;
+vanilla's name and seed fields and its Done/Cancel buttons are moved into it rather than cloned, so vanilla's
+validation, `OnNewWorldDone` and the panel's show/hide paths keep working unchanged. Moving them must happen before
+the panel is first activated: `UIGamePad` caches its parent `UIGroupHandler` in `Awake`.
+
+The dialog's world preview samples vanilla worlds through `UI/Preview/Vanilla/VanillaRiverPlacement`: Harmony
+**reverse patches** that copy vanilla's river placement into stub methods, rewritten to draw from `PreviewRandom`
+(a bit-exact reimplementation of `UnityEngine.Random`, verified once in game) so they can run off the main thread. They must stay copies. Nothing there may patch `WorldGenerator` itself, which places the rivers of every
+real vanilla world. The class carries no Harmony attributes so `PatchAll` never picks it up, and `Prepare` checks the
+originals' patch lists before and after copying. HarmonyX 2.7 can't apply detours under .NET 8, so the test host
+crashes on any real patch or reverse patch; tests can only run transpilers as plain functions.
 
 `Patches/ServerStartupPatch` is the dedicated server's side of world creation, which never passes
 through that dialog: `World.GetCreateWorld` (called only from `FejdStartup.ParseServerArguments`)

@@ -55,5 +55,7 @@ internal sealed class TestWorldgen(string guid) : IWorldGenerator, ISettingsHand
 
     public string CommandLineUsage => "any string";
 
+    public ISettingsForm CreateForm(ISettings current) => throw new System.NotImplementedException();
+
     public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
 }

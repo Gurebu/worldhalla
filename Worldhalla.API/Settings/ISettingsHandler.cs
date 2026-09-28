@@ -40,6 +40,14 @@ public interface ISettingsHandler
      * failed to parse.
      */
     string CommandLineUsage { get; }
-    
-    // TODO settings dialog
+
+    /**
+     * Create a form for editing the given settings in the world creation dialog.
+     * Called every time the settings dialog opens; the form is dropped when it closes.
+     *
+     * The form lays the settings out as controls from Worldhalla.API.Settings.Controls,
+     * which Worldhalla draws with the game's own widgets. What the settings are made
+     * of stays with the generator.
+     */
+    ISettingsForm CreateForm(ISettings current);
 }
