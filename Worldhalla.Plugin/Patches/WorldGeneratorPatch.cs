@@ -57,11 +57,11 @@ public static class WorldGeneratorPatch
         float wy,
         ref float __result)
     {
-        if (__instance.GetState() is not {} state)
+        if (__instance.GetState() is null)
             return true;
-        
-        __result = GetHeight(state, wx, wy, out _);
-        
+
+        __result = __instance.GetBiomeHeight(Heightmap.Biome.None, wx, wy, out _);
+
         return false;
     }
     
@@ -75,12 +75,12 @@ public static class WorldGeneratorPatch
         ref float __result)
     {
         mask = Color.black;
-        
-        if (__instance.GetState() is not {} state)
+
+        if (__instance.GetState() is null)
             return true;
-        
-        __result = GetHeight(state, wx, wy, out mask);
-        
+
+        __result = __instance.GetBiomeHeight(Heightmap.Biome.None, wx, wy, out mask);
+
         return false;
     }
 
