@@ -8,16 +8,14 @@ It reuses Valheim's UI elements wherever possible and has the following elements
 - World name input
 - World seed input, with a refresh seed button to its right
 - Generator selection
-- Settings summary
-- Generator settings summary
+- Settings summary, with a settings button
+- Generator settings summary, with a generator settings button
 
 #### Column 2
 
 - World preview
 - World preview hide button
 - World preview details button
-- Settings button
-- Generator settings button
 - Create button
 - Cancel button
 
@@ -38,6 +36,9 @@ its name followed by its guid in gray, so the name stands out. The "Valheim" opt
 and if chosen, creates a vanilla, completely unmodded world.
 
 ### Generator settings summary & generator settings button
+
+Each settings summary has its label on the left and a small "Edit" button at the right end of the label's row, above
+the summary's top right corner; the summary box sits underneath both.
 
 The summary is a labeled text box where our selected worldgen will output ISettings.Summary
 for the currently selected settings. The generator settings button opens a dialog showing the settings form the
@@ -134,7 +135,7 @@ It samples when opened and keeps its bitmap until the preview is invalidated.
 
 | | Bitmap resolution |
 |---|---|
-| Preview circle | fills column 2 (about 300 × 300) |
+| Preview circle | fills column 2 (about 390 × 390) |
 | Details dialog | 1024 × 1024 |
 
 The details dialog is kept tight around its map (about 12 px of padding) and is scaled down as a whole when it

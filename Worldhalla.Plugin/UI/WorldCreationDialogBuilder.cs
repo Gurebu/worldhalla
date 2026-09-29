@@ -12,22 +12,21 @@ internal static class WorldCreationDialogBuilder
     private const string DETAILS_NAME = "WorldhallaPreviewDetails";
     private const string SETTINGS_NAME = "WorldhallaSettings";
 
-    private const float PANEL_WIDTH = 760f;
+    private const float PANEL_WIDTH = 860f;
     private const float PANEL_HEIGHT = 540f;
     private const float CONTENT_TOP = 215f;
-    private const float COLUMN1_X = -170f;
+    private const float COLUMN1_X = -220f;
     private const float COLUMN1_WIDTH = 360f;
-    private const float COLUMN2_RIGHT = 345f;
+    private const float COLUMN2_RIGHT = 395f;
     private const float LABEL_HEIGHT = 26f;
     private const float FIELD_HEIGHT = 35f;
     private const float SUMMARY_HEIGHT = 85f;
-    private const float BUTTON_HEIGHT = 35f;
     private const float MAIN_BUTTON_HEIGHT = 45f;
     private const float ROW_GAP = 10f;
     private const float BUTTON_GAP = 8f;
     private const float SUMMARY_FONT_SCALE = 0.75f;
-    private const float SMALL_BUTTON_FONT_SCALE = 0.8f;
     private const float CLOSE_BUTTON_WIDTH = 136f;
+    private const float EDIT_BUTTON_WIDTH = 80f;
     private const float ICON_BUTTON_SIZE = FIELD_HEIGHT;
     private const string REFRESH_ICON_CHILD = "Image";
 
@@ -95,15 +94,15 @@ internal static class WorldCreationDialogBuilder
         var dropdownRect = (RectTransform)dialog.generatorDropdown.transform;
         PlaceField(dropdownRect, panel, dropdownRect.sizeDelta.y, ref y);
 
-        PlaceLabel(NewLabel(labelTemplate, panel, "worldSettings", "World settings").transform, ref y);
+        dialog.worldSettingsButton = NewEditableLabel(labelTemplate, cancel, panel, "worldSettings", "World settings", ref y);
         dialog.worldSettingsSummary = NewSummary(nameField, panel, "WorldSettingsSummary", ref y);
 
-        PlaceLabel(NewLabel(labelTemplate, panel, "generatorSettings", "Generator settings").transform, ref y);
+        dialog.generatorSettingsButton = NewEditableLabel(labelTemplate, cancel, panel, "generatorSettings", "Generator settings", ref y);
         dialog.generatorSettingsSummary = NewSummary(nameField, panel, "GeneratorSettingsSummary", ref y);
         var contentBottom = y + ROW_GAP;
 
         // Column 2 ends level with column 1, and the preview takes whatever height its buttons leave over
-        const float controlsHeight = ROW_GAP + BUTTON_HEIGHT + BUTTON_GAP + BUTTON_HEIGHT + 2f * BUTTON_GAP + MAIN_BUTTON_HEIGHT;
+        const float controlsHeight = ROW_GAP + MAIN_BUTTON_HEIGHT;
         var previewSize = Mathf.FloorToInt(CONTENT_TOP - contentBottom - controlsHeight);
         var column2Width = (float)previewSize;
         var column2X = COLUMN2_RIGHT - column2Width / 2f;
@@ -121,14 +120,6 @@ internal static class WorldCreationDialogBuilder
 
         var halfWidth = (column2Width - BUTTON_GAP) / 2f;
         var halfOffset = (halfWidth + BUTTON_GAP) / 2f;
-
-        dialog.worldSettingsButton = NewButton(cancel, panel, "WorldSettings", "World settings…", SMALL_BUTTON_FONT_SCALE);
-        Place(dialog.worldSettingsButton.transform, column2X, y, column2Width, BUTTON_HEIGHT);
-        y -= BUTTON_HEIGHT + BUTTON_GAP;
-
-        dialog.generatorSettingsButton = NewButton(cancel, panel, "GeneratorSettings", "Generator settings…", SMALL_BUTTON_FONT_SCALE);
-        Place(dialog.generatorSettingsButton.transform, column2X, y, column2Width, BUTTON_HEIGHT);
-        y -= BUTTON_HEIGHT + 2f * BUTTON_GAP;
 
         done.transform.SetParent(panel, false);
         cancel.transform.SetParent(panel, false);
@@ -266,6 +257,27 @@ internal static class WorldCreationDialogBuilder
         Place(label, COLUMN1_X, y, COLUMN1_WIDTH, LABEL_HEIGHT);
         label.GetComponent<TMP_Text>().horizontalAlignment = HorizontalAlignmentOptions.Left;
         y -= LABEL_HEIGHT;
+    }
+
+    // Created after its label so it draws above it and gets the clicks the full-width label would otherwise take
+    private static Button NewEditableLabel(TMP_Text labelTemplate, Button buttonTemplate, RectTransform panel, string name, string text, ref float y)
+    {
+        var top = y;
+        var label = NewLabel(labelTemplate, panel, name, text);
+        PlaceLabel(label.transform, ref y);
+
+        var button = NewButton(buttonTemplate, panel, name + "Edit", "Edit", 1f);
+        Place(button.transform, COLUMN1_X + (COLUMN1_WIDTH - EDIT_BUTTON_WIDTH) / 2f, top, EDIT_BUTTON_WIDTH, LABEL_HEIGHT);
+
+        var buttonText = button.GetComponentInChildren<TMP_Text>(true);
+        Stretch(buttonText.rectTransform);
+        buttonText.margin = Vector4.zero;
+        buttonText.enableAutoSizing = false;
+        buttonText.fontSize = label.fontSize;
+        buttonText.textWrappingMode = TextWrappingModes.NoWrap;
+        buttonText.overflowMode = TextOverflowModes.Overflow;
+        buttonText.verticalAlignment = VerticalAlignmentOptions.Middle;
+        return button;
     }
 
     private static void PlaceField(Transform field, RectTransform panel, float height, ref float y)
