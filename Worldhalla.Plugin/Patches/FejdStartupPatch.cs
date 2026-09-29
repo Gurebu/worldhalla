@@ -105,4 +105,14 @@ public static class FejdStartupPatch
             PrependWorldgenTooltip(__instance, worldListElement, world);
         }
     }
+
+    [HarmonyPostfix, HarmonyPatch(nameof(FejdStartup.ShowConnectError))]
+    private static void ShowConnectError(FejdStartup __instance, ZNet.ConnectionStatus statusOverride)
+    {
+        var message = ZNetPatch.TakeRefusalMessage();
+        var status = statusOverride == ZNet.ConnectionStatus.None ? ZNet.GetConnectionStatus() : statusOverride;
+
+        if (message != null && status == ZNet.ConnectionStatus.ErrorVersion)
+            __instance.m_connectionFailedError.text = message;
+    }
 }

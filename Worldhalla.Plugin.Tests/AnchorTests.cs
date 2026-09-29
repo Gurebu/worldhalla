@@ -50,15 +50,6 @@ public class AnchorTests
         AssertPreviousIs(matcher, instruction => instruction.IsStloc(), "the ZPackage local store");
     }
 
-    [Test, RequiresValheim]
-    public void ZPackageConstructorIsFoundInSendPeerInfo()
-    {
-        var matcher = Matcher(typeof(ZNet), nameof(ZNet.SendPeerInfo));
-
-        Assert.DoesNotThrow(() => matcher.AdvanceToAfterZPackageConstructor(out _));
-        AssertPreviousIs(matcher, instruction => instruction.IsStloc(), "the ZPackage local store");
-    }
-
     /*
      * This helper does not check IsInvalid, so the assertion below is the only thing standing
      * between a moved anchor and settings written at an arbitrary offset.
@@ -76,14 +67,6 @@ public class AnchorTests
             && method.DeclaringType == typeof(ZPackage)
             && method.Name == nameof(ZPackage.Write)
             && method.GetParameters()[0].ParameterType == typeof(int), "the world version write");
-    }
-
-    [Test, RequiresValheim]
-    public void WorldGenVersionWriteIsFoundInSendPeerInfo()
-    {
-        var matcher = Matcher(typeof(ZNet), nameof(ZNet.SendPeerInfo));
-
-        Assert.DoesNotThrow(() => matcher.AdvanceToAfterWorldGenVersionWrite());
     }
 
     [Test, RequiresValheim]

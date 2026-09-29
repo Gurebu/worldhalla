@@ -15,6 +15,8 @@ public interface IWorldGenerator
     string Name { get; }
     
     string Moniker { get; }
+    
+    string Version { get; }
 
     Feature[] Features { get; }
     

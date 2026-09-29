@@ -204,23 +204,13 @@ public class TranspilerTests
     }
 
     [Test, RequiresValheim]
-    public void SendPeerInfoInsertsTheWorldDataHook()
-    {
-        var original = Original(typeof(ZNet), nameof(ZNet.SendPeerInfo));
-        var patched = ZNetPatch.TranspileSendPeerInfo(original).ToList();
-
-        Assert.That(CallCount(patched, ZNetPatchType, "WriteWorldData"), Is.EqualTo(1));
-        Assert.That(patched, Has.Count.EqualTo(original.Count + 2));
-    }
-
-    [Test, RequiresValheim]
     public void RpcPeerInfoInsertsTheWorldDataHook()
     {
         var generator = Generator();
         var original = Original(typeof(ZNet), nameof(ZNet.RPC_PeerInfo), generator: generator);
         var patched = ZNetPatch.TranspileRpcPeerInfo(original, generator).ToList();
 
-        Assert.That(CallCount(patched, ZNetPatchType, "ReadWorldData"), Is.EqualTo(1));
-        Assert.That(patched, Has.Count.EqualTo(original.Count + 5));
+        Assert.That(CallCount(patched, ZNetPatchType, "ApplyServerWorld"), Is.EqualTo(1));
+        Assert.That(patched, Has.Count.EqualTo(original.Count + 4));
     }
 }

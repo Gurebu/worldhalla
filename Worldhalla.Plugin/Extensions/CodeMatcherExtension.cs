@@ -88,18 +88,6 @@ public static class CodeMatcherExtension
                && field.Name == nameof(World.m_worldGenVersion);
     }
 
-    public static CodeMatcher AdvanceToAfterWorldGenVersionWrite(this CodeMatcher matcher)
-    {
-        matcher.MatchForward(true,
-            new CodeMatch(instruction => IsWorldGenVersionAccess(instruction, OpCodes.Ldfld)),
-            new CodeMatch(instruction => IsZPackageCall(instruction, nameof(ZPackage.Write), typeof(int))));
-
-        if (matcher.IsInvalid)
-            throw new InvalidOperationException("Error patching, unable to find world gen version write");
-
-        return matcher.Advance(1);
-    }
-
     public static CodeMatcher AdvanceToAfterWorldGenVersionRead(this CodeMatcher matcher)
     {
         matcher.MatchForward(true,

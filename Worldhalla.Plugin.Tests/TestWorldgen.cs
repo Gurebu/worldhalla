@@ -23,6 +23,9 @@ internal sealed class SettinglessTestWorldgen(string guid) : IWorldGenerator
 
     public string Name => "Settingless test";
 
+
+    public string Version => "1.0.0";
+
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
 
     public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
@@ -37,6 +40,9 @@ internal sealed class TestWorldgen(string guid) : IWorldGenerator, ISettingsHand
     public string Moniker => "TEST";
 
     public string Name => "Test";
+
+
+    public string Version => "1.0.0";
 
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
 

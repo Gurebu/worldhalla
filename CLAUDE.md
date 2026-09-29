@@ -263,9 +263,30 @@ Not every game type is in `assembly_valheim.dll`: UI helpers such as `UITooltip`
 
 ### Multiplayer
 
-`ZNetPatch` registers an `AssertWorldhallaVersion` RPC on both handshakes. Peers are compatible
-when **major and minor match** — patch releases are free, a minor bump refuses connections across
-the version boundary.
+`Docs/VALHEIM_NETWORKING.md` maps the game's network stack (sockets, `ZRpc`, the `PeerInfo`
+handshake, routed RPCs, ZDO sync) and Worldhalla's extension of it. Read it before touching
+`ZNetPatch`, and keep its Worldhalla section true.
+
+Compatibility is decided per world, not per peer. For a vanilla world, Worldhalla sends nothing and
+changes nothing, so vanilla and modded peers mix freely in both directions. For a Worldhalla world, the
+server requires a client `WorldhallaHandshake` from a Worldhalla with the same **major and minor**
+version, and the world's generator at exactly the same `IWorldGenerator.Version`. The client then
+requires that generator to accept the settings.
+
+- **Patch releases must not change anything peers have to agree on.** That covers the two RPC
+  payloads and any `WorldGeneratorPatch` behaviour that alters the result of a query for an existing
+  world: the translation layer runs on every client, so two Worldhalla versions that differ there
+  generate different terrain for the same world. Any of these needs at least a minor bump.
+
+- Never add fields to vanilla's packages. A vanilla peer reads them positionally. Anything
+  Worldhalla needs to send goes in its own RPC, which a vanilla peer drops unread.
+- The RPC names `WorldhallaHandshake`/`WorldhallaWorld`/`WorldhallaRefused` and the leading plugin
+  version string of their payloads are permanent: they are how two different versions find out that they disagree.
+- Anything sent during the handshake must go out before the sender's `PeerInfo`. See the doc for why.
+- Every refusal of a Worldhalla client, on either side, leaves a player-facing sentence that
+  `FejdStartupPatch` shows in place of vanilla's "Incompatible version". A new refusal needs one too.
+- `ZRpc` silently skips argument types it doesn't know, enums included: cast `ConnectionStatus` to
+  `int` before invoking `"Error"`.
 
 ### Logging
 

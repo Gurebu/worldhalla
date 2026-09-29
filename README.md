@@ -128,6 +128,7 @@ public class MyGenerator : IWorldGenerator
     public string Guid => "dev.you.mygen";
     public string Moniker => "MG";
     public string Name => "My Generator";
+    public string Version => "1.0.0";
     public IWorldGenerator.Feature[] Features => [];
 
     public ISettings DefaultSettings => new MySettings();
@@ -148,6 +149,15 @@ time it loads. What it does save — objects placed when a zone was first genera
 stored as offsets — is only valid against the terrain it was created on. A generator must therefore
 return the same output for the same seed and settings forever: across its own updates, across
 platforms and across runtimes.
+
+#### Version
+
+In multiplayer, every client computes terrain locally. A client may only join a world created with
+your generator if it reports exactly the same `Version` string as the server. Change it whenever the
+same seed and settings may produce different terrain, deliberately or not. Returning your plugin
+version is the safe choice. Keeping the string unchanged across a release lets players on
+different versions of your mod play together, so do that only when you're sure the terrain is
+identical.
 
 <!-- TODO -->
 
