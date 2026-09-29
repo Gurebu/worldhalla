@@ -52,11 +52,11 @@ arrived at.
 
 `Worldhalla.sln` contains:
 
-- **Worldhalla.API** — the contract a worldgen mod implements: `IWorldGenerator`, `IWorldState`,
+- **Worldhalla.API** (assembly name **`Worldhalla`**) — the contract a worldgen mod implements: `IWorldGenerator`, `IWorldState`,
   `Biome`, and the `[WorldhallaPlugin]` attribute generators are discovered by, plus the optional
   `ISettingsHandler`/`ISettings` (for generators that take settings) and `IWorldGeography`.
   Deliberately free of game, Unity and BepInEx dependencies so a consumer needs nothing else.
-- **Worldhalla.Plugin** (assembly name **`Worldhalla`**) — the BepInEx plugin. `WorldhallaPlugin`
+- **Worldhalla.Plugin** (assembly name `Worldhalla.Plugin`, merged with the API into `Worldhalla.dll` for shipping) — the BepInEx plugin. `WorldhallaPlugin`
   wires logging and `PatchAll` in `Awake`, runs generator discovery in `Start`, and unpatches in
   `OnDestroy`. Patches live under `Patches/`, Harmony helpers under `Extensions/`.
 - **Worldhalla.Plugin.Tests** — NUnit suite. Runs the transpilers over the game's real IL without
@@ -85,15 +85,24 @@ Packaging is a publish step, not a build step — an ordinary build produces no 
 dotnet publish Worldhalla.Plugin -c Release
 ```
 
-`Worldhalla.Plugin/Thunderstore.targets` stages `thunderstore/` plus the two assemblies into
+`Worldhalla.Plugin/Thunderstore.targets` stages `thunderstore/` plus the merged assembly into
 `BepInEx/plugins/Worldhalla/` and zips it. It is deliberately self-contained (including its own
 copy of the `UpdateVersion` task) so it travels with the project.
 
-The package ships **two assemblies**: `Worldhalla.dll` and `Worldhalla.API.dll`, unmerged. There is
-no ILRepack in this repository, and adding one needs care: consumers compile against
-`Worldhalla.API`, so a second copy of those types anywhere — merged into the plugin, or shipped by
-a consumer — gives that consumer a different `IWorldGenerator` than the registry it registers
-into. Consumers must reference the API as compile-only.
+The package ships **one file**, `Worldhalla.dll`: a plugin shipping several assemblies is
+exposed to load order problems. `Worldhalla.Plugin/ILRepack.targets` merges on every build, into
+`bin/<config>/netstandard2.1/merged/`, with the API as the primary assembly. The merged assembly
+must carry the name consumers compiled against, so the API project's assembly is named `Worldhalla`,
+the same as the shipped file. The file name and the assembly name can't be separated: the compiler
+and ILRepack both name an assembly after its output file (`TargetName` silently overrides
+`AssemblyName`). Nothing in the build compares a consumer's reference with the shipped assembly
+name, so a mismatch only shows up at runtime — check with `monodis --assembly` /
+`monodis --assemblyref` after touching any of this.
+
+A second copy of the API types anywhere — merged into a consumer, or a consumer shipping the
+API-only `Worldhalla.dll` a build output may carry — gives that consumer a different
+`IWorldGenerator` than the registry it registers into. Consumers must reference the API as
+compile-only and never ship it.
 
 Note: a project that references `ILRepack.Lib.MSBuild.Task` without supplying its own
 `ILRepack.targets` gets the package's fallback target, which auto-merges **in Release only** with

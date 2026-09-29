@@ -1,14 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-    <!--
-        Packaging is a publish step, not a build step:
-
-            dotnet publish Worldhalla.Plugin -c Release
-
-        Deliberately self-contained, including the UpdateVersion task Riverheim also defines: this
-        project is meant to lift out into its own repository, and the only build file it shares
-        with its neighbours is BuildTools/ValheimLibs.targets.
-    -->
     <Target Name="Thunderstore" AfterTargets="Publish">
         <PropertyGroup>
             <ThunderstoreDir>$(ProjectDir)thunderstore/</ThunderstoreDir>
@@ -24,17 +15,9 @@
             <ThunderstoreFiles Include="$(ThunderstoreDir)icon.png" />
             <ThunderstoreFiles Include="$(ThunderstoreDir)README.md" />
         </ItemGroup>
-
-        <!--
-            Taken from $(TargetDir) rather than $(PublishDir): publish output also carries BepInEx,
-            HarmonyX and their dependencies, which the loader supplies at runtime and a plugin must
-            never ship. The API does ship, beside the plugin rather than merged into it - consumers
-            compile against that assembly, so a second copy anywhere would hand them a different
-            IWorldGenerator than the Registry they register into.
-        -->
+        
         <ItemGroup>
-            <PluginFiles Include="$(TargetPath)" />
-            <PluginFiles Include="$(TargetDir)Worldhalla.API.dll" />
+            <PluginFiles Include="$(TargetDir)merged/Worldhalla.dll" />
         </ItemGroup>
 
         <RemoveDir Directories="$(ThunderstoreStaging)" />

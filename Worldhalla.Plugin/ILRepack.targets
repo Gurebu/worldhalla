@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <!--
+        The API goes first and is named Worldhalla, like the shipped file: consumers compile against
+        the API, so the merged assembly must carry its name, and both the compiler and ILRepack name
+        an assembly after its file.
+    -->
+    <Target Name="ILRepacker" AfterTargets="PostBuildEvent">
+        <PropertyGroup>
+            <MergedPath>$(TargetDir)merged/Worldhalla.dll</MergedPath>
+        </PropertyGroup>
+
+        <ItemGroup>
+            <InputAssemblies Include="$(TargetDir)Worldhalla.dll"/>
+            <InputAssemblies Include="$(TargetPath)"/>
+        </ItemGroup>
+
+        <ItemGroup>
+            <LibraryPaths Include="$(TargetDir)"/>
+            <LibraryPaths Include="@(ReferencePath->'%(RootDir)%(Directory)')"/>
+        </ItemGroup>
+
+        <ILRepack
+            Parallel="true"
+            InputAssemblies="@(InputAssemblies)"
+            TargetKind="Dll"
+            OutputFile="$(MergedPath)"
+            LibraryPath="@(LibraryPaths)"/>
+    </Target>
+</Project>

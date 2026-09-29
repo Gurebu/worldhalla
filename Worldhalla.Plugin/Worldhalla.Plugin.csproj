@@ -4,7 +4,7 @@
     
     <PropertyGroup>
         <TargetFramework>netstandard2.1</TargetFramework>
-        <AssemblyName>Worldhalla</AssemblyName>
+        <AssemblyName>Worldhalla.Plugin</AssemblyName>
         <Description>Custom world generation framework for Valheim</Description>
         <Version>0.1.0</Version>
         <LangVersion>12.0</LangVersion>
@@ -25,6 +25,10 @@
         <PackageReference Include="BepInEx.PluginInfoProps" Version="1.0.0"/>
         <PackageReference Include="HarmonyX" Version="2.7.0" PrivateAssets="all" GeneratePathProperty="true"/>
         <PackageReference Include="UnityEngine.Modules" Version="6000.0.75" IncludeAssets="compile" PrivateAssets="all" GeneratePathProperty="true"/>
+        <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.40">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 
     <ItemGroup>
