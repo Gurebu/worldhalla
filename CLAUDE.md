@@ -72,11 +72,6 @@ auto-detects common Steam paths on Windows/Linux/macOS; override with `-p:Valhei
 `NuGet.Config` adds the BepInEx feed. It is load-bearing: `BepInEx.*` and `HarmonyX` are not on
 nuget.org, so restore fails outright without it.
 
-```
-dotnet build Worldhalla.sln
-dotnet test Worldhalla.sln
-```
-
 ### Packaging
 
 Packaging is a publish step, not a build step — an ordinary build produces no zip:
@@ -111,11 +106,6 @@ Note: a project that references `ILRepack.Lib.MSBuild.Task` without supplying it
 no `LibraryPath` and fails to resolve Harmony.
 
 ## Tests
-
-```
-dotnet test Worldhalla.sln
-dotnet test Worldhalla.Plugin.Tests --filter "FullyQualifiedName~AnchorTests"
-```
 
 `RequiresValheimAttribute` turns a missing game install into skips rather than failures, and the
 test project compiles its sources out entirely when the game is absent — keep game types out of
