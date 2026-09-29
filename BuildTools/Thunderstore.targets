@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <!--
+        Import after the project's own properties: the defaults below only fill what the project left unset.
+
+        Required:    ThunderstoreTeam, ThunderstoreName, ThunderstoreIcon (256x256 png)
+        Optional:    ThunderstoreVersion, ThunderstoreDescription, ThunderstoreWebsiteUrl,
+                     ThunderstoreReadme, ThunderstoreChangelog, ThunderstoreOutputDir,
+                     ThunderstorePackageFileName, ThunderstoreAfterTargets
+        Items:       ThunderstoreDependency Include="Namespace-Name" Version="x.y.z"
+                     ThunderstoreFile Include="path" PackagePath="dir/in/zip/"
+    -->
+    <PropertyGroup>
+        <ThunderstoreAfterTargets Condition="'$(ThunderstoreAfterTargets)' == ''">Publish</ThunderstoreAfterTargets>
+        <ThunderstoreVersion Condition="'$(ThunderstoreVersion)' == ''">$(Version)</ThunderstoreVersion>
+        <ThunderstoreDescription Condition="'$(ThunderstoreDescription)' == ''">$(Description)</ThunderstoreDescription>
+    </PropertyGroup>
+
+    <Target Name="ThunderstorePack" AfterTargets="$(ThunderstoreAfterTargets)">
+        <PropertyGroup>
+            <ThunderstoreOutputDir Condition="'$(ThunderstoreOutputDir)' == ''">$(TargetDir)</ThunderstoreOutputDir>
+            <ThunderstorePackageFileName Condition="'$(ThunderstorePackageFileName)' == ''">$(ThunderstoreTeam)-$(ThunderstoreName)-$(ThunderstoreVersion).zip</ThunderstorePackageFileName>
+            <ThunderstorePackage>$([MSBuild]::EnsureTrailingSlash('$(ThunderstoreOutputDir)'))$(ThunderstorePackageFileName)</ThunderstorePackage>
+            <ThunderstoreStaging>$(IntermediateOutputPath)thunderstore/</ThunderstoreStaging>
+        </PropertyGroup>
+
+        <ItemGroup>
+            <ThunderstoreFile Include="$(TargetPath)" PackagePath="BepInEx/plugins/$(ThunderstoreName)/"
+                              Condition="'@(ThunderstoreFile)' == ''" />
+        </ItemGroup>
+
+        <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(ThunderstoreTeam)', '^[a-zA-Z0-9_]+$'))"
+               Text="ThunderstoreTeam '$(ThunderstoreTeam)' must be non-empty and contain only a-z, A-Z, 0-9 and _" />
+        <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(ThunderstoreName)', '^[a-zA-Z0-9_]+$'))"
+               Text="ThunderstoreName '$(ThunderstoreName)' must be non-empty and contain only a-z, A-Z, 0-9 and _" />
+        <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(ThunderstoreVersion)', '^\d+\.\d+\.\d+$'))"
+               Text="ThunderstoreVersion '$(ThunderstoreVersion)' must be Major.Minor.Patch" />
+        <Error Condition="$(ThunderstoreDescription.Length) &gt; 250"
+               Text="ThunderstoreDescription is $(ThunderstoreDescription.Length) characters, Thunderstore allows 250" />
+        <Error Condition="'$(ThunderstoreIcon)' == '' Or !Exists('$(ThunderstoreIcon)')"
+               Text="Thunderstore requires a 256x256 icon, ThunderstoreIcon is '$(ThunderstoreIcon)'" />
+        <Error Condition="'$(ThunderstoreReadme)' != '' And !Exists('$(ThunderstoreReadme)')"
+               Text="ThunderstoreReadme '$(ThunderstoreReadme)' does not exist" />
+        <Error Condition="'$(ThunderstoreChangelog)' != '' And !Exists('$(ThunderstoreChangelog)')"
+               Text="ThunderstoreChangelog '$(ThunderstoreChangelog)' does not exist" />
+        <Error Condition="'%(ThunderstoreDependency.Version)' == '' And '@(ThunderstoreDependency)' != ''"
+               Text="ThunderstoreDependency '%(ThunderstoreDependency.Identity)' needs a Version" />
+        <Error Condition="!Exists('%(ThunderstoreFile.FullPath)')"
+               Text="Thunderstore package file '%(ThunderstoreFile.FullPath)' does not exist" />
+
+        <RemoveDir Directories="$(ThunderstoreStaging)" />
+
+        <WriteThunderstoreManifest
+            Filename="$(ThunderstoreStaging)manifest.json"
+            Name="$(ThunderstoreName)"
+            Version="$(ThunderstoreVersion)"
+            WebsiteUrl="$(ThunderstoreWebsiteUrl)"
+            Description="$(ThunderstoreDescription)"
+            Dependencies="@(ThunderstoreDependency)" />
+
+        <Copy SourceFiles="$(ThunderstoreIcon)" DestinationFiles="$(ThunderstoreStaging)icon.png" />
+        <Copy Condition="'$(ThunderstoreReadme)' != ''" SourceFiles="$(ThunderstoreReadme)" DestinationFiles="$(ThunderstoreStaging)README.md" />
+        <Copy Condition="'$(ThunderstoreChangelog)' != ''" SourceFiles="$(ThunderstoreChangelog)" DestinationFiles="$(ThunderstoreStaging)CHANGELOG.md" />
+        <Copy SourceFiles="@(ThunderstoreFile)" DestinationFolder="$(ThunderstoreStaging)%(ThunderstoreFile.PackagePath)" />
+
+        <ZipDirectory Overwrite="true" SourceDirectory="$(ThunderstoreStaging)" DestinationFile="$(ThunderstorePackage)" />
+        <RemoveDir Directories="$(ThunderstoreStaging)" />
+
+        <Message Importance="high" Text="Thunderstore package: $(ThunderstorePackage)" />
+    </Target>
+
+    <UsingTask
+        TaskName="WriteThunderstoreManifest"
+        TaskFactory="RoslynCodeTaskFactory"
+        AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+        <ParameterGroup>
+            <Filename ParameterType="System.String" Required="true" />
+            <Name ParameterType="System.String" Required="true" />
+            <Version ParameterType="System.String" Required="true" />
+            <WebsiteUrl ParameterType="System.String" />
+            <Description ParameterType="System.String" />
+            <Dependencies ParameterType="Microsoft.Build.Framework.ITaskItem[]" />
+        </ParameterGroup>
+        <Task>
+            <Using Namespace="System.IO" />
+            <Using Namespace="System.Linq" />
+            <Using Namespace="System.Text" />
+            <Code Type="Fragment" Language="cs">
+                <![CDATA[
+            Func<string, string> quote = s =>
+            {
+                var sb = new StringBuilder("\"");
+                foreach (var c in s ?? "")
+                {
+                    switch (c)
+                    {
+                        case '"': sb.Append("\\\""); break;
+                        case '\\': sb.Append("\\\\"); break;
+                        case '\n': sb.Append("\\n"); break;
+                        case '\r': sb.Append("\\r"); break;
+                        case '\t': sb.Append("\\t"); break;
+                        default:
+                            if (c < 0x20) sb.Append("\\u").Append(((int)c).ToString("x4"));
+                            else sb.Append(c);
+                            break;
+                    }
+                }
+                return sb.Append('"').ToString();
+            };
+
+            var dependencies = (Dependencies ?? new ITaskItem[0])
+                .Select(d => "\n        " + quote(d.ItemSpec + "-" + d.GetMetadata("Version")))
+                .ToArray();
+
+            var json = new StringBuilder()
+                .Append("{\n")
+                .Append("    \"name\": ").Append(quote(Name)).Append(",\n")
+                .Append("    \"version_number\": ").Append(quote(Version)).Append(",\n")
+                .Append("    \"website_url\": ").Append(quote(WebsiteUrl)).Append(",\n")
+                .Append("    \"description\": ").Append(quote(Description)).Append(",\n")
+                .Append("    \"dependencies\": [")
+                .Append(string.Join(",", dependencies))
+                .Append(dependencies.Length > 0 ? "\n    ]\n" : "]\n")
+                .Append("}\n");
+
+            Directory.CreateDirectory(Path.GetDirectoryName(Filename));
+            File.WriteAllText(Filename, json.ToString());
+        ]]>
+            </Code>
+        </Task>
+    </UsingTask>
+</Project>

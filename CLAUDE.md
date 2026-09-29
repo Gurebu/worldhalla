@@ -85,9 +85,11 @@ Packaging is a publish step, not a build step — an ordinary build produces no 
 dotnet publish Worldhalla.Plugin -c Release
 ```
 
-`Worldhalla.Plugin/Thunderstore.targets` stages `thunderstore/` plus the merged assembly into
-`BepInEx/plugins/Worldhalla/` and zips it. It is deliberately self-contained (including its own
-copy of the `UpdateVersion` task) so it travels with the project.
+`BuildTools/Thunderstore.targets` is project-agnostic: `Worldhalla.Plugin.csproj` describes the
+package with `Thunderstore*` properties and items, and the target generates `manifest.json` from
+them, adds the icon plus the plugin's own `README.md` and `CHANGELOG.md`, stages the merged assembly
+into `BepInEx/plugins/Worldhalla/` and zips it. There is no checked-in manifest; the package version
+is the project's `Version`. It must be imported after the project's own properties.
 
 The package ships **one file**, `Worldhalla.dll`: a plugin shipping several assemblies is
 exposed to load order problems. `Worldhalla.Plugin/ILRepack.targets` merges on every build, into

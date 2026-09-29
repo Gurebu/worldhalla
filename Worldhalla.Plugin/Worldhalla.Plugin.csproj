@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="Thunderstore.targets" />
     <Import Project="$(MSBuildThisFileDirectory)../BuildTools/ValheimLibs.targets" />
     
     <PropertyGroup>
@@ -41,5 +40,21 @@
     <ItemGroup>
       <ProjectReference Include="..\Worldhalla.API\Worldhalla.API.csproj" />
     </ItemGroup>
+
+    <PropertyGroup>
+        <ThunderstoreTeam>Gurebu</ThunderstoreTeam>
+        <ThunderstoreName>Worldhalla</ThunderstoreName>
+        <ThunderstoreDescription>A framework for custom world generation in Valheim.</ThunderstoreDescription>
+        <ThunderstoreIcon>thunderstore/icon.png</ThunderstoreIcon>
+        <ThunderstoreReadme>README.md</ThunderstoreReadme>
+        <ThunderstoreChangelog>CHANGELOG.md</ThunderstoreChangelog>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ThunderstoreDependency Include="denikson-BepInExPack_Valheim" Version="5.4.2202" />
+        <ThunderstoreFile Include="$(TargetDir)merged/Worldhalla.dll" PackagePath="BepInEx/plugins/Worldhalla/" />
+    </ItemGroup>
+
+    <Import Project="$(MSBuildThisFileDirectory)../BuildTools/Thunderstore.targets" />
 
 </Project>
