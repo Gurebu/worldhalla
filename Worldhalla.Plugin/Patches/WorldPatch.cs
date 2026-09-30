@@ -26,36 +26,38 @@ public static class WorldPatch
      * - [uint][4 bytes] worldhalla header (this is what the unmodded game reads as world version):
      *   - [bit 31] sign bit that doubles as the worldhalla world flag. Always on
      *   - [bits 30-8] padding
-     *   - [bits 7-0] protocol version
+     *   - [bits 7-0] format version
      * ------------------ END OF CUSTOM HEADER --------------------
      * - [int][4 bytes] original world version
      * ---------------- START OF CUSTOM WORLD DATA ----------------
      * - [int][4 bytes] payload length
      * - [variable] payload, itself a ZPackage holding:
      *   - [string][1-255 bytes] custom worldgen ID
-     *   - [int][4 bytes] settings blob length
-     *   - [variable] settings blob, opaque - written and read by the generator alone
+     *   - [int][4 bytes] worldhalla settings blob length
+     *   - [variable] worldhalla settings blob, a ZPackage of worldhalla's own settings. Currently empty
+     *   - [int][4 bytes] generator settings blob length
+     *   - [variable] generator settings blob, opaque - written and read by the generator alone
      * ----------------- END OF CUSTOM WORLD DATA -----------------
      * - [...] original world data
      *
      * The payload is length-prefixed so a reader that does not care about its contents can skip it
      * without parsing anything inside.
      *
-     * Worlds written before the protocol version byte existed carry 0xff in its place, hold the
+     * Worlds written before the format version byte existed carry 0xff in its place, hold the
      * worldgen ID before the original world version rather than after it, and store the settings
      * inline with no length in front of them - see RiverheimMigration
      */
 
     private const uint CUSTOM_WORLDGEN_FLAG = 0x80000000;
-    private const uint PROTOCOL_VERSION_MASK = 0x000000ff;
-    internal const byte PROTOCOL_VERSION = 0x00;
+    private const uint FORMAT_VERSION_MASK = 0x000000ff;
+    internal const byte FORMAT_VERSION = 0x00;
 
-    internal struct ProtocolInfo
+    internal struct FormatInfo
     {
         public bool isModded;
         public byte version;
 
-        public readonly bool IsLegacyRiverheim() => version == RiverheimMigration.PROTOCOL_VERSION;
+        public readonly bool IsLegacyRiverheim() => version == RiverheimMigration.FORMAT_VERSION;
     }
 
     internal static void WriteHeader(ZPackage package, World world)
@@ -63,7 +65,7 @@ public static class WorldPatch
         if (world.IsVanillaWorld())
             return;
         
-        package.Write(CUSTOM_WORLDGEN_FLAG | PROTOCOL_VERSION);
+        package.Write(CUSTOM_WORLDGEN_FLAG | FORMAT_VERSION);
     }
 
     internal static void WriteWorldData(ZPackage package, World world)
@@ -74,28 +76,29 @@ public static class WorldPatch
         var payload = new ZPackage();
 
         payload.Write(world.GetWorldgen()!.GetGuid());
+        payload.Write(new ZPackage().GetArray());
         payload.Write(world.SaveSettings());
 
         package.Write(payload.GetArray());
     }
 
-    internal static bool ReadHeader(string name, ZPackage package, out ProtocolInfo protocolInfo)
+    internal static bool ReadHeader(string name, ZPackage package, out FormatInfo formatInfo)
     {
-        protocolInfo = new ProtocolInfo { isModded = true, version = PROTOCOL_VERSION };
+        formatInfo = new FormatInfo { isModded = true, version = FORMAT_VERSION };
         var headerStart = package.GetPos();
         
         var header = package.ReadUInt();
         if ((header & CUSTOM_WORLDGEN_FLAG) == 0)
         {
             package.SetPos(headerStart);
-            protocolInfo.isModded = false;
+            formatInfo.isModded = false;
             
             Logger.LogInfo($"World '{name}' seems to be a vanilla world");
             return true;
         }
 
-        protocolInfo.version = (byte)(header & PROTOCOL_VERSION_MASK);
-        if (protocolInfo.IsLegacyRiverheim())
+        formatInfo.version = (byte)(header & FORMAT_VERSION_MASK);
+        if (formatInfo.IsLegacyRiverheim())
         {
             Logger.LogInfo($"World '{name}' is a legacy riverheim world, preparing for migratory read");
             
@@ -109,9 +112,9 @@ public static class WorldPatch
             return true;
         }
 
-        if (protocolInfo.version > PROTOCOL_VERSION)
+        if (formatInfo.version > FORMAT_VERSION)
         {
-            Logger.LogInfo($"World '{name}': unsupported worldhalla protocol version {protocolInfo.version}, current version is {PROTOCOL_VERSION}");
+            Logger.LogInfo($"World '{name}': unsupported worldhalla format version {formatInfo.version}, current version is {FORMAT_VERSION}");
             return false;
         }
         
@@ -120,9 +123,9 @@ public static class WorldPatch
         return true;
     }
 
-    internal static bool ReadWorldData(string name, ZPackage package, World world, in ProtocolInfo protocolInfo)
+    internal static bool ReadWorldData(string name, ZPackage package, World world, in FormatInfo formatInfo)
     {
-        if (!protocolInfo.isModded)
+        if (!formatInfo.isModded)
             return true;
         
         string worldgenGuid;
@@ -130,7 +133,7 @@ public static class WorldPatch
 
         try
         {
-            var migrate = protocolInfo.IsLegacyRiverheim();
+            var migrate = formatInfo.IsLegacyRiverheim();
             (worldgenGuid, settings) = migrate
                 ? RiverheimMigration.MigratoryRead(package)
                 : ReadPayload(package);
@@ -171,6 +174,7 @@ public static class WorldPatch
         var payload = new ZPackage(package.ReadByteArray());
         
         var worldgenGuid = payload.ReadString();
+        payload.ReadByteArray();
         var settings = payload.ReadByteArray();
 
         return (worldgenGuid, settings);
@@ -200,8 +204,8 @@ public static class WorldPatch
     [HarmonyPatch(nameof(World.LoadWorld))]
     internal static IEnumerable<CodeInstruction> TranspileWorldLoad(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
     {
-        var protocolInfo = generator.DeclareLocal(typeof(ProtocolInfo));
-        var ld_ProtocolInfo = new CodeInstruction(OpCodes.Ldloca, protocolInfo);
+        var formatInfo = generator.DeclareLocal(typeof(FormatInfo));
+        var ld_FormatInfo = new CodeInstruction(OpCodes.Ldloca, formatInfo);
         var worldName = generator.DeclareLocal(typeof(string));
         var ld_WorldName = new CodeInstruction(OpCodes.Ldloc, worldName);
 
@@ -214,14 +218,14 @@ public static class WorldPatch
             .InsertAndAdvance(new CodeInstruction(OpCodes.Stloc, worldName))
             .InsertAndAdvance(ld_WorldName)
             .InsertAndAdvance(ld_ZPackage)
-            .InsertAndAdvance(ld_ProtocolInfo)
+            .InsertAndAdvance(ld_FormatInfo)
             .InsertAndAdvance(CodeInstruction.Call(typeof(WorldPatch), nameof(ReadHeader)))
             .InsertAndAdvance(new CodeInstruction(OpCodes.Brfalse_S, label))
             .AdvanceToAfterDefaultWorldConstructor(out var ld_World)
             .InsertAndAdvance(ld_WorldName)
             .InsertAndAdvance(ld_ZPackage)
             .InsertAndAdvance(ld_World)
-            .InsertAndAdvance(ld_ProtocolInfo)
+            .InsertAndAdvance(ld_FormatInfo)
             .InsertAndAdvance(CodeInstruction.Call(typeof(WorldPatch), nameof(ReadWorldData)))
             .InsertAndAdvance(new CodeInstruction(OpCodes.Brfalse_S, label))
             .InstructionEnumeration();

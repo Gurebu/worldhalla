@@ -16,8 +16,8 @@ public class WorldDataTests
     private const string VANILLA_DATA = "the world name vanilla reads next";
 
     /*
-     * The bytes a pre-protocol Riverheim world holds inline, which the migration transcribes into a
-     * blob. Pinned rather than round-tripped: these exist on disk and cannot be regenerated.
+     * The bytes a Riverheim world from before the format version holds inline, which the migration
+     * transcribes into a blob. Pinned rather than round-tripped: these exist on disk and cannot be regenerated.
      */
     private const string LEGACY_SETTINGS_BYTES =
         "0206707265736574146275696C74696E2E6578706572696D656E74616C0E7072657365742E76657273696F6E00000000";
@@ -52,7 +52,7 @@ public class WorldDataTests
     }
 
     /*
-     * A .fwl as worlds carried it before the protocol version byte existed: an all ones header, the
+     * A .fwl as worlds carried it before the format version byte existed: an all ones header, the
      * worldgen id, then the settings inline with no length in front of them.
      */
     private static ZPackage LegacyPackage(string settingName = "preset", string worldgenId = LEGACY_WORLDGEN)
@@ -97,6 +97,7 @@ public class WorldDataTests
             var payload = new ZPackage();
 
             payload.Write(worldgenId);
+            payload.Write(new ZPackage().GetArray());
             payload.Write(world.GetSettings().SaveToBinaryBlob());
 
             package.Write(payload.GetArray());
@@ -116,8 +117,8 @@ public class WorldDataTests
         WorldPatch.WriteHeader(package, NewWorld());
         package.SetPos(0);
 
-        Assert.That(WorldPatch.ReadHeader("world_name", package, out var protocolInfo), Is.True);
-        Assert.That(protocolInfo.version, Is.EqualTo(WorldPatch.PROTOCOL_VERSION));
+        Assert.That(WorldPatch.ReadHeader("world_name", package, out var formatInfo), Is.True);
+        Assert.That(formatInfo.version, Is.EqualTo(WorldPatch.FORMAT_VERSION));
     }
 
     /*
@@ -149,11 +150,11 @@ public class WorldDataTests
 
         var world = NewWorld(custom: false);
 
-        Assert.That(WorldPatch.ReadHeader("world_name", package, out var protocolInfo), Is.True);
-        Assert.That(protocolInfo.isModded, Is.False);
+        Assert.That(WorldPatch.ReadHeader("world_name", package, out var formatInfo), Is.True);
+        Assert.That(formatInfo.isModded, Is.False);
         Assert.That(package.ReadInt(), Is.EqualTo((int)Version.World.DeepNorth));
 
-        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, protocolInfo), Is.True);
+        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
         Assert.That(world.IsVanillaWorld(), Is.True);
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
@@ -180,10 +181,10 @@ public class WorldDataTests
         var package = CurrentPackage(new TestSettings("round tripped"));
         var world = NewWorld();
 
-        Assert.That(WorldPatch.ReadHeader("world_name", package, out var protocolInfo), Is.True);
+        Assert.That(WorldPatch.ReadHeader("world_name", package, out var formatInfo), Is.True);
         package.ReadInt();
 
-        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, protocolInfo), Is.True);
+        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
         Assert.That(world.GetSettings(), Is.EqualTo(new TestSettings("round tripped")));
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
@@ -204,10 +205,10 @@ public class WorldDataTests
 
         var world = new World { m_name = "test" };
 
-        Assert.That(WorldPatch.ReadHeader("world_name", package, out var protocolInfo), Is.True);
+        Assert.That(WorldPatch.ReadHeader("world_name", package, out var formatInfo), Is.True);
         package.ReadInt();
 
-        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, protocolInfo), Is.True);
+        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
         Assert.That(world.GetWorldgen(), Is.SameAs(SettinglessGenerator));
         Assert.That(world.GetSettings(), Is.Null);
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
@@ -231,15 +232,30 @@ public class WorldDataTests
     }
 
     [Test, RequiresValheim]
+    public void PayloadHoldsWorldhallaSettingsBetweenGuidAndGeneratorSettings()
+    {
+        var package = CurrentPackage(new TestSettings("laid out"));
+
+        WorldPatch.ReadHeader("world_name", package, out _);
+        package.ReadInt();
+
+        var payload = new ZPackage(package.ReadByteArray());
+
+        Assert.That(payload.ReadString(), Is.EqualTo(WORLDGEN));
+        Assert.That(payload.ReadByteArray(), Is.Empty);
+        Assert.That(payload.ReadByteArray(), Is.EqualTo(new TestSettings("laid out").SaveToBinaryBlob()));
+    }
+
+    [Test, RequiresValheim]
     public void UnregisteredWorldgenIsSkipped()
     {
         var package = CurrentPackage(worldgenId: "dev.someone.else");
         var world = NewWorld();
 
-        Assert.That(WorldPatch.ReadHeader("world_name", package, out var protocolInfo), Is.True);
+        Assert.That(WorldPatch.ReadHeader("world_name", package, out var formatInfo), Is.True);
         package.ReadInt();
 
-        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, protocolInfo), Is.False);
+        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.False);
     }
 
     [Test, RequiresValheim]
@@ -248,10 +264,10 @@ public class WorldDataTests
         var package = CurrentPackage(new TestSettings(TestWorldgen.MALFORMED));
         var world = NewWorld();
 
-        WorldPatch.ReadHeader("world_name", package, out var protocolInfo);
+        WorldPatch.ReadHeader("world_name", package, out var formatInfo);
         package.ReadInt();
 
-        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, protocolInfo), Is.False);
+        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.False);
     }
 
     [Test, RequiresValheim]
@@ -260,11 +276,11 @@ public class WorldDataTests
         var package = LegacyPackage();
         var world = NewWorld();
 
-        Assert.That(WorldPatch.ReadHeader("world_name", package, out var protocolInfo), Is.True);
-        Assert.That(protocolInfo.version, Is.EqualTo(RiverheimMigration.PROTOCOL_VERSION));
+        Assert.That(WorldPatch.ReadHeader("world_name", package, out var formatInfo), Is.True);
+        Assert.That(formatInfo.version, Is.EqualTo(RiverheimMigration.FORMAT_VERSION));
         package.ReadInt();
 
-        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, protocolInfo), Is.True);
+        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 
@@ -299,9 +315,9 @@ public class WorldDataTests
         var package = LegacyPackage(settingName: "preset.renamed");
         var world = NewWorld();
 
-        WorldPatch.ReadHeader("world_name", package, out var protocolInfo);
+        WorldPatch.ReadHeader("world_name", package, out var formatInfo);
         package.ReadInt();
 
-        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, protocolInfo), Is.False);
+        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.False);
     }
 }

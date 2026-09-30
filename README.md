@@ -86,10 +86,10 @@ load.
 packet-beta
 0: "flag"
 1-23: "reserved (zero)"
-24-31: "protocol version"
+24-31: "format version"
 ```
 
-Besides the modded world flag, the header currently carries only the Worldhalla protocol version in
+Besides the modded world flag, the header currently carries only the Worldhalla format version in
 its least significant byte, which is `0`. A change to the format takes a new version number rather
 than a new meaning for an existing one, so worlds written by a newer Worldhalla are declined rather
 than misread.
@@ -102,16 +102,18 @@ with a single length-prefixed read, without parsing anything inside.
 
 ```mermaid
 block-beta
-columns 2
-  guid["[string] worldgen guid"] blob["[bytes] settings"]
+columns 3
+  guid["[string] worldgen guid"] own["[bytes] worldhalla settings"] blob["[bytes] generator settings"]
 
 style guid fill:#c5eec7,stroke:#000,color:#000
+style own fill:#c5eec7,stroke:#000,color:#000
 style blob fill:#c5eec7,stroke:#000,color:#000
 ```
 
-For now it only holds the GUID of the generator that produced the world (for example, Riverheim)
-and a blob of settings data that is handed off to the generator to read and write. In the future it
-might also carry generator-agnostic settings like world size multipliers.
+It holds the GUID of the generator that produced the world (for example, Riverheim), a blob of
+Worldhalla's own generator-agnostic settings, and a blob of settings data that is handed off to the
+generator to read and write. Worldhalla's settings blob is empty for now; it is reserved for
+settings like world size multipliers.
 
 ## Modding instructions
 

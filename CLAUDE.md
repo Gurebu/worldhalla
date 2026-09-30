@@ -11,7 +11,7 @@ nothing itself: it owns the `.fwl` header, the settings blob, the version check 
 the `WorldGenerator` query path, and delegates the actual terrain to whatever `IWorldGenerator` a
 mod registers.
 
-Worlds written through Worldhalla must stay loadable forever. The protocol version in the header
+Worlds written through Worldhalla must stay loadable forever. The format version in the header
 is a public compatibility surface, not an implementation detail — see "World format" below.
 
 World persistency and plugin interface concerns are only valid after worldhalla's public release.
@@ -177,15 +177,17 @@ A modded game reading an unmodded world sees a plain version without the flag an
 vanilla. The layout is documented at the top of `Patches/WorldPatch.cs`; keep that comment true.
 
 - `CUSTOM_WORLDGEN_FLAG = 0x80000000` — always set
-- low byte — protocol version, currently `0x00`
-- `0xff` is reserved: pre-protocol Riverheim worlds, handled by `Compat/RiverheimMigration`
+- low byte — format version, currently `0x00`
+- `0xff` is reserved: Riverheim worlds written before the format version existed, handled by `Compat/RiverheimMigration`
 
 Everything Worldhalla adds beyond the header goes into a single length-prefixed blob — itself a
-`ZPackage` holding the worldgen id and the generator's settings — so a third-party `.fwl` reader can
-step over it without parsing its contents. Legacy `0xff` worlds predate that and store both inline.
+`ZPackage` holding the worldgen id, Worldhalla's own settings and the generator's settings — so a
+third-party `.fwl` reader can step over it without parsing its contents. Worldhalla's settings are a
+blob of their own, empty for now, so settings can be added to it without changing the layout. Legacy
+`0xff` worlds predate all of that and store the id and generator settings inline.
 
-A world written by a newer protocol than the installed one is declined, not misread. **Changing
-what an existing protocol version means breaks worlds that already exist on disk; add a version.**
+A world written by a newer format version than the installed one is declined, not misread. **Changing
+what an existing format version means breaks worlds that already exist on disk; add a version.**
 
 ### Patches
 

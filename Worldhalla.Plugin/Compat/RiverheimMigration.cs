@@ -2,7 +2,7 @@ namespace Worldhalla.Plugin.Compat;
 
 public static class RiverheimMigration
 {
-    public const byte PROTOCOL_VERSION = 0xff;
+    public const byte FORMAT_VERSION = 0xff;
     public const string GUID = "dev.gurebu.riverheim.stable";
     
     private const int SETTING_COUNT = 2;

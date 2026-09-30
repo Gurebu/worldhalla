@@ -256,7 +256,7 @@ vanilla peer drops all of them unread:
 | RPC | Direction | When | Payload |
 |---|---|---|---|
 | `WorldhallaHandshake` | client → server | in reply to `ClientHandshake`, so before the client's `PeerInfo` | `[string plugin version][int n]` then `n` × `[string worldgen id][string worldgen version]` |
-| `WorldhallaWorld` | server → client | right before the server's `PeerInfo`, Worldhalla worlds only | `[string plugin version][string worldgen id][byte[] settings]` |
+| `WorldhallaWorld` | server → client | right before the server's `PeerInfo`, Worldhalla worlds only | `[string plugin version][string worldgen id][byte[] worldhalla settings][byte[] generator settings]` |
 | `WorldhallaRefused` | server → client | right before the `Error(3)` that refuses a Worldhalla client | `[string plugin version][int reason][string worldgen id][string worldgen name][string worldgen version]` |
 
 - **Server.** A prefix on `RPC_PeerInfo` lets the vanilla path run untouched when the server's world
@@ -307,6 +307,6 @@ Two peers compute the same terrain for a world only if they agree on three thing
    when it changes, and must change it whenever the same seed and settings may produce different
    terrain.
 
-The plugin version check is independent of the `.fwl` protocol version in `WorldPatch`. A version
+The plugin version check is independent of the `.fwl` format version in `WorldPatch`. A version
 check only keeps multiplayer peers from disagreeing. A terrain change still alters every existing world
 on its next load, single-player included, because terrain is never saved.

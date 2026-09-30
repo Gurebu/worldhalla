@@ -35,8 +35,10 @@ public static class ZNetPatch
      * world:
      * - [string][1-255 bytes] plugin version
      * - [string][1-255 bytes] custom worldgen ID
-     * - [int][4 bytes] settings blob length
-     * - [variable] settings blob, as in the .fwl
+     * - [int][4 bytes] worldhalla settings blob length
+     * - [variable] worldhalla settings blob, as in the .fwl
+     * - [int][4 bytes] generator settings blob length
+     * - [variable] generator settings blob, as in the .fwl
      *
      * WorldhallaRefused, server to client, directly ahead of the Error that refuses a Worldhalla client, so
      * the client can tell the player why:
@@ -240,6 +242,7 @@ public static class ZNetPatch
 
         package.Write(PluginInfo.PLUGIN_VERSION);
         package.Write(worldgen.GetGuid());
+        package.Write(new ZPackage().GetArray());
         package.Write(world.SaveSettings());
 
         rpc.Invoke(WORLD_RPC, package);
@@ -275,6 +278,8 @@ public static class ZNetPatch
                 $"This world was created with '{worldgenType}', which you don't have installed.");
 
         Logger.LogInfo($"Joining world '{world.m_name}' created with '{worldgen.GetGuid()}'");
+
+        package.ReadByteArray();
 
         ISettings? settings;
 
