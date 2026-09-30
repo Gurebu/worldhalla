@@ -2,6 +2,7 @@ using BepInEx;
 using HarmonyLib;
 using Worldhalla.Plugin.Compat;
 using Worldhalla.Plugin.Internal;
+using Worldhalla.Plugin.Patches;
 
 namespace Worldhalla.Plugin;
 
@@ -31,7 +32,17 @@ public class WorldhallaPlugin : BaseUnityPlugin
             }
         });
 
-        new Harmony(GUID).PatchAll();
+        var worldListPatch = Config.Bind("Compatibility", "WorldListPatch", true,
+            "Shows the world generator in the world list and its tooltip. Disable to improve compatibility with mods that change the world list.");
+
+        var harmony = new Harmony(GUID);
+        foreach (var type in AccessTools.GetTypesFromAssembly(typeof(WorldhallaPlugin).Assembly))
+        {
+            if (type == typeof(WorldListPatch) && !worldListPatch.Value)
+                continue;
+
+            harmony.CreateClassProcessor(type).Patch();
+        }
     }
     
     public void Start()

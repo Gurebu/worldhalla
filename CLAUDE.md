@@ -209,8 +209,11 @@ each has an anchor test.
 up to four times per vertex on a biome-border chunk and a generator doing its own blending would
 otherwise repeat the work.
 
-`Patches/FejdStartupPatch` adds a worldgen moniker column to the start menu's world list by cloning
-the `name` child of the row template and shrinking `name` to make room.
+`Patches/WorldListPatch` adds a worldgen moniker column to the start menu's world list by cloning
+the `name` child of the row template and shrinking `name` to make room, and prepends the generator to
+each row's tooltip. It is cosmetic, so players can turn it off (`Compatibility.WorldListPatch` in the
+BepInEx config) and `WorldhallaPlugin.Awake` skips the class when they do. A new patch that Worldhalla
+works without belongs behind that kind of switch; one it can't work without does not.
 
 `Patches/CreateWorldPanelPatch` replaces the create-world dialog with `UI/WorldCreationDialog` (specified in
 `Specs/CREATE_WORLD_DIALOG.md`) and, through a transpiler on `OnNewWorldDone`, assigns the selected generator
