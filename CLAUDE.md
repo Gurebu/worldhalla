@@ -189,6 +189,11 @@ blob of their own, empty for now, so settings can be added to it without changin
 it in the current format, so starting a legacy world from the world list asks the player to confirm
 first (`FejdStartupPatch.Awake` gates the world list's Start button).
 
+The generator's settings blob is capped at 64 KiB (`Internal/SettingsBlob`). The cap is checked
+where settings come into being (default settings at discovery, the settings dialog, the command
+line) and wherever a blob is read, but never on save: a save that throws mid-game costs more than an
+oversized blob.
+
 A world written by a newer format version than the installed one is declined, not misread. **Changing
 what an existing format version means breaks worlds that already exist on disk; add a version.**
 

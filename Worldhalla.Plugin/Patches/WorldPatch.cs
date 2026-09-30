@@ -179,7 +179,7 @@ public static class WorldPatch
         
         var worldgenGuid = payload.ReadString();
         payload.ReadByteArray();
-        var settings = payload.ReadByteArray();
+        var settings = SettingsBlob.Read(payload);
 
         return (worldgenGuid, settings);
     }

@@ -113,7 +113,8 @@ style blob fill:#c5eec7,stroke:#000,color:#000
 It holds the GUID of the generator that produced the world (for example, Riverheim), a blob of
 Worldhalla's own generator-agnostic settings, and a blob of settings data that is handed off to the
 generator to read and write. Worldhalla's settings blob is empty for now; it is reserved for
-settings like world size multipliers.
+settings like world size multipliers. The generator's blob may take at most 64 KiB; settings
+describe a world rather than carry its data.
 
 ## Modding instructions
 

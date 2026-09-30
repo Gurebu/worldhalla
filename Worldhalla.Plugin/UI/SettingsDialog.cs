@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Worldhalla.API.Settings;
 using Worldhalla.API.Settings.Controls;
+using Worldhalla.Plugin.Internal;
 using Logger = Worldhalla.Plugin.Internal.Logger;
 
 namespace Worldhalla.Plugin.UI;
@@ -154,7 +155,10 @@ public class SettingsDialog : MonoBehaviour
 
         try
         {
-            settings = form.Build();
+            var built = form.Build();
+            SettingsBlob.Check(built);
+
+            settings = built;
             return null;
         }
         catch (SettingsException e)

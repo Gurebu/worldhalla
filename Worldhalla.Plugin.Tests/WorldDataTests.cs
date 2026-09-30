@@ -263,6 +263,32 @@ public class WorldDataTests
     }
 
     [Test, RequiresValheim]
+    public void SettingsAtTheSizeLimitAreRead()
+    {
+        var limit = new TestSettings(new string('x', SettingsBlob.MAX_SIZE));
+        var package = CurrentPackage(limit);
+        var world = NewWorld();
+
+        WorldPatch.ReadHeader("world_name", package, out var formatInfo);
+        package.ReadInt();
+
+        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
+        Assert.That(world.GetSettings(), Is.EqualTo(limit));
+    }
+
+    [Test, RequiresValheim]
+    public void SettingsOverTheSizeLimitAreSkipped()
+    {
+        var package = CurrentPackage(new TestSettings(new string('x', SettingsBlob.MAX_SIZE + 1)));
+        var world = NewWorld();
+
+        WorldPatch.ReadHeader("world_name", package, out var formatInfo);
+        package.ReadInt();
+
+        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.False);
+    }
+
+    [Test, RequiresValheim]
     public void MalformedSettingsAreSkipped()
     {
         var package = CurrentPackage(new TestSettings(TestWorldgen.MALFORMED));

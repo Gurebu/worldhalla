@@ -43,7 +43,10 @@ public static class ServerStartupPatch
 
         try
         {
-            return handler.BuildSettingsFromCommandLine(text);
+            var settings = handler.BuildSettingsFromCommandLine(text);
+            SettingsBlob.Check(settings);
+
+            return settings;
         }
         catch (SettingsException e)
         {

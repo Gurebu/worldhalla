@@ -70,6 +70,32 @@ internal sealed class BlankGuidWorldgen : IWorldGenerator
     public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
 
+[WorldhallaPlugin(GUID)]
+internal sealed class OversizedDefaultsWorldgen : IWorldGenerator, ISettingsHandler
+{
+    public const string GUID = "dev.test.oversized";
+
+    public string Moniker => "OVERSIZED";
+
+    public string Name => "Oversized defaults";
+
+    public string Version => "1.0.0";
+
+    public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
+
+    public ISettings DefaultSettings => new TestSettings(new string('x', SettingsBlob.MAX_SIZE + 1));
+
+    public ISettings BuildSettingsFromBinaryBlob(byte[] data) => throw new System.NotImplementedException();
+
+    public ISettings BuildSettingsFromCommandLine(string settings) => throw new System.NotImplementedException();
+
+    public string CommandLineUsage => "";
+
+    public ISettingsForm CreateForm(ISettings current) => throw new System.NotImplementedException();
+
+    public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
+}
+
 [WorldhallaPlugin("dev.test.nongenerator")]
 internal sealed class LabelledNonGenerator
 {
@@ -100,6 +126,12 @@ public class RegistryTests
      * The interface alone must not be enough to register: a mod carries helper implementations and
      * test doubles it never meant to hand over.
      */
+    [Test, RequiresValheim]
+    public void GeneratorWithOversizedDefaultsIsNotDiscovered()
+    {
+        Assert.That(Registry.FindByGuid(OversizedDefaultsWorldgen.GUID, out _), Is.False);
+    }
+
     [Test, RequiresValheim]
     public void UnlabelledGeneratorIsNotDiscovered()
     {

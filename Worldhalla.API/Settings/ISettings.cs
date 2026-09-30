@@ -11,6 +11,9 @@ public interface ISettings
     /**
      * Produce a binary representation that is loadable
      * by ISettingsHandler.BuildSettingsFromBinaryBlob().
+     *
+     * The blob may take at most 64 KiB. Settings that exceed it are
+     * rejected as invalid, and worlds carrying them do not load.
      */
     byte[] SaveToBinaryBlob();
 

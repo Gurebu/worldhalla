@@ -285,7 +285,7 @@ public static class ZNetPatch
 
         try
         {
-            settings = worldgen.LoadSettings(package.ReadByteArray());
+            settings = worldgen.LoadSettings(SettingsBlob.Read(package));
         }
         catch (SettingsException e)
         {

@@ -1,6 +1,7 @@
 using System.Reflection;
 using Worldhalla.API;
 using Worldhalla.API.Attributes;
+using Worldhalla.API.Settings;
 
 namespace Worldhalla.Plugin.Internal;
 
@@ -99,6 +100,18 @@ internal static class Registry
         catch (Exception e)
         {
             Logger.LogError($"Could not instantiate worldgen '{type.FullName}': {e.Message}");
+
+            return;
+        }
+
+        try
+        {
+            if (generator is ISettingsHandler handler)
+                SettingsBlob.Check(handler.DefaultSettings);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError($"Worldgen '{guid}' has unusable default settings, skipping: {e.Message}");
 
             return;
         }
