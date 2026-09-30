@@ -75,7 +75,7 @@ public static class WorldPatch
         
         var payload = new ZPackage();
 
-        payload.Write(world.GetWorldgen()!.GetGuid());
+        payload.Write(world.GetWorldgenGuid()!);
         payload.Write(new ZPackage().GetArray());
         payload.Write(world.SaveSettings());
 
@@ -147,24 +147,26 @@ public static class WorldPatch
         
         if (!Registry.FindByGuid(worldgenGuid, out var worldgen))
         {
-            Logger.LogInfo($"Missing generator for guid '{worldgenGuid}', skipping");
-            return false;
+            Logger.LogInfo($"Missing generator for guid '{worldgenGuid}', marking world '{name}' unloadable");
+            world.SetUnknownWorldgen(worldgenGuid);
+            world.m_dataError = World.SaveDataError.BadVersion;
+            return true;
         }
 
         try
         {
-            world.SetWorldgen(worldgen);
+            world.SetWorldgen(worldgenGuid, worldgen);
             world.SetSettings(worldgen.LoadSettings(settings));
             world.SetLegacyFormat(formatInfo.IsLegacyRiverheim());
         }
         catch (SettingsException e)
         {
-            Logger.LogInfo($"World '{name}': settings rejected by '{worldgen.GetGuid()}': {e.Message}, skipping");
+            Logger.LogInfo($"World '{name}': settings rejected by '{worldgenGuid}': {e.Message}, skipping");
             return false;
         }
         catch (Exception e)
         {
-            Logger.LogError($"World '{name}': '{worldgen.GetGuid()}' failed to load its settings, skipping: {e}");
+            Logger.LogError($"World '{name}': '{worldgenGuid}' failed to load its settings, skipping: {e}");
             return false;
         }
 

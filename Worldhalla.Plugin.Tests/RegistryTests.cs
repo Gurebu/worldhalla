@@ -109,9 +109,8 @@ public class RegistryTests
     [Test, RequiresValheim]
     public void DiscoveredGeneratorIsKnownByItsLabel()
     {
-        Registry.FindByGuid(LabelledWorldgen.GUID, out var generator);
-
-        Assert.That(Registry.GuidOf(generator), Is.EqualTo(LabelledWorldgen.GUID));
+        Assert.That(Registry.Generators.Keys, Does.Contain(LabelledWorldgen.GUID));
+        Assert.That(Registry.Generators[LabelledWorldgen.GUID], Is.InstanceOf<LabelledWorldgen>());
     }
 
     [Test, RequiresValheim]

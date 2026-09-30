@@ -17,6 +17,7 @@ public static class FejdStartupPatch
     private const float MONIKER_GAP = 4f;
     private const string WORLDGEN_TOOLTIP_TOPIC = "Custom world generator";
     private const string MIGRATION_HEADER = "Upgrade the world?";
+    private const string UNKNOWN_MONIKER = "???";
 
     private static void EnsureMonikerColumn(GameObject worldListElement)
     {
@@ -40,7 +41,10 @@ public static class FejdStartupPatch
 
     private static string GetMoniker(World world)
     {
-        var moniker = world.GetWorldgen()?.Moniker ?? "";
+        if (world.GetWorldgenGuid() == null)
+            return "";
+
+        var moniker = world.GetWorldgen()?.Moniker ?? UNKNOWN_MONIKER;
 
         return moniker.Length > MONIKER_LENGTH ? moniker.Substring(0, MONIKER_LENGTH) : moniker;
     }
@@ -67,14 +71,19 @@ public static class FejdStartupPatch
 
     private static void PrependWorldgenTooltip(FejdStartup startup, GameObject worldListElement, World world)
     {
-        var worldgen = world.GetWorldgen();
         var tooltip = worldListElement.GetComponentInChildren<UITooltip>();
-        if (worldgen == null || tooltip == null)
+        if (tooltip == null)
             return;
 
-        var text = $"Name: {worldgen.Name}\nGuid: {worldgen.GetGuid()}";
+        if (world.GetWorldgenGuid() is not { } guid)
+            return;
+
+        var text = world.GetWorldgen() is { } worldgen
+            ? $"Name: {worldgen.Name}\nGuid: {guid}"
+            : $"Generator: Unknown\nGuid: {guid}";
         if (world.GetSettings() is { } settings)
             text += $"\n{settings.Summary().TrimEnd()}";
+
         if (tooltip.m_text != "")
         {
             var header = tooltip.m_topic != "" ? FormatAsTopic(tooltip, tooltip.m_topic) : "";

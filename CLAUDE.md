@@ -153,9 +153,10 @@ public class MyGenerator : IWorldGenerator { }
 ```
 
 The GUID in the attribute is the generator's identity: it is what worlds store and what peers
-compare. It lives only there, not on `IWorldGenerator`, so there is a single source for it, and
-`Registry` remembers it for the plugin's own use (`GetGuid()`). The type needs a parameterless
-constructor.
+compare. It lives only there, not on `IWorldGenerator`, so there is a single source for it. Inside
+the plugin it travels next to the generator: `Registry.Generators` is keyed by it, and a `World`
+carries it in its extension data (`GetWorldgenGuid()`), even when the generator isn't installed.
+The type needs a parameterless constructor.
 
 **Discovery runs in `WorldhallaPlugin.Start`, and must not move to `Awake`.** BepInEx loads a
 plugin's assembly when it instantiates that plugin, and every mod depending on Worldhalla is

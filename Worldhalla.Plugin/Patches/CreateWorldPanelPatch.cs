@@ -17,10 +17,10 @@ public static class CreateWorldPanelPatch
 
     internal static void AssignSelectedWorldgen(FejdStartup startup)
     {
-        if (GetDialog(startup) is not { SelectedWorldgen: { } worldgen } dialog)
+        if (GetDialog(startup) is not { SelectedWorldgenGuid: { } guid, SelectedWorldgen: { } worldgen } dialog)
             return;
 
-        startup.m_world.SetWorldgen(worldgen);
+        startup.m_world.SetWorldgen(guid, worldgen);
         startup.m_world.SetSettings(dialog.Settings);
     }
 

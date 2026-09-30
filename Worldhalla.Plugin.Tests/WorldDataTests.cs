@@ -46,7 +46,7 @@ public class WorldDataTests
     {
         var world = new World { m_name = "test" };
         if (custom)
-            world.SetWorldgen(Generator);
+            world.SetWorldgen(WORLDGEN, Generator);
 
         return world;
     }
@@ -194,7 +194,7 @@ public class WorldDataTests
     public void SettinglessWorldRoundTripsAndLeavesTheCursorOnVanillaData()
     {
         var written = new World { m_name = "test" };
-        written.SetWorldgen(SettinglessGenerator);
+        written.SetWorldgen(SETTINGLESS_WORLDGEN, SettinglessGenerator);
 
         var package = new ZPackage();
 
@@ -248,15 +248,18 @@ public class WorldDataTests
     }
 
     [Test, RequiresValheim]
-    public void UnregisteredWorldgenIsSkipped()
+    public void UnregisteredWorldgenIsReadAsUnloadableAndLeavesTheCursorOnVanillaData()
     {
         var package = CurrentPackage(worldgenId: "dev.someone.else");
-        var world = NewWorld();
+        var world = new World { m_name = "test" };
 
         Assert.That(WorldPatch.ReadHeader("world_name", package, out var formatInfo), Is.True);
         package.ReadInt();
 
-        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.False);
+        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
+        Assert.That(world.m_dataError, Is.EqualTo(World.SaveDataError.BadVersion));
+        Assert.That(world.GetWorldgenGuid(), Is.EqualTo("dev.someone.else"));
+        Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 
     [Test, RequiresValheim]

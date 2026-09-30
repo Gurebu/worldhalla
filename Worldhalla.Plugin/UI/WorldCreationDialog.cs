@@ -58,14 +58,14 @@ public class WorldCreationDialog : MonoBehaviour
     private PreviewTexture? detailsTexture;
     private Texture? detailsPlaceholder;
 
-    private List<IWorldGenerator> generators = [];
+    private List<KeyValuePair<string, IWorldGenerator>> generators = [];
     private ISettings? settings;
     private bool revealed;
     private bool spoilerAccepted;
     private float? seedChangedAt;
     private Exception? reportedFailure;
 
-    public IWorldGenerator? SelectedWorldgen
+    private KeyValuePair<string, IWorldGenerator>? Selected
     {
         get
         {
@@ -73,6 +73,10 @@ public class WorldCreationDialog : MonoBehaviour
             return index >= 0 && index < generators.Count ? generators[index] : null;
         }
     }
+
+    public string? SelectedWorldgenGuid => Selected?.Key;
+
+    public IWorldGenerator? SelectedWorldgen => Selected?.Value;
 
     public ISettings? Settings => settings;
 
@@ -98,13 +102,13 @@ public class WorldCreationDialog : MonoBehaviour
     public void Open()
     {
         generators = Registry.Generators
-            .OrderBy(generator => generator.Name)
-            .ThenBy(generator => generator.GetGuid())
+            .OrderBy(generator => generator.Value.Name)
+            .ThenBy(generator => generator.Key)
             .ToList();
 
         generatorDropdown.ClearOptions();
         generatorDropdown.AddOptions(new[] { VANILLA_OPTION }
-            .Concat(generators.Select(generator => $"<noparse>{generator.Name}</noparse> <color={GUID_COLOR}>(<noparse>{generator.GetGuid()}</noparse>)</color>"))
+            .Concat(generators.Select(generator => $"<noparse>{generator.Value.Name}</noparse> <color={GUID_COLOR}>(<noparse>{generator.Key}</noparse>)</color>"))
             .ToList());
         generatorDropdown.SetValueWithoutNotify(0);
         generatorDropdown.RefreshShownValue();
@@ -179,7 +183,7 @@ public class WorldCreationDialog : MonoBehaviour
         }
         catch (Exception e)
         {
-            Logger.LogError($"{SelectedWorldgen.GetGuid()} failed to create its settings form: {e}");
+            Logger.LogError($"{SelectedWorldgenGuid} failed to create its settings form: {e}");
             return;
         }
 

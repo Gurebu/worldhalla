@@ -15,27 +15,27 @@ public static class ServerStartupPatch
 {
     private static CommandLineOptions ParseCommandLine() => CommandLine.Parse(Environment.GetCommandLineArgs());
 
-    private static (IWorldGenerator worldgen, ISettings? settings)? ResolveRequest(CommandLineOptions options)
+    private static (string guid, IWorldGenerator worldgen, ISettings? settings)? ResolveRequest(CommandLineOptions options)
     {
         if (options.worldgenGuid == null)
             return null;
 
         if (!Registry.FindByGuid(options.worldgenGuid, out var worldgen))
         {
-            var installed = string.Join(", ", Registry.Generators.Select(generator => generator.GetGuid()));
+            var installed = string.Join(", ", Registry.Generators.Keys);
             throw new ServerStartupException($"Unknown worldgen '{options.worldgenGuid}', installed: [{installed}]");
         }
 
-        return (worldgen, ParseSettings(worldgen, options.settings));
+        return (options.worldgenGuid, worldgen, ParseSettings(options.worldgenGuid, worldgen, options.settings));
     }
 
-    private static ISettings? ParseSettings(IWorldGenerator worldgen, string? text)
+    private static ISettings? ParseSettings(string guid, IWorldGenerator worldgen, string? text)
     {
         if (worldgen is not ISettingsHandler handler)
         {
             return text == null
                 ? null
-                : throw new ServerStartupException($"Worldgen '{worldgen.GetGuid()}' takes no settings, but '{CommandLine.PREFIX} settings' was given");
+                : throw new ServerStartupException($"Worldgen '{guid}' takes no settings, but '{CommandLine.PREFIX} settings' was given");
         }
 
         if (text == null)
@@ -47,11 +47,11 @@ public static class ServerStartupPatch
         }
         catch (SettingsException e)
         {
-            throw new ServerStartupException($"Invalid settings '{text}' for worldgen '{worldgen.GetGuid()}': {e.Message}\n{handler.CommandLineUsage}");
+            throw new ServerStartupException($"Invalid settings '{text}' for worldgen '{guid}': {e.Message}\n{handler.CommandLineUsage}");
         }
         catch (Exception e)
         {
-            throw new ServerStartupException($"Worldgen '{worldgen.GetGuid()}' failed to parse settings '{text}': {e}");
+            throw new ServerStartupException($"Worldgen '{guid}' failed to parse settings '{text}': {e}");
         }
     }
 
@@ -60,13 +60,13 @@ public static class ServerStartupPatch
         if (SaveSystem.TryGetSaveByName(world.m_name, SaveDataType.World, out var save) && !save.IsDeleted)
             throw new ServerStartupException($"World '{world.m_name}' exists but could not be loaded, refusing to replace it with a new one");
 
-        if (ResolveRequest(ParseCommandLine()) is not var (worldgen, settings))
+        if (ResolveRequest(ParseCommandLine()) is not var (guid, worldgen, settings))
             return;
 
-        world.SetWorldgen(worldgen);
+        world.SetWorldgen(guid, worldgen);
         world.SetSettings(settings);
 
-        Logger.LogInfo($"Creating world '{world.m_name}' with worldgen '{worldgen.GetGuid()}'");
+        Logger.LogInfo($"Creating world '{world.m_name}' with worldgen '{guid}'");
     }
 
     [HarmonyPrefix, HarmonyPatch(typeof(FejdStartup), nameof(FejdStartup.ParseServerArguments))]

@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Worldhalla.API;
 using Worldhalla.API.Attributes;
 
@@ -8,12 +7,11 @@ namespace Worldhalla.Plugin.Internal;
 internal static class Registry
 {
     private static readonly Dictionary<string, IWorldGenerator> WorldGenerators = new();
-    private static readonly ConditionalWeakTable<IWorldGenerator, string> Guids = new();
     private static readonly HashSet<Assembly> ScannedAssemblies = [];
 
     private static readonly string ApiAssemblyName = typeof(WorldhallaPluginAttribute).Assembly.GetName().Name;
 
-    public static IEnumerable<IWorldGenerator> Generators => WorldGenerators.Values;
+    public static IReadOnlyDictionary<string, IWorldGenerator> Generators => WorldGenerators;
 
     public static void DiscoverGenerators()
     {
@@ -33,16 +31,8 @@ internal static class Registry
             return false;
         
         WorldGenerators.Add(guid, generator);
-        Guids.AddOrUpdate(generator, guid);
 
         return true;
-    }
-
-    public static string GuidOf(IWorldGenerator generator)
-    {
-        return Guids.TryGetValue(generator, out var guid)
-            ? guid
-            : throw new InvalidOperationException($"'{generator.GetType().FullName}' is not a registered worldgen");
     }
 
     public static bool FindByGuid(string guid, out IWorldGenerator generator)
@@ -120,7 +110,6 @@ internal static class Registry
     public static void PurgeAll()
     {
         WorldGenerators.Clear();
-        Guids.Clear();
         ScannedAssemblies.Clear();
     }
 }

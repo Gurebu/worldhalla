@@ -100,12 +100,11 @@ public static class ZNetPatch
 
         handshake.Write(PluginInfo.PLUGIN_VERSION);
 
-        var generators = Registry.Generators.ToList();
-        handshake.Write(generators.Count);
+        handshake.Write(Registry.Generators.Count);
 
-        foreach (var generator in generators)
+        foreach (var (guid, generator) in Registry.Generators)
         {
-            handshake.Write(generator.GetGuid());
+            handshake.Write(guid);
             handshake.Write(generator.Version);
         }
 
@@ -133,12 +132,12 @@ public static class ZNetPatch
                && version.Minor == LocalVersion.Minor;
     }
 
-    private static Refusal? FindRefusal(PeerHandshake handshake, IWorldGenerator worldgen)
+    private static Refusal? FindRefusal(PeerHandshake handshake, string guid, IWorldGenerator worldgen)
     {
         if (!IsCompatible(handshake.pluginVersion))
             return Refusal.WorldhallaVersion;
 
-        if (!handshake.generatorVersions.TryGetValue(worldgen.GetGuid(), out var version))
+        if (!handshake.generatorVersions.TryGetValue(guid, out var version))
             return Refusal.GeneratorMissing;
 
         return version == worldgen.Version ? null : Refusal.GeneratorVersion;
@@ -151,24 +150,25 @@ public static class ZNetPatch
         if (!__instance.IsServer() || world.GetWorldgen() is not { } worldgen)
             return true;
 
+        var guid = world.GetWorldgenGuid()!;
         var peer = rpc.GetSocket().GetEndPointString();
-        var refusing = $"Refusing peer {peer}: world '{world.m_name}' is created with '{worldgen.GetGuid()}' {worldgen.Version}";
+        var refusing = $"Refusing peer {peer}: world '{world.m_name}' is created with '{guid}' {worldgen.Version}";
 
         if (!PeerHandshakes.TryGetValue(rpc, out var handshake))
         {
             Logger.LogWarning($"{refusing} and the peer does not run Worldhalla");
         }
-        else if (FindRefusal(handshake, worldgen) is { } refusal)
+        else if (FindRefusal(handshake, guid, worldgen) is { } refusal)
         {
             var problem = refusal switch
             {
                 Refusal.WorldhallaVersion => $"runs Worldhalla {handshake.pluginVersion}, local is {LocalVersion}",
                 Refusal.GeneratorMissing => "does not have it installed",
-                _ => $"has version {handshake.generatorVersions[worldgen.GetGuid()]}",
+                _ => $"has version {handshake.generatorVersions[guid]}",
             };
 
             Logger.LogWarning($"{refusing} and the peer {problem}");
-            SendRefusal(rpc, refusal, worldgen);
+            SendRefusal(rpc, refusal, guid, worldgen);
         }
         else
         {
@@ -181,13 +181,13 @@ public static class ZNetPatch
         return false;
     }
 
-    private static void SendRefusal(ZRpc rpc, Refusal refusal, IWorldGenerator worldgen)
+    private static void SendRefusal(ZRpc rpc, Refusal refusal, string guid, IWorldGenerator worldgen)
     {
         var package = new ZPackage();
 
         package.Write(PluginInfo.PLUGIN_VERSION);
         package.Write((int)refusal);
-        package.Write(worldgen.GetGuid());
+        package.Write(guid);
         package.Write(worldgen.Name);
         package.Write(worldgen.Version);
 
@@ -241,7 +241,7 @@ public static class ZNetPatch
         var package = new ZPackage();
 
         package.Write(PluginInfo.PLUGIN_VERSION);
-        package.Write(worldgen.GetGuid());
+        package.Write(world.GetWorldgenGuid()!);
         package.Write(new ZPackage().GetArray());
         package.Write(world.SaveSettings());
 
@@ -277,7 +277,7 @@ public static class ZNetPatch
             return RefuseWorld(rpc, $"Unknown custom worldgen '{worldgenType}'",
                 $"This world was created with '{worldgenType}', which you don't have installed.");
 
-        Logger.LogInfo($"Joining world '{world.m_name}' created with '{worldgen.GetGuid()}'");
+        Logger.LogInfo($"Joining world '{world.m_name}' created with '{worldgenType}'");
 
         package.ReadByteArray();
 
@@ -289,16 +289,16 @@ public static class ZNetPatch
         }
         catch (SettingsException e)
         {
-            return RefuseWorld(rpc, $"World settings rejected by '{worldgen.GetGuid()}': {e.Message}",
+            return RefuseWorld(rpc, $"World settings rejected by '{worldgenType}': {e.Message}",
                 $"{worldgen.Name} can't load this world's settings: {e.Message}");
         }
         catch (Exception e)
         {
-            return RefuseWorld(rpc, $"'{worldgen.GetGuid()}' failed to load the world settings: {e}",
+            return RefuseWorld(rpc, $"'{worldgenType}' failed to load the world settings: {e}",
                 $"{worldgen.Name} failed to load this world's settings. See the log for details.");
         }
 
-        world.SetWorldgen(worldgen);
+        world.SetWorldgen(worldgenType, worldgen);
         world.SetSettings(settings);
 
         return true;

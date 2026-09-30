@@ -8,6 +8,7 @@ public static class WorldExtension
 {
     private class ExtensionData
     {
+        public string? worldgenGuid;
         public IWorldGenerator? worldgen;
         public ISettings? settings;
         public bool legacyFormat;
@@ -35,9 +36,20 @@ public static class WorldExtension
         return world.GetSettings()?.SaveToBinaryBlob() ?? Array.Empty<byte>();
     }
     
-    public static void SetWorldgen(this World world, IWorldGenerator worldgen)
+    public static void SetWorldgen(this World world, string guid, IWorldGenerator worldgen)
     {
+        world.GetData().worldgenGuid = guid;
         world.GetData().worldgen = worldgen;
+    }
+
+    internal static void SetUnknownWorldgen(this World world, string guid)
+    {
+        world.GetData().worldgenGuid = guid;
+    }
+
+    public static string? GetWorldgenGuid(this World world)
+    {
+        return world.GetData().worldgenGuid;
     }
 
     public static IWorldGenerator? GetWorldgen(this World world)
