@@ -306,6 +306,20 @@ requires that generator to accept the settings.
 - `ZRpc` silently skips argument types it doesn't know, enums included: cast `ConnectionStatus` to
   `int` before invoking `"Error"`.
 
+### Localization
+
+Player-facing text lives in `Worldhalla.Plugin/Localization/<Language>/*.csv`, one folder per language,
+named as the game names it (`English`, `German`, ...). The files use the game's own CSV format with a
+`Key,<Language>` header, are embedded in the DLL, and are fed to `Localization.LoadCSV` by a postfix on
+`Localization.SetupLanguage`: English first, then the selected language over it. So a translation may
+leave keys out, but a blank cell blanks the text rather than falling back. Keys start with `wh_` and
+take arguments as `$1`, `$2`.
+
+Text set once goes on a label as `$wh_key` with a `Localize` component, which follows language changes;
+text set from code goes through `Translations.Get`. Log lines, console errors and generator-supplied
+text are not translated. `TranslationTests` checks every language against English with the game's
+parser.
+
 ### Logging
 
 `Internal.Logger` is an indirection with a `LogLevel` enum and a settable sink, wired to BepInEx in

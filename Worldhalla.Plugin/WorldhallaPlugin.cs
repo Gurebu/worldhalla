@@ -43,6 +43,9 @@ public class WorldhallaPlugin : BaseUnityPlugin
 
             harmony.CreateClassProcessor(type).Patch();
         }
+
+        if (Traverse.Create<Localization>().Field<Localization>("m_instance").Value is { } localization)
+            Translations.Load(localization, localization.GetSelectedLanguage());
     }
     
     public void Start()

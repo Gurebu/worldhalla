@@ -20,12 +20,12 @@ public class WorldCreationDialog : MonoBehaviour
     private const float SPINNER_DEGREES_PER_SECOND = -270f;
     private const float DETAILS_SCREEN_FRACTION = 0.95f;
 
-    private const string SPOILER_HEADER = "Reveal the world?";
-    private const string SPOILER_TEXT = "The preview shows the layout of the whole world, including where every biome lies.";
-    private const string CLICK_TO_REVEAL = "Click to reveal";
-    private const string ENTER_SEED = "Enter a seed";
-    private const string GENERATING = "Generating world";
-    private const string FAILED = "Preview failed";
+    private const string SPOILER_HEADER = "$wh_spoiler_header";
+    private const string SPOILER_TEXT = "$wh_spoiler_text";
+    private const string CLICK_TO_REVEAL = "$wh_preview_click_to_reveal";
+    private const string ENTER_SEED = "$wh_preview_enter_seed";
+    private const string GENERATING = "$wh_preview_generating";
+    private const string FAILED = "$wh_preview_failed";
 
     internal FejdStartup startup = null!;
     internal GuiInputField nameField = null!;
@@ -187,7 +187,7 @@ public class WorldCreationDialog : MonoBehaviour
             return;
         }
 
-        settingsDialog.Open($"{SelectedWorldgen.Name} settings", form, OnGeneratorSettingsAccepted);
+        settingsDialog.Open(Translations.Get("$wh_settings_title", SelectedWorldgen.Name), form, OnGeneratorSettingsAccepted);
     }
 
     private void OnGeneratorSettingsAccepted(ISettings accepted)
@@ -213,7 +213,7 @@ public class WorldCreationDialog : MonoBehaviour
             return;
         }
 
-        UnifiedPopup.Push(new YesNoPopup(SPOILER_HEADER, SPOILER_TEXT, () =>
+        UnifiedPopup.Push(new YesNoPopup(Translations.Get(SPOILER_HEADER), Translations.Get(SPOILER_TEXT), () =>
         {
             UnifiedPopup.Pop();
             spoilerAccepted = true;
@@ -298,11 +298,11 @@ public class WorldCreationDialog : MonoBehaviour
             previewImage.texture = discTexture;
         }
 
-        previewLabel.text = !revealed ? CLICK_TO_REVEAL
+        previewLabel.text = Translations.Get(!revealed ? CLICK_TO_REVEAL
             : waiting ? GENERATING
             : phase == WorldPreview.Phase.Failed ? FAILED
             : phase == WorldPreview.Phase.Idle ? ENTER_SEED
-            : "";
+            : "");
 
         var generationProgress = waiting ? preview.GenerationProgress : null;
 

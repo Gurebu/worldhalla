@@ -21,7 +21,7 @@ public class SettingsDialog : MonoBehaviour
     private const float BUTTON_HEIGHT = 45f;
     private const float BUTTON_GAP = 8f;
     private const float SCREEN_FRACTION = 0.95f;
-    private const string BUILD_FAILED = "The generator couldn't build these settings";
+    private const string BUILD_FAILED = "$wh_settings_build_failed";
 
     internal RectTransform frame = null!;
     internal TMP_Text title = null!;
@@ -151,7 +151,7 @@ public class SettingsDialog : MonoBehaviour
     {
         settings = null;
         if (form == null)
-            return BUILD_FAILED;
+            return Translations.Get(BUILD_FAILED);
 
         try
         {
@@ -168,7 +168,7 @@ public class SettingsDialog : MonoBehaviour
         catch (Exception e)
         {
             Logger.LogError($"Settings form failed to build settings: {e}");
-            return BUILD_FAILED;
+            return Translations.Get(BUILD_FAILED);
         }
     }
 

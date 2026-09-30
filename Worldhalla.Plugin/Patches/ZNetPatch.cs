@@ -210,17 +210,17 @@ public static class ZNetPatch
 
         refusalMessage = refusal switch
         {
-            Refusal.GeneratorMissing => $"This world was created with {name} {version}. Install it to join.",
+            Refusal.GeneratorMissing => Translations.Get("$wh_refused_generator_missing", name, version),
             Refusal.GeneratorVersion when Registry.FindByGuid(guid, out var local) =>
-                $"This world needs {name} {version}. You have {local.Version}.",
-            Refusal.GeneratorVersion => $"This world needs {name} {version}.",
+                Translations.Get("$wh_refused_generator_version_local", name, version, local.Version),
+            Refusal.GeneratorVersion => Translations.Get("$wh_refused_generator_version", name, version),
             _ => WorldhallaVersionMessage(serverVersion),
         };
     }
 
     private static string WorldhallaVersionMessage(string serverVersion)
     {
-        return $"The server runs Worldhalla {serverVersion}. You have {LocalVersion}.";
+        return Translations.Get("$wh_refused_worldhalla_version", serverVersion, LocalVersion.ToString());
     }
 
     internal static string? TakeRefusalMessage()
@@ -270,12 +270,12 @@ public static class ZNetPatch
 
         if (world.m_seed == 0)
             return RefuseWorld(rpc, $"Server world '{world.m_name}' has no seed",
-                "The server's world has no seed.");
+                Translations.Get("$wh_refused_no_seed"));
 
         var worldgenType = package.ReadString();
         if (!Registry.FindByGuid(worldgenType, out var worldgen))
             return RefuseWorld(rpc, $"Unknown custom worldgen '{worldgenType}'",
-                $"This world was created with '{worldgenType}', which you don't have installed.");
+                Translations.Get("$wh_refused_generator_unknown", worldgenType));
 
         Logger.LogInfo($"Joining world '{world.m_name}' created with '{worldgenType}'");
 
@@ -290,12 +290,12 @@ public static class ZNetPatch
         catch (SettingsException e)
         {
             return RefuseWorld(rpc, $"World settings rejected by '{worldgenType}': {e.Message}",
-                $"{worldgen.Name} can't load this world's settings: {e.Message}");
+                Translations.Get("$wh_refused_settings_rejected", worldgen.Name, e.Message));
         }
         catch (Exception e)
         {
             return RefuseWorld(rpc, $"'{worldgenType}' failed to load the world settings: {e}",
-                $"{worldgen.Name} failed to load this world's settings. See the log for details.");
+                Translations.Get("$wh_refused_settings_failed", worldgen.Name));
         }
 
         world.SetWorldgen(worldgenType, worldgen);

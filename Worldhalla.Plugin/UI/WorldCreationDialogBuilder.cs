@@ -93,15 +93,15 @@ internal static class WorldCreationDialogBuilder
         Place(dialog.newSeedButton.transform, COLUMN1_X + (COLUMN1_WIDTH - ICON_BUTTON_SIZE) / 2f, y, ICON_BUTTON_SIZE, ICON_BUTTON_SIZE);
         y -= FIELD_HEIGHT + ROW_GAP;
 
-        PlaceLabel(NewLabel(labelTemplate, panel, "generator", "Generator").transform, ref y);
+        PlaceLabel(NewLabel(labelTemplate, panel, "generator", "$wh_generator").transform, ref y);
         dialog.generatorDropdown = NewDropdown(startup, panel);
         var dropdownRect = (RectTransform)dialog.generatorDropdown.transform;
         PlaceField(dropdownRect, panel, dropdownRect.sizeDelta.y, ref y);
 
-        dialog.worldSettingsButton = NewEditableLabel(labelTemplate, cancel, panel, "worldSettings", "World settings", ref y);
+        dialog.worldSettingsButton = NewEditableLabel(labelTemplate, cancel, panel, "worldSettings", "$wh_world_settings", ref y);
         dialog.worldSettingsSummary = NewSummary(nameField, panel, "WorldSettingsSummary", ref y);
 
-        dialog.generatorSettingsButton = NewEditableLabel(labelTemplate, cancel, panel, "generatorSettings", "Generator settings", ref y);
+        dialog.generatorSettingsButton = NewEditableLabel(labelTemplate, cancel, panel, "generatorSettings", "$wh_generator_settings", ref y);
         dialog.generatorSettingsSummary = NewSummary(nameField, panel, "GeneratorSettingsSummary", ref y);
         var contentBottom = y + ROW_GAP;
 
@@ -225,7 +225,7 @@ internal static class WorldCreationDialogBuilder
 
         var y = DETAILS_HEIGHT / 2f - DETAILS_PADDING;
 
-        var title = NewLabel(labelTemplate, frameRect, "topic", "World preview");
+        var title = NewLabel(labelTemplate, frameRect, "topic", "$wh_preview_title");
         title.horizontalAlignment = HorizontalAlignmentOptions.Center;
         Place(title.transform, 0f, y, DETAILS_MAP_SIZE, DETAILS_TITLE_HEIGHT);
         y -= DETAILS_TITLE_HEIGHT + BUTTON_GAP;
@@ -236,7 +236,7 @@ internal static class WorldCreationDialogBuilder
         Stretch(ring.rectTransform);
         y -= DETAILS_MAP_SIZE + BUTTON_GAP;
 
-        var close = NewButton(cancel, frameRect, "Close", "Close", 1f);
+        var close = NewButton(cancel, frameRect, "Close", "$wh_preview_close", 1f);
         Place(close.transform, 0f, y, CLOSE_BUTTON_WIDTH, MAIN_BUTTON_HEIGHT);
 
         dialog.detailsOverlay = overlay;
@@ -286,8 +286,8 @@ internal static class WorldCreationDialogBuilder
         settings.title = title;
         settings.rows = rows;
         settings.error = error;
-        settings.okButton = NewButton(cancel, frame, "Ok", "OK", 1f);
-        settings.cancelButton = NewButton(cancel, frame, "Cancel", "Cancel", 1f);
+        settings.okButton = NewButton(cancel, frame, "Ok", "$wh_settings_ok", 1f);
+        settings.cancelButton = NewButton(cancel, frame, "Cancel", "$wh_settings_cancel", 1f);
         settings.labelTemplate = rowLabel;
         settings.dropdownTemplate = dropdown;
         settings.Initialize();
@@ -308,7 +308,7 @@ internal static class WorldCreationDialogBuilder
         var label = NewLabel(labelTemplate, panel, name, text);
         PlaceLabel(label.transform, ref y);
 
-        var button = NewButton(buttonTemplate, panel, name + "Edit", "Edit", 1f);
+        var button = NewButton(buttonTemplate, panel, name + "Edit", "$wh_edit", 1f);
         Place(button.transform, COLUMN1_X + (COLUMN1_WIDTH - EDIT_BUTTON_WIDTH) / 2f, top, EDIT_BUTTON_WIDTH, LABEL_HEIGHT);
 
         var buttonText = button.GetComponentInChildren<TMP_Text>(true);
@@ -358,6 +358,13 @@ internal static class WorldCreationDialogBuilder
             Object.DestroyImmediate(localize);
     }
 
+    private static void SetText(TMP_Text label, string text)
+    {
+        label.text = text;
+        if (text.StartsWith("$"))
+            label.gameObject.AddComponent<Localize>();
+    }
+
     private static TMP_Text NewLabel(TMP_Text template, Transform parent, string name, string text)
     {
         var label = Object.Instantiate(template.gameObject, parent);
@@ -365,7 +372,7 @@ internal static class WorldCreationDialogBuilder
         StripLocalization(label);
 
         var component = label.GetComponent<TMP_Text>();
-        component.text = text;
+        SetText(component, text);
         return component;
     }
 
@@ -415,7 +422,7 @@ internal static class WorldCreationDialogBuilder
             return button;
 
         var label = gameObject.GetComponentInChildren<TMP_Text>(true);
-        label.text = text;
+        SetText(label, text);
         label.fontSize *= fontScale;
         label.fontSizeMax *= fontScale;
         label.fontSizeMin *= fontScale;

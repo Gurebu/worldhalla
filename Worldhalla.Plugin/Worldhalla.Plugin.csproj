@@ -41,6 +41,10 @@
       <ProjectReference Include="..\Worldhalla.API\Worldhalla.API.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <EmbeddedResource Include="Localization/**/*.csv" LogicalName="Localization/%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
     <PropertyGroup>
         <ThunderstoreTeam>Gurebu</ThunderstoreTeam>
         <ThunderstoreName>Worldhalla</ThunderstoreName>

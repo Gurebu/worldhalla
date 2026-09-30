@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using HarmonyLib;
 using UnityEngine.UI;
 using Worldhalla.Plugin.Extensions;
+using Worldhalla.Plugin.Internal;
 
 namespace Worldhalla.Plugin.Patches;
 
@@ -9,7 +10,7 @@ namespace Worldhalla.Plugin.Patches;
 [HarmonyPatch(typeof(FejdStartup))]
 public static class FejdStartupPatch
 {
-    private const string MIGRATION_HEADER = "Upgrade the world?";
+    private const string MIGRATION_HEADER = "$wh_migration_header";
 
     private static bool NeedsMigrationConfirmed(FejdStartup startup)
     {
@@ -21,10 +22,9 @@ public static class FejdStartupPatch
 
     private static void ConfirmMigration(World world, Action start)
     {
-        var text = $"'{world.m_name}' was created with an older version of {world.GetWorldgen()!.Name}. " +
-                   "Once loaded, it is saved in a new format that older versions can't read.";
+        var text = Translations.Get("$wh_migration_text", world.m_name, world.GetWorldgen()!.Name);
 
-        UnifiedPopup.Push(new YesNoPopup(MIGRATION_HEADER, text, () =>
+        UnifiedPopup.Push(new YesNoPopup(Translations.Get(MIGRATION_HEADER), text, () =>
         {
             UnifiedPopup.Pop();
             start();

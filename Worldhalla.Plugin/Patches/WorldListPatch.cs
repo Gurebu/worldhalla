@@ -4,6 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Worldhalla.Plugin.Extensions;
+using Worldhalla.Plugin.Internal;
 
 namespace Worldhalla.Plugin.Patches;
 
@@ -15,7 +16,7 @@ public static class WorldListPatch
     private const int MONIKER_LENGTH = 3;
     private const float GLYPH_WIDTH_EM = 0.75f;
     private const float MONIKER_GAP = 4f;
-    private const string WORLDGEN_TOOLTIP_TOPIC = "Custom world generator";
+    private const string WORLDGEN_TOOLTIP_TOPIC = "$wh_tooltip_topic";
     private const string UNKNOWN_MONIKER = "???";
 
     private static void EnsureMonikerColumn(GameObject worldListElement)
@@ -78,8 +79,9 @@ public static class WorldListPatch
             return;
 
         var text = world.GetWorldgen() is { } worldgen
-            ? $"Name: {worldgen.Name}\nGuid: {guid}"
-            : $"Generator: Unknown\nGuid: {guid}";
+            ? Translations.Get("$wh_tooltip_name", worldgen.Name)
+            : Translations.Get("$wh_tooltip_unknown");
+        text += $"\n{Translations.Get("$wh_tooltip_guid", guid)}";
         if (world.GetSettings() is { } settings)
             text += $"\n{settings.Summary().TrimEnd()}";
 
@@ -90,7 +92,7 @@ public static class WorldListPatch
         }
 
         var anchor = startup.m_worldSourceInfoPanel.activeSelf ? startup.m_tooltipSecondaryAnchor : startup.m_tooltipAnchor;
-        tooltip.Set(WORLDGEN_TOOLTIP_TOPIC, text, anchor);
+        tooltip.Set(Translations.Get(WORLDGEN_TOOLTIP_TOPIC), text, anchor);
     }
 
     [HarmonyPrefix, HarmonyPatch(nameof(FejdStartup.UpdateWorldList))]

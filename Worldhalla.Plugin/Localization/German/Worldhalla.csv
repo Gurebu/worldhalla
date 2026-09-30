@@ -1,0 +1,31 @@
+Key,German
+wh_generator,Generator
+wh_world_settings,Welteinstellungen
+wh_generator_settings,Generator-Einstellungen
+wh_edit,Bearbeiten
+wh_settings_title,Einstellungen: $1
+wh_settings_ok,OK
+wh_settings_cancel,Abbrechen
+wh_settings_build_failed,Der Generator konnte diese Einstellungen nicht übernehmen
+wh_preview_title,Weltvorschau
+wh_preview_close,Schließen
+wh_preview_click_to_reveal,Klicken zum Aufdecken
+wh_preview_enter_seed,Seed eingeben
+wh_preview_generating,Welt wird generiert
+wh_preview_failed,Vorschau fehlgeschlagen
+wh_spoiler_header,Welt aufdecken?
+wh_spoiler_text,"Die Vorschau zeigt den Aufbau der ganzen Welt, einschließlich der Lage jedes Bioms."
+wh_migration_header,Welt aktualisieren?
+wh_migration_text,"„$1“ wurde mit einer älteren Version von $2 erstellt. Nach dem Laden wird sie in einem neuen Format gespeichert, das ältere Versionen nicht lesen können."
+wh_tooltip_topic,Eigener Weltgenerator
+wh_tooltip_name,Name: $1
+wh_tooltip_unknown,Generator: Unbekannt
+wh_tooltip_guid,Guid: $1
+wh_refused_worldhalla_version,Der Server verwendet Worldhalla $1. Du hast $2.
+wh_refused_generator_missing,"Diese Welt wurde mit $1 $2 erstellt. Installiere es, um beizutreten."
+wh_refused_generator_version,Diese Welt benötigt $1 $2.
+wh_refused_generator_version_local,Diese Welt benötigt $1 $2. Du hast $3.
+wh_refused_no_seed,Die Welt des Servers hat keinen Seed.
+wh_refused_generator_unknown,"Diese Welt wurde mit „$1“ erstellt, das du nicht installiert hast."
+wh_refused_settings_rejected,$1 kann die Einstellungen dieser Welt nicht laden: $2
+wh_refused_settings_failed,$1 konnte die Einstellungen dieser Welt nicht laden. Details stehen im Log.
