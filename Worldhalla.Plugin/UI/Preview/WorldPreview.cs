@@ -20,9 +20,9 @@ internal sealed class WorldPreview
 
     private readonly int previewSize;
     private int version;
-    private Func<Task<GeneratedWorld>>? wanted;
+    private Func<WorldGeneration>? wanted;
 
-    private Task<GeneratedWorld>? running;
+    private WorldGeneration? running;
     private int runningVersion;
 
     private GeneratedWorld? state;
@@ -52,13 +52,14 @@ internal sealed class WorldPreview
 
     public bool CanShowDetails => state != null;
 
-    // A generation that is already running can't be interrupted; it finishes and its result is dropped.
-    // Requests made meanwhile replace each other, so only the latest one starts afterwards.
-    public void Request(Func<Task<GeneratedWorld>> createState)
+    public float? GenerationProgress => runningVersion == version ? running?.Progress : null;
+
+    // Generations run one at a time: a cancelled one is left to wind down before the latest request starts.
+    public void Request(Func<WorldGeneration> startGeneration)
     {
         DropOutputs();
         version++;
-        wanted = createState;
+        wanted = startGeneration;
     }
 
     public void Clear()
@@ -70,14 +71,14 @@ internal sealed class WorldPreview
 
     public void Tick()
     {
-        if (running is { IsCompleted: true })
+        if (running?.Completion is { IsCompleted: true } completion)
         {
             if (runningVersion == version)
             {
-                if (running.IsFaulted)
-                    failure = running.Exception!.InnerException ?? running.Exception;
+                if (completion.Status == TaskStatus.RanToCompletion)
+                    state = completion.Result;
                 else
-                    state = running.Result;
+                    failure = completion.Exception?.InnerException ?? (Exception?)completion.Exception ?? new OperationCanceledException();
             }
 
             running = null;
@@ -106,20 +107,21 @@ internal sealed class WorldPreview
         return failure ?? Main?.Error;
     }
 
-    private static Task<GeneratedWorld> Start(Func<Task<GeneratedWorld>> createState)
+    private static WorldGeneration Start(Func<WorldGeneration> startGeneration)
     {
         try
         {
-            return createState();
+            return startGeneration();
         }
         catch (Exception e)
         {
-            return Task.FromException<GeneratedWorld>(e);
+            return WorldGeneration.Of(Task.FromException<GeneratedWorld>(e));
         }
     }
 
     private void DropOutputs()
     {
+        running?.Cancel();
         Main?.Cancel();
         Details?.Cancel();
         Main = null;

@@ -22,7 +22,7 @@ internal sealed class LabelledWorldgen : IWorldGenerator
 
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
 
-    public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
+    public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
 
 internal sealed class UnlabelledWorldgen : IWorldGenerator
@@ -39,7 +39,7 @@ internal sealed class UnlabelledWorldgen : IWorldGenerator
 
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
 
-    public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
+    public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
 
 [WorldhallaPlugin]
@@ -59,7 +59,7 @@ internal sealed class ThrowingWorldgen : IWorldGenerator
 
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
 
-    public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
+    public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
 
 [WorldhallaPlugin]

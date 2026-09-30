@@ -24,9 +24,7 @@ public static class WorldGeneratorPatch
         if (world.m_seed == 0)
             throw new InvalidOperationException($"Seed is 0 for world '{world.m_name}', but it is not a menu world");
         
-        var worldState = worldgen.Generate(world.m_seed, world.GetSettings());
-
-        __instance.SetWorld(GeneratedWorld.Of(worldgen, worldState));
+        __instance.SetWorld(WorldGeneration.Start(worldgen, world.m_seed, world.GetSettings()).Wait());
 
         return false;
     }

@@ -38,11 +38,15 @@ internal static class WorldCreationDialogBuilder
 
     private const int SPINNER_SIZE = 64;
     private const float SPINNER_DISPLAY_SIZE = 32f;
+    private const int PROGRESS_SIZE = 96;
+    private const float PROGRESS_DISPLAY_SIZE = 48f;
+    private const float PROGRESS_FONT_SCALE = 0.6f;
     private const float RING_WIDTH = 3f;
 
     private static readonly Color DiscColor = new(0.05f, 0.07f, 0.08f, 0.92f);
     private static readonly Color RingColor = new(0.64f, 0.48f, 0.21f, 1f);
     private static readonly Color SpinnerColor = new(0.94f, 0.70f, 0.29f, 1f);
+    private static readonly Color ProgressTrackColor = new(0.94f, 0.70f, 0.29f, 0.2f);
     private static readonly Color OverlayColor = new(0f, 0f, 0f, 0.6f);
     private static readonly Color ErrorColor = new(0.93f, 0.45f, 0.35f, 1f);
     private const float ERROR_FONT_SCALE = 0.8f;
@@ -158,12 +162,50 @@ internal static class WorldCreationDialogBuilder
         spinner.rectTransform.anchoredPosition = new Vector2(0f, SPINNER_DISPLAY_SIZE);
         dialog.spinner = spinner.rectTransform;
 
+        BuildProgress(dialog, preview.transform, labelTemplate);
+
         var label = NewLabel(labelTemplate, preview.transform, "Label", "");
         label.horizontalAlignment = HorizontalAlignmentOptions.Center;
         label.verticalAlignment = VerticalAlignmentOptions.Middle;
         label.raycastTarget = false;
         Stretch(label.rectTransform);
         dialog.previewLabel = label;
+    }
+
+    private static void BuildProgress(WorldCreationDialog dialog, Transform parent, TMP_Text labelTemplate)
+    {
+        var progress = new GameObject("Progress", typeof(RectTransform));
+        progress.transform.SetParent(parent, false);
+        var rect = (RectTransform)progress.transform;
+        rect.sizeDelta = new Vector2(PROGRESS_DISPLAY_SIZE, PROGRESS_DISPLAY_SIZE);
+        rect.anchoredPosition = new Vector2(0f, PROGRESS_DISPLAY_SIZE);
+        progress.SetActive(false);
+        dialog.progress = progress;
+
+        var track = NewRawImage(rect, "Track", Shapes.Ring(PROGRESS_SIZE, 6f, ProgressTrackColor), false);
+        Stretch(track.rectTransform);
+
+        var fillTexture = Shapes.Ring(PROGRESS_SIZE, 6f, SpinnerColor);
+        var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        fill.transform.SetParent(rect, false);
+        fill.sprite = Sprite.Create(fillTexture, new Rect(0f, 0f, PROGRESS_SIZE, PROGRESS_SIZE), new Vector2(0.5f, 0.5f));
+        fill.type = Image.Type.Filled;
+        fill.fillMethod = Image.FillMethod.Radial360;
+        fill.fillOrigin = (int)Image.Origin360.Top;
+        fill.fillClockwise = true;
+        fill.fillAmount = 0f;
+        fill.raycastTarget = false;
+        Stretch(fill.rectTransform);
+        dialog.progressFill = fill;
+
+        var percent = NewLabel(labelTemplate, rect, "Percent", "");
+        percent.enableAutoSizing = false;
+        percent.fontSize *= PROGRESS_FONT_SCALE;
+        percent.horizontalAlignment = HorizontalAlignmentOptions.Center;
+        percent.verticalAlignment = VerticalAlignmentOptions.Middle;
+        percent.raycastTarget = false;
+        Stretch(percent.rectTransform);
+        dialog.progressPercent = percent;
     }
 
     private static void BuildDetails(WorldCreationDialog dialog, Transform root, RectTransform panel, TMP_Text labelTemplate, Button cancel)

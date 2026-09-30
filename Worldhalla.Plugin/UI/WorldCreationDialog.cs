@@ -37,6 +37,9 @@ public class WorldCreationDialog : MonoBehaviour
     internal Button previewButton = null!;
     internal TMP_Text previewLabel = null!;
     internal RectTransform spinner = null!;
+    internal GameObject progress = null!;
+    internal Image progressFill = null!;
+    internal TMP_Text progressPercent = null!;
     internal Texture2D discTexture = null!;
     internal int previewSize;
     internal Button hideButton = null!;
@@ -243,12 +246,12 @@ public class WorldCreationDialog : MonoBehaviour
 
         if (worldgen == null)
         {
-            preview.Request(() => VanillaWorldState.Generate(seed));
+            preview.Request(() => WorldGeneration.Of(VanillaWorldState.Generate(seed)));
             return;
         }
 
         var seedHash = seed.GetStableHashCode();
-        preview.Request(() => Task.Run(() => GeneratedWorld.Of(worldgen, worldgen.Generate(seedHash, worldSettings))));
+        preview.Request(() => WorldGeneration.Start(worldgen, seedHash, worldSettings));
     }
 
     private void OpenDetails()
@@ -297,8 +300,17 @@ public class WorldCreationDialog : MonoBehaviour
             : phase == WorldPreview.Phase.Idle ? ENTER_SEED
             : "";
 
-        spinner.gameObject.SetActive(waiting);
-        if (waiting)
+        var generationProgress = waiting ? preview.GenerationProgress : null;
+
+        progress.SetActive(generationProgress != null);
+        if (generationProgress is { } fraction)
+        {
+            progressFill.fillAmount = fraction;
+            progressPercent.text = $"{Mathf.FloorToInt(fraction * 100f)}%";
+        }
+
+        spinner.gameObject.SetActive(waiting && generationProgress == null);
+        if (waiting && generationProgress == null)
             spinner.Rotate(0f, 0f, SPINNER_DEGREES_PER_SECOND * Time.unscaledDeltaTime);
     }
 

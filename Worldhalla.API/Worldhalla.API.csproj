@@ -6,6 +6,12 @@
         <LangVersion>12.0</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <!--
+            Makes the compiler mark the assembly with SkipVerification, which is what lets Mono ignore access
+            checks on the plugin's publicized game members. ILRepack keeps only this assembly's permission set
+            when it merges the plugin in, so the mark has to be here, not just on the plugin.
+        -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>

@@ -28,7 +28,7 @@ internal sealed class SettinglessTestWorldgen(string guid) : IWorldGenerator
 
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
 
-    public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
+    public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
 
 internal sealed class TestWorldgen(string guid) : IWorldGenerator, ISettingsHandler
@@ -63,5 +63,5 @@ internal sealed class TestWorldgen(string guid) : IWorldGenerator, ISettingsHand
 
     public ISettingsForm CreateForm(ISettings current) => throw new System.NotImplementedException();
 
-    public IWorldState Generate(int seed, ISettings settings) => throw new System.NotImplementedException();
+    public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
