@@ -7,6 +7,12 @@ public interface IWorldGenerator
 {
     enum Feature
     {
+        /**
+         * The generator blends biome borders itself, see IWorldState.RenderPoint.
+         *
+         * If this feature is missing, biome blending will be done during chunk generation
+         * by the game.
+         */
         BiomeBlending,
     }
     

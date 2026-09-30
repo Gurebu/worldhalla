@@ -1,4 +1,5 @@
 using Worldhalla.API.World;
+using Worldhalla.Plugin.Internal;
 using Worldhalla.Plugin.UI.Preview.Vanilla;
 
 namespace Worldhalla.Plugin.UI.Preview;
@@ -16,17 +17,17 @@ internal sealed class VanillaWorldState : IWorldState
 
     // Must be called on the main thread: the constructor seeds through UnityEngine.Random. Constructing as a menu
     // world skips river placement there, which then runs on a preview thread through VanillaRiverPlacement.
-    public static Task<IWorldState> Generate(string seed)
+    public static Task<GeneratedWorld> Generate(string seed)
     {
         var world = new World("", seed) { m_menu = true };
         var generator = new WorldGenerator(world);
         world.m_menu = false;
 
-        var state = new VanillaWorldState(generator);
+        var state = new GeneratedWorld(new VanillaWorldState(generator), biomeBlending: false);
         if (!VanillaRiverPlacement.Prepare())
-            return Task.FromResult<IWorldState>(state);
+            return Task.FromResult(state);
 
-        return Task.Run<IWorldState>(() =>
+        return Task.Run(() =>
         {
             VanillaRiverPlacement.Pregenerate(generator);
             return state;
@@ -43,13 +44,12 @@ internal sealed class VanillaWorldState : IWorldState
         return 0f;
     }
 
-    public IWorldState.PointData RenderPoint(float x, float y)
+    public IWorldState.PointData RenderPoint(float x, float y, Biome biome)
     {
-        var biome = generator.GetBiome(x, y);
         return new IWorldState.PointData
         {
-            biome = (Biome)biome,
-            height = generator.GetBiomeHeight(biome, x, y, out _) - WATER_LEVEL,
+            biome = biome,
+            height = generator.GetBiomeHeight((Heightmap.Biome)biome, x, y, out _) - WATER_LEVEL,
         };
     }
 }

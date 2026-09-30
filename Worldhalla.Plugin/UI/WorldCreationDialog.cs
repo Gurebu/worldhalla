@@ -248,7 +248,7 @@ public class WorldCreationDialog : MonoBehaviour
         }
 
         var seedHash = seed.GetStableHashCode();
-        preview.Request(() => Task.Run(() => worldgen.Generate(seedHash, worldSettings)));
+        preview.Request(() => Task.Run(() => GeneratedWorld.Of(worldgen, worldgen.Generate(seedHash, worldSettings))));
     }
 
     private void OpenDetails()

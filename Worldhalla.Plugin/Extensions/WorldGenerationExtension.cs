@@ -1,24 +1,24 @@
 using System.Runtime.CompilerServices;
-using Worldhalla.API.World;
+using Worldhalla.Plugin.Internal;
 
 namespace Worldhalla.Plugin.Extensions;
 
 public static class WorldGeneratorExtension
 {
-    private static readonly ConditionalWeakTable<WorldGenerator, IWorldState> StateStore = new();
+    private static readonly ConditionalWeakTable<WorldGenerator, GeneratedWorld> WorldStore = new();
 
-    public static void SetState(this WorldGenerator worldGenerator, IWorldState worldState)
+    internal static void SetWorld(this WorldGenerator worldGenerator, GeneratedWorld world)
     {
-        StateStore.AddOrUpdate(worldGenerator, worldState);
+        WorldStore.AddOrUpdate(worldGenerator, world);
     }
 
-    public static IWorldState? GetState(this WorldGenerator? worldGenerator)
+    internal static GeneratedWorld? GetWorld(this WorldGenerator? worldGenerator)
     {
         if (worldGenerator == null)
             return null;
 
-        StateStore.TryGetValue(worldGenerator, out var worldState);
+        WorldStore.TryGetValue(worldGenerator, out var world);
 
-        return worldState;
+        return world;
     }
 }

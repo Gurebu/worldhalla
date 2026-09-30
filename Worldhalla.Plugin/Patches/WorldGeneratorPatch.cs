@@ -3,6 +3,7 @@ using HarmonyLib;
 using UnityEngine;
 using Worldhalla.API.World;
 using Worldhalla.Plugin.Extensions;
+using Worldhalla.Plugin.Internal;
 
 namespace Worldhalla.Plugin.Patches;
 
@@ -11,7 +12,7 @@ namespace Worldhalla.Plugin.Patches;
 public static class WorldGeneratorPatch
 {
     private const float FOREST_FACTOR_MULTIPLIER = 2.15f;
-    private static readonly ThreadLocal<(Vector2, IWorldState.PointData)> cache = new();
+    private static readonly ThreadLocal<(IWorldState, Vector2, IWorldState.PointData)> cache = new();
 
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.Pregenerate))]
     private static bool Pregenerate(WorldGenerator __instance)
@@ -25,7 +26,7 @@ public static class WorldGeneratorPatch
         
         var worldState = worldgen.Generate(world.m_seed, world.GetSettings());
 
-        __instance.SetState(worldState);
+        __instance.SetWorld(GeneratedWorld.Of(worldgen, worldState));
 
         return false;
     }
@@ -41,10 +42,10 @@ public static class WorldGeneratorPatch
     {
         mask = Color.black;
 
-        if (__instance.GetState() is not {} state)
+        if (__instance.GetWorld() is not {} world)
             return true;
 
-        __result = GetHeight(state, wx, wy, out mask);
+        __result = GetHeight(world, (Biome)biome, wx, wy, out mask);
 
         return false;
     }
@@ -57,7 +58,7 @@ public static class WorldGeneratorPatch
         float wy,
         ref float __result)
     {
-        if (__instance.GetState() is null)
+        if (__instance.GetWorld() is not { BiomeBlending: true })
             return true;
 
         __result = __instance.GetBiomeHeight(Heightmap.Biome.None, wx, wy, out _);
@@ -76,7 +77,7 @@ public static class WorldGeneratorPatch
     {
         mask = Color.black;
 
-        if (__instance.GetState() is null)
+        if (__instance.GetWorld() is not { BiomeBlending: true })
             return true;
 
         __result = __instance.GetBiomeHeight(Heightmap.Biome.None, wx, wy, out mask);
@@ -91,10 +92,10 @@ public static class WorldGeneratorPatch
         float wy,
         ref Heightmap.Biome __result)
     {
-        if (__instance.GetState() is not {} state)
+        if (__instance.GetWorld() is not {} world)
             return true;
 
-        __result = (Heightmap.Biome)state.GetBiome(wx, wy);
+        __result = (Heightmap.Biome)world.State.GetBiome(wx, wy);
 
         return false;
     }
@@ -104,10 +105,10 @@ public static class WorldGeneratorPatch
         ref Vector3 pos,
         ref float __result)
     {
-        if (WorldGenerator.instance.GetState() is not {} state)
+        if (WorldGenerator.instance.GetWorld() is not {} world)
             return true;
         
-        __result = FOREST_FACTOR_MULTIPLIER * (1 - state.GetForestation(pos.x, pos.z));
+        __result = FOREST_FACTOR_MULTIPLIER * (1 - world.State.GetForestation(pos.x, pos.z));
 
         return false;
     }
@@ -115,7 +116,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.IsAshlands))]
     private static bool IsAshlands(float x, float y, ref bool __result)
     {
-        if (WorldGenerator.instance.GetState() is not IWorldGeography geography)
+        if (WorldGenerator.instance.GetWorld()?.State is not IWorldGeography geography)
             return true;
 
         __result = geography.IsAshlands(x, y);
@@ -126,7 +127,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.IsDeepnorth))]
     private static bool IsDeepnorth(float x, float y, ref bool __result)
     {
-        if (WorldGenerator.instance.GetState() is not IWorldGeography geography)
+        if (WorldGenerator.instance.GetWorld()?.State is not IWorldGeography geography)
             return true;
 
         __result = geography.IsDeepNorth(x, y);
@@ -137,7 +138,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.GetAshlandsOceanGradient), typeof(float), typeof(float))]
     private static bool GetAshlandsOceanGradient(float x, float y, ref float __result)
     {
-        if (WorldGenerator.instance.GetState() is not IWorldGeography geography)
+        if (WorldGenerator.instance.GetWorld()?.State is not IWorldGeography geography)
             return true;
 
         __result = geography.GetAshlandsOceanGradient(x, y);
@@ -148,7 +149,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.DeepNorthWaveFade))]
     private static bool DeepNorthWaveFade(float wx, float wy, ref double __result)
     {
-        if (WorldGenerator.instance.GetState() is not IWorldGeography geography)
+        if (WorldGenerator.instance.GetWorld()?.State is not IWorldGeography geography)
             return true;
 
         __result = geography.GetDeepNorthWaveFade(wx, wy);
@@ -167,10 +168,10 @@ public static class WorldGeneratorPatch
     {
         mask = Color.black;
 
-        if (__instance.GetState() is not {} state)
+        if (__instance.GetWorld() is not {} world)
             return true;
 
-        __result = GetHeight(state, wx, wy, out mask);
+        __result = GetHeight(world, Biome.AshLands, wx, wy, out mask);
 
         return false;
     }
@@ -178,27 +179,11 @@ public static class WorldGeneratorPatch
     // TODO take this from worldgen settings
     private const float heightOffset = 30.0f;
     
-    private static float GetHeight(IWorldState state, float wx, float wy, out Color mask)
+    private static float GetHeight(GeneratedWorld world, Biome biome, float wx, float wy, out Color mask)
     {
-        // TODO only cache if the blending feature is enabled
-        // TODO remove riverheim-related commentary
-        
-        /*
-         * Valheim does its biome blending during chunk generation.
-         * If any of the 4 corners of the chunk differ in their biomes (border chunk),
-         * it will query height 4 times for each point of the chunk and do bilinear interpolation.
-         *
-         * For Riverheim this is a massive waste since it does its own biome blending.
-         *
-         * So we cache a single height value so that it's only computed once instead of 4 times.
-         * Cache has to be thread-local since chunk generation can happen on worker threads.
-         */
-
-        var pos = new Vector2(wx, wy);
-        if (!cache.IsValueCreated || cache.Value.Item1 != pos)
-            cache.Value = (pos, state.RenderPoint(wx, wy));
-
-        var pointData = cache.Value.Item2;
+        var pointData = world.BiomeBlending
+            ? RenderCached(world.State, wx, wy)
+            : world.State.RenderPoint(wx, wy, biome);
             
         /*
          * Original game mask channel format:
@@ -217,5 +202,19 @@ public static class WorldGeneratorPatch
             Mathf.Max(pointData.lava, pointData.fertility));
             
         return heightOffset + pointData.height;
+    }
+
+    /*
+     * At chunks whose corners lie in different biomes the game renders every point once per corner biome and
+     * interpolates between the results. A generator that blends biomes itself returns the same point four times,
+     * so the last point is cached. Chunks are built on worker threads, hence thread-local.
+     */
+    private static IWorldState.PointData RenderCached(IWorldState state, float wx, float wy)
+    {
+        var pos = new Vector2(wx, wy);
+        if (!cache.IsValueCreated || cache.Value.Item1 != state || cache.Value.Item2 != pos)
+            cache.Value = (state, pos, state.RenderPoint(wx, wy, Biome.None));
+
+        return cache.Value.Item3;
     }
 }

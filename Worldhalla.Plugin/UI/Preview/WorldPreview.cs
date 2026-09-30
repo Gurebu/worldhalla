@@ -1,4 +1,5 @@
 using Worldhalla.API.World;
+using Worldhalla.Plugin.Internal;
 
 namespace Worldhalla.Plugin.UI.Preview;
 
@@ -19,12 +20,12 @@ internal sealed class WorldPreview
 
     private readonly int previewSize;
     private int version;
-    private Func<Task<IWorldState>>? wanted;
+    private Func<Task<GeneratedWorld>>? wanted;
 
-    private Task<IWorldState>? running;
+    private Task<GeneratedWorld>? running;
     private int runningVersion;
 
-    private IWorldState? state;
+    private GeneratedWorld? state;
     private Exception? failure;
 
     public PreviewRender? Main { get; private set; }
@@ -53,7 +54,7 @@ internal sealed class WorldPreview
 
     // A generation that is already running can't be interrupted; it finishes and its result is dropped.
     // Requests made meanwhile replace each other, so only the latest one starts afterwards.
-    public void Request(Func<Task<IWorldState>> createState)
+    public void Request(Func<Task<GeneratedWorld>> createState)
     {
         DropOutputs();
         version++;
@@ -105,7 +106,7 @@ internal sealed class WorldPreview
         return failure ?? Main?.Error;
     }
 
-    private static Task<IWorldState> Start(Func<Task<IWorldState>> createState)
+    private static Task<GeneratedWorld> Start(Func<Task<GeneratedWorld>> createState)
     {
         try
         {
@@ -113,7 +114,7 @@ internal sealed class WorldPreview
         }
         catch (Exception e)
         {
-            return Task.FromException<IWorldState>(e);
+            return Task.FromException<GeneratedWorld>(e);
         }
     }
 
@@ -127,8 +128,8 @@ internal sealed class WorldPreview
         failure = null;
     }
 
-    private static float GetWorldRadius(IWorldState state)
+    private static float GetWorldRadius(GeneratedWorld world)
     {
-        return state is IWorldGeography geography ? geography.WorldSize / 2f : DEFAULT_WORLD_RADIUS;
+        return world.State is IWorldGeography geography ? geography.WorldSize / 2f : DEFAULT_WORLD_RADIUS;
     }
 }
