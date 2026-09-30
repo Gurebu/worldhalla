@@ -99,12 +99,12 @@ public class WorldCreationDialog : MonoBehaviour
     {
         generators = Registry.Generators
             .OrderBy(generator => generator.Name)
-            .ThenBy(generator => generator.Guid)
+            .ThenBy(generator => generator.GetGuid())
             .ToList();
 
         generatorDropdown.ClearOptions();
         generatorDropdown.AddOptions(new[] { VANILLA_OPTION }
-            .Concat(generators.Select(generator => $"<noparse>{generator.Name}</noparse> <color={GUID_COLOR}>(<noparse>{generator.Guid}</noparse>)</color>"))
+            .Concat(generators.Select(generator => $"<noparse>{generator.Name}</noparse> <color={GUID_COLOR}>(<noparse>{generator.GetGuid()}</noparse>)</color>"))
             .ToList());
         generatorDropdown.SetValueWithoutNotify(0);
         generatorDropdown.RefreshShownValue();
@@ -179,7 +179,7 @@ public class WorldCreationDialog : MonoBehaviour
         }
         catch (Exception e)
         {
-            Logger.LogError($"{SelectedWorldgen.Guid} failed to create its settings form: {e}");
+            Logger.LogError($"{SelectedWorldgen.GetGuid()} failed to create its settings form: {e}");
             return;
         }
 

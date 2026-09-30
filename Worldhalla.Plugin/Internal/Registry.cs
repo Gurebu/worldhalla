@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Worldhalla.API;
 using Worldhalla.API.Attributes;
 
@@ -7,6 +8,7 @@ namespace Worldhalla.Plugin.Internal;
 internal static class Registry
 {
     private static readonly Dictionary<string, IWorldGenerator> WorldGenerators = new();
+    private static readonly ConditionalWeakTable<IWorldGenerator, string> Guids = new();
     private static readonly HashSet<Assembly> ScannedAssemblies = [];
 
     private static readonly string ApiAssemblyName = typeof(WorldhallaPluginAttribute).Assembly.GetName().Name;
@@ -31,8 +33,16 @@ internal static class Registry
             return false;
         
         WorldGenerators.Add(guid, generator);
+        Guids.AddOrUpdate(generator, guid);
 
         return true;
+    }
+
+    public static string GuidOf(IWorldGenerator generator)
+    {
+        return Guids.TryGetValue(generator, out var guid)
+            ? guid
+            : throw new InvalidOperationException($"'{generator.GetType().FullName}' is not a registered worldgen");
     }
 
     public static bool FindByGuid(string guid, out IWorldGenerator generator)
@@ -68,12 +78,25 @@ internal static class Registry
 
     private static void RegisterIfLabelled(Type type)
     {
-        if (type.GetCustomAttribute<WorldhallaPluginAttribute>() == null)
+        if (type.GetCustomAttribute<WorldhallaPluginAttribute>() is not { } label)
             return;
 
         if (type.IsAbstract || type.ContainsGenericParameters || !typeof(IWorldGenerator).IsAssignableFrom(type))
         {
-            Logger.LogError($"'{type.FullName}' is labelled [WorldGenerator] but is not a concrete IWorldGenerator, skipping");
+            Logger.LogError($"'{type.FullName}' is labelled [WorldhallaPlugin] but is not a concrete IWorldGenerator, skipping");
+            return;
+        }
+
+        var guid = label.Guid;
+        if (string.IsNullOrWhiteSpace(guid))
+        {
+            Logger.LogError($"'{type.FullName}' is labelled [WorldhallaPlugin] without a GUID, skipping");
+            return;
+        }
+
+        if (WorldGenerators.ContainsKey(guid))
+        {
+            Logger.LogWarning($"Worldgen '{guid}' from '{type.FullName}' is already registered, skipping");
             return;
         }
 
@@ -90,15 +113,14 @@ internal static class Registry
             return;
         }
 
-        if (RegisterGenerator(generator.Guid, generator))
-            Logger.LogInfo($"Discovered worldgen '{generator.Guid}' in '{type.Assembly.GetName().Name}'");
-        else
-            Logger.LogWarning($"Worldgen '{generator.Guid}' from '{type.FullName}' is already registered, skipping");
+        RegisterGenerator(guid, generator);
+        Logger.LogInfo($"Discovered worldgen '{guid}' in '{type.Assembly.GetName().Name}'");
     }
     
     public static void PurgeAll()
     {
         WorldGenerators.Clear();
+        Guids.Clear();
         ScannedAssemblies.Clear();
     }
 }

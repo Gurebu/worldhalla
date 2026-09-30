@@ -122,10 +122,9 @@ Reference `Worldhalla.API`, implement `IWorldGenerator`, and label the class:
 [BepInDependency("dev.gurebu.worldhalla")]
 public class MyPlugin : BaseUnityPlugin { }
 
-[WorldhallaPlugin]
+[WorldhallaPlugin("dev.you.mygen")]
 public class MyGenerator : IWorldGenerator
 {
-    public string Guid => "dev.you.mygen";
     public string Moniker => "MG";
     public string Name => "My Generator";
     public string Version => "1.0.0";
@@ -134,7 +133,7 @@ public class MyGenerator : IWorldGenerator
     public ISettings DefaultSettings => new MySettings();
     public ISettings DeserializeSettings(byte[] data, out string error) { ... }
     public ISettings? ParseSettings(string settings, out string error) { ... }
-    public IWorldState Generate(int seed, ISettings settings) { ... }
+    public IWorldState Generate(int seed, ISettings? settings, IProgress<float> progress, CancellationToken cancellation) { ... }
 }
 ```
 

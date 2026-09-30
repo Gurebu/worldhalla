@@ -15,10 +15,8 @@ internal sealed record TestSettings(string Payload) : ISettings
     public string Summary() => Payload;
 }
 
-internal sealed class SettinglessTestWorldgen(string guid) : IWorldGenerator
+internal sealed class SettinglessTestWorldgen : IWorldGenerator
 {
-    public string Guid { get; } = guid;
-
     public string Moniker => "BARE";
 
     public string Name => "Settingless test";
@@ -31,11 +29,9 @@ internal sealed class SettinglessTestWorldgen(string guid) : IWorldGenerator
     public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
 
-internal sealed class TestWorldgen(string guid) : IWorldGenerator, ISettingsHandler
+internal sealed class TestWorldgen : IWorldGenerator, ISettingsHandler
 {
     public const string MALFORMED = "malformed";
-
-    public string Guid { get; } = guid;
 
     public string Moniker => "TEST";
 

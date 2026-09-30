@@ -22,9 +22,9 @@ public class WorldDataTests
     private const string LEGACY_SETTINGS_BYTES =
         "0206707265736574146275696C74696E2E6578706572696D656E74616C0E7072657365742E76657273696F6E00000000";
 
-    private static readonly TestWorldgen Generator = new(WORLDGEN);
-    private static readonly TestWorldgen LegacyGenerator = new(LEGACY_WORLDGEN);
-    private static readonly SettinglessTestWorldgen SettinglessGenerator = new(SETTINGLESS_WORLDGEN);
+    private static readonly TestWorldgen Generator = new();
+    private static readonly TestWorldgen LegacyGenerator = new();
+    private static readonly SettinglessTestWorldgen SettinglessGenerator = new();
 
     private static string Hex(byte[] data) => System.BitConverter.ToString(data).Replace("-", "");
 

@@ -22,7 +22,7 @@ public static class ServerStartupPatch
 
         if (!Registry.FindByGuid(options.worldgenGuid, out var worldgen))
         {
-            var installed = string.Join(", ", Registry.Generators.Select(generator => generator.Guid));
+            var installed = string.Join(", ", Registry.Generators.Select(generator => generator.GetGuid()));
             throw new ServerStartupException($"Unknown worldgen '{options.worldgenGuid}', installed: [{installed}]");
         }
 
@@ -35,7 +35,7 @@ public static class ServerStartupPatch
         {
             return text == null
                 ? null
-                : throw new ServerStartupException($"Worldgen '{worldgen.Guid}' takes no settings, but '{CommandLine.PREFIX} settings' was given");
+                : throw new ServerStartupException($"Worldgen '{worldgen.GetGuid()}' takes no settings, but '{CommandLine.PREFIX} settings' was given");
         }
 
         if (text == null)
@@ -47,11 +47,11 @@ public static class ServerStartupPatch
         }
         catch (SettingsException e)
         {
-            throw new ServerStartupException($"Invalid settings '{text}' for worldgen '{worldgen.Guid}': {e.Message}\n{handler.CommandLineUsage}");
+            throw new ServerStartupException($"Invalid settings '{text}' for worldgen '{worldgen.GetGuid()}': {e.Message}\n{handler.CommandLineUsage}");
         }
         catch (Exception e)
         {
-            throw new ServerStartupException($"Worldgen '{worldgen.Guid}' failed to parse settings '{text}': {e}");
+            throw new ServerStartupException($"Worldgen '{worldgen.GetGuid()}' failed to parse settings '{text}': {e}");
         }
     }
 
@@ -66,7 +66,7 @@ public static class ServerStartupPatch
         world.SetWorldgen(worldgen);
         world.SetSettings(settings);
 
-        Logger.LogInfo($"Creating world '{world.m_name}' with worldgen '{worldgen.Guid}'");
+        Logger.LogInfo($"Creating world '{world.m_name}' with worldgen '{worldgen.GetGuid()}'");
     }
 
     [HarmonyPrefix, HarmonyPatch(typeof(FejdStartup), nameof(FejdStartup.ParseServerArguments))]

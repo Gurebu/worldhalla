@@ -7,12 +7,10 @@ using Worldhalla.Plugin.Internal;
 
 namespace Worldhalla.Plugin.Tests;
 
-[WorldhallaPlugin]
+[WorldhallaPlugin(GUID)]
 internal sealed class LabelledWorldgen : IWorldGenerator
 {
     public const string GUID = "dev.test.labelled";
-
-    public string Guid => GUID;
 
     public string Moniker => "LABELLED";
 
@@ -29,8 +27,6 @@ internal sealed class UnlabelledWorldgen : IWorldGenerator
 {
     public const string GUID = "dev.test.unlabelled";
 
-    public string Guid => GUID;
-
     public string Moniker => "UNLABELLED";
 
     public string Name => "Unlabelled";
@@ -42,14 +38,12 @@ internal sealed class UnlabelledWorldgen : IWorldGenerator
     public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
 
-[WorldhallaPlugin]
+[WorldhallaPlugin(GUID)]
 internal sealed class ThrowingWorldgen : IWorldGenerator
 {
     public const string GUID = "dev.test.throwing";
 
     public ThrowingWorldgen() => throw new System.Exception("this mod is broken");
-
-    public string Guid => GUID;
 
     public string Moniker => "THROWING";
 
@@ -62,7 +56,21 @@ internal sealed class ThrowingWorldgen : IWorldGenerator
     public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
 
-[WorldhallaPlugin]
+[WorldhallaPlugin(" ")]
+internal sealed class BlankGuidWorldgen : IWorldGenerator
+{
+    public string Moniker => "BLANK";
+
+    public string Name => "Blank GUID";
+
+    public string Version => "1.0.0";
+
+    public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
+
+    public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
+}
+
+[WorldhallaPlugin("dev.test.nongenerator")]
 internal sealed class LabelledNonGenerator
 {
 }
@@ -99,6 +107,14 @@ public class RegistryTests
     }
 
     [Test, RequiresValheim]
+    public void DiscoveredGeneratorIsKnownByItsLabel()
+    {
+        Registry.FindByGuid(LabelledWorldgen.GUID, out var generator);
+
+        Assert.That(Registry.GuidOf(generator), Is.EqualTo(LabelledWorldgen.GUID));
+    }
+
+    [Test, RequiresValheim]
     public void RescanningDoesNotRegisterASecondInstance()
     {
         Registry.FindByGuid(LabelledWorldgen.GUID, out var first);
@@ -120,6 +136,7 @@ public class RegistryTests
         Assert.DoesNotThrow(() => Registry.DiscoverGenerators());
 
         Assert.That(Registry.FindByGuid(ThrowingWorldgen.GUID, out _), Is.False);
+        Assert.That(Registry.FindByGuid(" ", out _), Is.False);
         Assert.That(Registry.FindByGuid(LabelledWorldgen.GUID, out _), Is.True);
     }
 }

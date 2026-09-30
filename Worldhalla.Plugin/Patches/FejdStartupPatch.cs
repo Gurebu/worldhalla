@@ -71,7 +71,7 @@ public static class FejdStartupPatch
         if (worldgen == null || tooltip == null)
             return;
 
-        var text = $"Name: {worldgen.Name}\nGuid: {worldgen.Guid}";
+        var text = $"Name: {worldgen.Name}\nGuid: {worldgen.GetGuid()}";
         if (world.GetSettings() is { } settings)
             text += $"\n{settings.Summary().TrimEnd()}";
         if (tooltip.m_text != "")

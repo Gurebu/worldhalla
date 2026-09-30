@@ -16,8 +16,6 @@ public interface IWorldGenerator
         BiomeBlending,
     }
     
-    string Guid { get; }
-
     string Name { get; }
     
     string Moniker { get; }

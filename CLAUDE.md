@@ -148,15 +148,14 @@ A mod references `Worldhalla.API`, implements `IWorldGenerator` and labels the c
 [BepInDependency("dev.gurebu.worldhalla")]
 public class MyPlugin : BaseUnityPlugin { }
 
-[WorldhallaPlugin]
-public class MyGenerator : IWorldGenerator
-{
-    public string Guid => "dev.you.mygen";
-}
+[WorldhallaPlugin("dev.you.mygen")]
+public class MyGenerator : IWorldGenerator { }
 ```
 
-Identity comes from `IWorldGenerator.Guid`, not from the attribute, so the two cannot disagree.
-The type needs a parameterless constructor.
+The GUID in the attribute is the generator's identity: it is what worlds store and what peers
+compare. It lives only there, not on `IWorldGenerator`, so there is a single source for it, and
+`Registry` remembers it for the plugin's own use (`GetGuid()`). The type needs a parameterless
+constructor.
 
 **Discovery runs in `WorldhallaPlugin.Start`, and must not move to `Awake`.** BepInEx loads a
 plugin's assembly when it instantiates that plugin, and every mod depending on Worldhalla is

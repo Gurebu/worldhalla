@@ -73,7 +73,7 @@ public static class WorldPatch
         
         var payload = new ZPackage();
 
-        payload.Write(world.GetWorldgen()!.Guid);
+        payload.Write(world.GetWorldgen()!.GetGuid());
         payload.Write(world.SaveSettings());
 
         package.Write(payload.GetArray());
@@ -154,12 +154,12 @@ public static class WorldPatch
         }
         catch (SettingsException e)
         {
-            Logger.LogInfo($"World '{name}': settings rejected by '{worldgen.Guid}': {e.Message}, skipping");
+            Logger.LogInfo($"World '{name}': settings rejected by '{worldgen.GetGuid()}': {e.Message}, skipping");
             return false;
         }
         catch (Exception e)
         {
-            Logger.LogError($"World '{name}': '{worldgen.Guid}' failed to load its settings, skipping: {e}");
+            Logger.LogError($"World '{name}': '{worldgen.GetGuid()}' failed to load its settings, skipping: {e}");
             return false;
         }
 
