@@ -36,6 +36,20 @@ moving the submodule pointer.
 - Riverheim is a private repository: don't reference its contents (tools, classes, config) in this repository's code,
   comments or docs, even when an idea is ported from there. Describe what Worldhalla does in its own terms.
 
+## Patching
+
+Modding puts compatibility first: Worldhalla shares the game with other mods patching the same
+methods, and every patch is a chance to break them. Patch only where it is necessary, and prefer the
+least invasive way to get the job done:
+
+- Postfixes and prefixes that let the original run over prefixes that skip it; a prefix returning
+  `false` replaces vanilla and silences every mod patching the method, so it needs a reason.
+- Don't take over a code path in branches where vanilla would have done the same thing or nothing
+  at all; act only in the cases Worldhalla actually changes.
+- Narrow transpilers anchored on the specific instructions over rewriting a method.
+- Scope a patch to the situation it's for (Worldhalla worlds, client or server) and leave vanilla
+  behaviour untouched everywhere else.
+
 ## Code style
 
 This is a low-comment codebase — naming carries the intent instead of doc comments. Don't add
@@ -265,7 +279,7 @@ server requires a client `WorldhallaHandshake` from a Worldhalla with the same *
 version, and the world's generator at exactly the same `IWorldGenerator.Version`. The client then
 requires that generator to accept the settings.
 
-- **Patch releases must not change anything peers have to agree on.** That covers the two RPC
+- **Patch releases must not change anything peers have to agree on.** That covers the RPC
   payloads and any `WorldGeneratorPatch` behaviour that alters the result of a query for an existing
   world: the translation layer runs on every client, so two Worldhalla versions that differ there
   generate different terrain for the same world. Any of these needs at least a minor bump.

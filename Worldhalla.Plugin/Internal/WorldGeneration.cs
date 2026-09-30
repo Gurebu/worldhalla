@@ -37,6 +37,11 @@ internal sealed class WorldGeneration : IProgress<float>
         cancellation.Cancel();
     }
 
+    public bool Wait(int millisecondsTimeout)
+    {
+        return ((IAsyncResult)Completion).AsyncWaitHandle.WaitOne(millisecondsTimeout);
+    }
+
     public GeneratedWorld Wait()
     {
         return Completion.GetAwaiter().GetResult();

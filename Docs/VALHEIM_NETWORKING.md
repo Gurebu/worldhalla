@@ -270,6 +270,13 @@ vanilla peer drops all of them unread:
   `World`. With no stored message, the world is vanilla. As a backstop, the client still refuses
   (external error plus `Disconnect`) on a Worldhalla version mismatch or a generator it doesn't have. Rejecting
   the settings can only happen here.
+- **Keepalive.** `WorldGenerator.Initialize` runs inside the client's `RPC_PeerInfo`, so the client
+  generates the world while its main thread waits, and a waiting main thread answers no pings: past
+  30 s the server closes the connection. While `Pregenerate` waits for the generator, it answers a
+  ping request of its own making on every peer once a second, through a reverse patch of vanilla's
+  `ZRpc.ReceivePing` that leaves out other mods' patches, so the reply is vanilla's own. The server's
+  `ReceivePing` resets the timeout on any reply, requested or not, and a Steam socket hands the
+  message to Steam at once, without the main thread's help. `KeepaliveTests` pins both halves.
 - **Error message.** Whoever refuses leaves a sentence for the player: the server through
   `WorldhallaRefused`, the client directly. A postfix on `FejdStartup.ShowConnectError`, which runs
   when the main menu comes back, puts it into the vanilla "connection failed" panel in place of

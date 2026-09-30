@@ -4,6 +4,7 @@ using UnityEngine;
 using Worldhalla.API.World;
 using Worldhalla.Plugin.Extensions;
 using Worldhalla.Plugin.Internal;
+using Logger = Worldhalla.Plugin.Internal.Logger;
 
 namespace Worldhalla.Plugin.Patches;
 
@@ -12,6 +13,7 @@ namespace Worldhalla.Plugin.Patches;
 public static class WorldGeneratorPatch
 {
     private const float FOREST_FACTOR_MULTIPLIER = 2.15f;
+    private const int KEEPALIVE_INTERVAL_MS = 1000;
     private static readonly ThreadLocal<(IWorldState, Vector2, IWorldState.PointData)> cache = new();
 
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.Pregenerate))]
@@ -24,9 +26,45 @@ public static class WorldGeneratorPatch
         if (world.m_seed == 0)
             throw new InvalidOperationException($"Seed is 0 for world '{world.m_name}', but it is not a menu world");
         
-        __instance.SetWorld(WorldGeneration.Start(worldgen, world.m_seed, world.GetSettings()).Wait());
+        var generation = WorldGeneration.Start(worldgen, world.m_seed, world.GetSettings());
+
+        var keepingAlive = true;
+        while (!generation.Wait(KEEPALIVE_INTERVAL_MS))
+        {
+            if (keepingAlive)
+                keepingAlive = SendPingReplies();
+        }
+
+        __instance.SetWorld(generation.Wait());
 
         return false;
+    }
+
+    /*
+     * A client generates inside its handler of the server's PeerInfo, and the blocked main thread can't
+     * answer the server's pings, so a long generation gets the client timed out. An unrequested ping reply
+     * resets the server's timeout all the same.
+     */
+    private static bool SendPingReplies()
+    {
+        if (ZNet.instance == null)
+            return true;
+
+        try
+        {
+            foreach (var peer in ZNet.instance.GetPeers())
+            {
+                if (peer.m_rpc.IsConnected())
+                    ZRpcPatch.AnswerPing(peer.m_rpc, ZRpcPatch.PingRequest());
+            }
+
+            return true;
+        }
+        catch (Exception e)
+        {
+            Logger.LogWarning($"Stopped keeping the connection alive during world generation: {e}");
+            return false;
+        }
     }
 
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.GetBiomeHeight))]
