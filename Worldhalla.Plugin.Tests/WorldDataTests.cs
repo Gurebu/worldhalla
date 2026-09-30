@@ -186,6 +186,7 @@ public class WorldDataTests
 
         Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
         Assert.That(world.GetSettings(), Is.EqualTo(new TestSettings("round tripped")));
+        Assert.That(world.IsLegacyFormat(), Is.False);
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 
@@ -288,6 +289,23 @@ public class WorldDataTests
      * The transcription has to land on exactly the bytes the old format held, or the blob it hands
      * to a generator parses as something else.
      */
+    [Test, RequiresValheim]
+    public void LegacyWorldIsMarkedUntilSaved()
+    {
+        var package = LegacyPackage();
+        var world = new World { m_name = "test" };
+
+        WorldPatch.ReadHeader("world_name", package, out var formatInfo);
+        package.ReadInt();
+        WorldPatch.ReadWorldData("world_name", package, world, formatInfo);
+
+        Assert.That(world.IsLegacyFormat(), Is.True);
+
+        WorldPatch.WriteWorldData(new ZPackage(), world);
+
+        Assert.That(world.IsLegacyFormat(), Is.False);
+    }
+
     [Test, RequiresValheim]
     public void LegacySettingsTranscribeToTheSameBytes()
     {

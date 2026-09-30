@@ -10,6 +10,7 @@ public static class WorldExtension
     {
         public IWorldGenerator? worldgen;
         public ISettings? settings;
+        public bool legacyFormat;
     }
 
     private static readonly ConditionalWeakTable<World, ExtensionData> DataStore = new();
@@ -44,5 +45,12 @@ public static class WorldExtension
         return world.GetData().worldgen;
     }
     
+    internal static void SetLegacyFormat(this World world, bool legacyFormat)
+    {
+        world.GetData().legacyFormat = legacyFormat;
+    }
+
+    internal static bool IsLegacyFormat(this World world) => world.GetData().legacyFormat;
+
     public static bool IsVanillaWorld(this World world) => world.GetData().worldgen == null;
 }

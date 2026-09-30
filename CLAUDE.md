@@ -184,7 +184,9 @@ Everything Worldhalla adds beyond the header goes into a single length-prefixed 
 `ZPackage` holding the worldgen id, Worldhalla's own settings and the generator's settings — so a
 third-party `.fwl` reader can step over it without parsing its contents. Worldhalla's settings are a
 blob of their own, empty for now, so settings can be added to it without changing the layout. Legacy
-`0xff` worlds predate all of that and store the id and generator settings inline.
+`0xff` worlds predate all of that and store the id and generator settings inline. Saving one rewrites
+it in the current format, so starting a legacy world from the world list asks the player to confirm
+first (`FejdStartupPatch.Awake` gates the world list's Start button).
 
 A world written by a newer format version than the installed one is declined, not misread. **Changing
 what an existing format version means breaks worlds that already exist on disk; add a version.**

@@ -80,6 +80,7 @@ public static class WorldPatch
         payload.Write(world.SaveSettings());
 
         package.Write(payload.GetArray());
+        world.SetLegacyFormat(false);
     }
 
     internal static bool ReadHeader(string name, ZPackage package, out FormatInfo formatInfo)
@@ -146,7 +147,7 @@ public static class WorldPatch
         
         if (!Registry.FindByGuid(worldgenGuid, out var worldgen))
         {
-            Logger.LogInfo($"Unknown worldgen guid '{worldgenGuid}', skipping");
+            Logger.LogInfo($"Missing generator for guid '{worldgenGuid}', skipping");
             return false;
         }
 
@@ -154,6 +155,7 @@ public static class WorldPatch
         {
             world.SetWorldgen(worldgen);
             world.SetSettings(worldgen.LoadSettings(settings));
+            world.SetLegacyFormat(formatInfo.IsLegacyRiverheim());
         }
         catch (SettingsException e)
         {
