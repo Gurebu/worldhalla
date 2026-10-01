@@ -16,6 +16,16 @@
         <ThunderstoreDescription Condition="'$(ThunderstoreDescription)' == ''">$(Description)</ThunderstoreDescription>
     </PropertyGroup>
 
+    <!-- IDEs otherwise list every Include as a project file -->
+    <ItemDefinitionGroup>
+        <ThunderstoreDependency>
+            <Visible>false</Visible>
+        </ThunderstoreDependency>
+        <ThunderstoreFile>
+            <Visible>false</Visible>
+        </ThunderstoreFile>
+    </ItemDefinitionGroup>
+
     <Target Name="ThunderstorePack" AfterTargets="$(ThunderstoreAfterTargets)">
         <PropertyGroup>
             <ThunderstoreOutputDir Condition="'$(ThunderstoreOutputDir)' == ''">$(TargetDir)</ThunderstoreOutputDir>
