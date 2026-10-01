@@ -55,6 +55,10 @@ internal sealed class WorldPreview
 
     public bool CanShowDetails => state != null;
 
+    public GeneratedWorld? World => state;
+
+    public float? WorldRadius => state != null ? GetWorldRadius(state) : null;
+
     public DetailsRender? WholeDetails => wholeDetails;
 
     public float? GenerationProgress => runningVersion == version ? running?.Progress : null;

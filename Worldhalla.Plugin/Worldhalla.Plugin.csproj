@@ -35,6 +35,7 @@
         <Reference Include="$(ValheimDataPath)/Managed/assembly_guiutils.dll" Private="false" />
         <Reference Include="$(ValheimDataPath)/Managed/UnityEngine.UI.dll" Private="false" />
         <Reference Include="$(ValheimDataPath)/Managed/gui_framework.dll" Private="false" />
+        <Reference Include="$(ValheimDataPath)/Managed/SoftReferenceableAssets.dll" Private="false" />
     </ItemGroup>
 
     <ItemGroup>

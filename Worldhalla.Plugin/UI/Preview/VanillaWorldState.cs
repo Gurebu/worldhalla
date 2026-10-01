@@ -10,6 +10,8 @@ internal sealed class VanillaWorldState : IWorldState
 
     private readonly WorldGenerator generator;
 
+    public WorldGenerator Generator => generator;
+
     private VanillaWorldState(WorldGenerator generator)
     {
         this.generator = generator;

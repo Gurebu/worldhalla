@@ -11,6 +11,7 @@ internal sealed class PreviewCache
 
     private readonly TileCache<(float height, Biome biome)> samples;
     private readonly Dictionary<int, TileCache<Color32>> pixels = new();
+    private volatile bool empty = true;
 
     public readonly int cells;
     public readonly float radius;
@@ -26,6 +27,8 @@ internal sealed class PreviewCache
         for (var cellsPerPixel = 1; cellsPerPixel <= PreviewView.MAX_ZOOM; cellsPerPixel *= 2)
             pixels[cellsPerPixel] = new TileCache<Color32>(cells / cellsPerPixel);
     }
+
+    public bool IsEmpty => empty;
 
     public Vector2 Position(Vector2Int cell)
     {
@@ -56,6 +59,7 @@ internal sealed class PreviewCache
     public void SetSample(Vector2Int cell, float height, Biome biome)
     {
         samples.Set(cell.x, cell.y, (height, biome));
+        empty = false;
     }
 
     public TileCache<Color32> Pixels(int cellsPerPixel) => pixels[cellsPerPixel];

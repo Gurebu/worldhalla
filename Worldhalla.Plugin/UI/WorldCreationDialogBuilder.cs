@@ -26,6 +26,7 @@ internal static class WorldCreationDialogBuilder
     private const float BUTTON_GAP = 8f;
     private const float SUMMARY_FONT_SCALE = 0.75f;
     private const float CLOSE_BUTTON_WIDTH = 136f;
+    private const float LOCATIONS_BUTTON_WIDTH = 200f;
     private const float EDIT_BUTTON_WIDTH = 80f;
     private const float ICON_BUTTON_SIZE = FIELD_HEIGHT;
     private const string REFRESH_ICON_CHILD = "Image";
@@ -243,7 +244,9 @@ internal static class WorldCreationDialogBuilder
         y -= DETAILS_MAP_SIZE + BUTTON_GAP;
 
         var close = NewButton(cancel, frameRect, "Close", "$wh_preview_close", 1f);
-        Place(close.transform, 0f, y, CLOSE_BUTTON_WIDTH, MAIN_BUTTON_HEIGHT);
+        var locations = NewButton(cancel, frameRect, "Locations", "$wh_preview_locations", 1f);
+        Place(locations.transform, -(LOCATIONS_BUTTON_WIDTH + BUTTON_GAP) / 2f, y, LOCATIONS_BUTTON_WIDTH, MAIN_BUTTON_HEIGHT);
+        Place(close.transform, (CLOSE_BUTTON_WIDTH + BUTTON_GAP) / 2f, y, CLOSE_BUTTON_WIDTH, MAIN_BUTTON_HEIGHT);
 
         dialog.detailsOverlay = overlay;
         dialog.detailsFrame = frameRect;
@@ -252,6 +255,8 @@ internal static class WorldCreationDialogBuilder
         dialog.detailsInput = map.AddComponent<DragAndScroll>();
         dialog.detailsRing = ring.gameObject;
         dialog.detailsCloseButton = close;
+        dialog.locationsButton = locations;
+        dialog.captionTemplate = labelTemplate;
 
         overlay.SetActive(false);
     }

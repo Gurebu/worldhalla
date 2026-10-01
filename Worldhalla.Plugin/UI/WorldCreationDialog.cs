@@ -1,3 +1,4 @@
+using System.Collections;
 using GUIFramework;
 using TMPro;
 using UnityEngine;
@@ -8,6 +9,7 @@ using Worldhalla.API.World;
 using Worldhalla.Plugin.Extensions;
 using Worldhalla.Plugin.Internal;
 using Worldhalla.Plugin.UI.Preview;
+using Worldhalla.Plugin.UI.Preview.Locations;
 using Logger = Worldhalla.Plugin.Internal.Logger;
 
 namespace Worldhalla.Plugin.UI;
@@ -19,6 +21,9 @@ public class WorldCreationDialog : MonoBehaviour
     private const float SEED_DEBOUNCE_SECONDS = 0.5f;
     private const float SPINNER_DEGREES_PER_SECOND = -270f;
     private const float DETAILS_SCREEN_FRACTION = 0.95f;
+    private const float LOCATION_ICON_SIZE = 32f;
+    private const float CAPTION_FONT_SIZE = 16f;
+    private const float CAPTION_WIDTH = 240f;
 
     private const string SPOILER_HEADER = "$wh_spoiler_header";
     private const string SPOILER_TEXT = "$wh_spoiler_text";
@@ -26,6 +31,8 @@ public class WorldCreationDialog : MonoBehaviour
     private const string ENTER_SEED = "$wh_preview_enter_seed";
     private const string GENERATING = "$wh_preview_generating";
     private const string FAILED = "$wh_preview_failed";
+    private const string LOCATIONS = "$wh_preview_locations";
+    private const string LOCATIONS_PROGRESS = "$wh_preview_locations_progress";
 
     internal FejdStartup startup = null!;
     internal GuiInputField nameField = null!;
@@ -54,6 +61,8 @@ public class WorldCreationDialog : MonoBehaviour
     internal DragAndScroll detailsInput = null!;
     internal GameObject detailsRing = null!;
     internal Button detailsCloseButton = null!;
+    internal Button locationsButton = null!;
+    internal TMP_Text captionTemplate = null!;
     internal SettingsDialog settingsDialog = null!;
 
     private WorldPreview preview = null!;
@@ -70,6 +79,12 @@ public class WorldCreationDialog : MonoBehaviour
     private bool spoilerAccepted;
     private float? seedChangedAt;
     private Exception? reportedFailure;
+    private string? previewSeed;
+    private GeneratedWorld? simulatedWorld;
+    private CancellationTokenSource? simulation;
+    private LocationSimulation.Progress? simulationProgress;
+    private TMP_Text locationsLabel = null!;
+    private readonly List<(RectTransform icon, Vector3 position)> locationIcons = [];
 
     private KeyValuePair<string, IWorldGenerator>? Selected
     {
@@ -102,6 +117,8 @@ public class WorldCreationDialog : MonoBehaviour
         hideButton.onClick.AddListener(Hide);
         detailsButton.onClick.AddListener(OpenDetails);
         detailsCloseButton.onClick.AddListener(CloseDetails);
+        locationsButton.onClick.AddListener(SimulateLocations);
+        locationsLabel = locationsButton.GetComponentInChildren<TMP_Text>(true);
         detailsInput.DragStarted += () => detailsDragStart = detailsView;
         detailsInput.Dragged += PanDetails;
         detailsInput.Scrolled += ZoomDetails;
@@ -140,6 +157,10 @@ public class WorldCreationDialog : MonoBehaviour
         preview.Clear();
         CloseDetails();
         settingsDialog.Close();
+        simulation?.Cancel();
+        simulatedWorld = null;
+        simulationProgress = null;
+        ClearLocationIcons();
     }
 
     private void Update()
@@ -257,6 +278,7 @@ public class WorldCreationDialog : MonoBehaviour
 
         var worldgen = SelectedWorldgen;
         var worldSettings = settings;
+        previewSeed = seed;
 
         if (worldgen == null)
         {
@@ -277,6 +299,100 @@ public class WorldCreationDialog : MonoBehaviour
 
         detailsView = PreviewView.Whole;
         detailsOverlay.SetActive(true);
+    }
+
+    // Experimental: logs where the priority locations of the previewed world would be placed
+    private void SimulateLocations()
+    {
+        if (preview.World is not { } world || world == simulatedWorld || previewSeed == null)
+            return;
+
+        simulatedWorld = world;
+        simulation?.Cancel();
+        simulation = new CancellationTokenSource();
+        ClearLocationIcons();
+        StartCoroutine(RunSimulation(LocationSimulation.CreateGenerator(previewSeed, world), world, simulation.Token));
+    }
+
+    // A simulation that ends without showing anything leaves the button available to try again
+    private IEnumerator RunSimulation(WorldGenerator generator, GeneratedWorld world, CancellationToken token)
+    {
+        var progress = new LocationSimulation.Progress();
+        simulationProgress = progress;
+
+        yield return LocationSimulation.Run(generator, progress, ShowLocations, token);
+
+        if (simulationProgress != progress)
+            yield break;
+
+        simulationProgress = null;
+        if (locationIcons.Count == 0 && simulatedWorld == world)
+            simulatedWorld = null;
+    }
+
+    private void ShowLocations(List<LocationSimulation.Placed> placed)
+    {
+        if (preview.World != simulatedWorld)
+            return;
+
+        foreach (var location in placed)
+        {
+            var icon = new GameObject(location.name, typeof(RectTransform), typeof(RawImage));
+            icon.transform.SetParent(detailsInput.transform, false);
+            var image = icon.GetComponent<RawImage>();
+            image.texture = location.icon;
+            image.raycastTarget = false;
+            var rect = image.rectTransform;
+            rect.sizeDelta = new Vector2(LOCATION_ICON_SIZE, LOCATION_ICON_SIZE);
+            rect.anchoredPosition = Vector2.zero;
+            locationIcons.Add((rect, location.position));
+
+            if (location.caption != null)
+                AddCaption(rect, location.caption);
+        }
+    }
+
+    private void AddCaption(RectTransform icon, string text)
+    {
+        var caption = Instantiate(captionTemplate, icon, false);
+        caption.name = "Caption";
+        if (caption.GetComponent<Localize>() is { } localize)
+            DestroyImmediate(localize);
+
+        caption.text = text;
+        caption.fontSize = CAPTION_FONT_SIZE;
+        caption.horizontalAlignment = HorizontalAlignmentOptions.Center;
+        caption.verticalAlignment = VerticalAlignmentOptions.Top;
+        caption.textWrappingMode = TextWrappingModes.NoWrap;
+        caption.raycastTarget = false;
+
+        var rect = caption.rectTransform;
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
+        rect.pivot = new Vector2(0.5f, 1f);
+        rect.sizeDelta = new Vector2(CAPTION_WIDTH, CAPTION_FONT_SIZE * 1.5f);
+        rect.anchoredPosition = Vector2.zero;
+    }
+
+    private void ClearLocationIcons()
+    {
+        foreach (var (icon, _) in locationIcons)
+            Destroy(icon.gameObject);
+        locationIcons.Clear();
+    }
+
+    private void PlaceLocationIcons()
+    {
+        if (preview.World != simulatedWorld || preview.WorldRadius is not { } radius)
+        {
+            ClearLocationIcons();
+            return;
+        }
+
+        foreach (var (icon, position) in locationIcons)
+        {
+            var at = detailsView.Normalized(new Vector2(position.x, position.z), radius);
+            icon.anchorMin = icon.anchorMax = at;
+        }
     }
 
     private void PanDetails(Vector2 offset)
@@ -351,6 +467,7 @@ public class WorldCreationDialog : MonoBehaviour
             return;
 
         detailsRing.SetActive(detailsView.IsWhole);
+        PlaceLocationIcons();
 
         var render = preview.EnsureDetails(detailsView);
         var whole = preview.WholeDetails;
@@ -389,6 +506,10 @@ public class WorldCreationDialog : MonoBehaviour
 
         hideButton.interactable = revealed;
         detailsButton.interactable = revealed && preview.CanShowDetails;
+        locationsButton.interactable = preview.World != null && preview.World != simulatedWorld;
+        locationsLabel.text = simulationProgress is { } progress
+            ? Translations.Get(LOCATIONS_PROGRESS, Mathf.FloorToInt(progress.Fraction * 100f).ToString())
+            : Translations.Get(LOCATIONS);
         worldSettingsButton.interactable = worldgen != null;
         generatorSettingsButton.interactable = worldgen is ISettingsHandler;
     }

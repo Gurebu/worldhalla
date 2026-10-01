@@ -65,11 +65,15 @@ internal sealed class DetailsRender
     {
         try
         {
-            CopyCachedPixels();
-            revision++;
+            // A full-size sweep that finds nothing would hold up the first coarse blocks
+            if (!cache.IsEmpty)
+            {
+                CopyCachedPixels();
+                revision++;
 
-            if (!RenderPass(1, false, token))
-                return;
+                if (!RenderPass(1, false, token))
+                    return;
+            }
 
             for (var block = coarsestBlock; block >= 1; block /= 2)
             {

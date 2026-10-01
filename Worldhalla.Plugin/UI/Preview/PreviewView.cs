@@ -42,6 +42,12 @@ internal readonly struct PreviewView : IEquatable<PreviewView>
         return new Rect((Vector2)(origin - shown.origin) / extent, Vector2.one * ((float)cellsPerPixel / shown.cellsPerPixel));
     }
 
+    public Vector2 Normalized(Vector2 position, float radius)
+    {
+        var cell = (position + radius * Vector2.one) * (CELLS / (2f * radius));
+        return (cell - origin) / ((float)SIZE * cellsPerPixel);
+    }
+
     private PreviewView Fitted()
     {
         var limit = CELLS - SIZE * cellsPerPixel;
