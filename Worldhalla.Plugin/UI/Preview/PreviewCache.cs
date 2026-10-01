@@ -9,7 +9,7 @@ internal sealed class PreviewCache
 {
     private const float OUTSIDE_MARGIN_CELLS = 2f;
 
-    private readonly TileCache<(float height, Biome biome)> samples;
+    private readonly TileCache<(float height, Biome biome, float lava)> samples;
     private readonly Dictionary<int, TileCache<Color32>> pixels = new();
     private volatile bool empty = true;
 
@@ -22,7 +22,7 @@ internal sealed class PreviewCache
         this.radius = radius;
         this.cells = cells;
         step = 2f * radius / cells;
-        samples = new TileCache<(float, Biome)>(cells);
+        samples = new TileCache<(float, Biome, float)>(cells);
 
         for (var cellsPerPixel = 1; cellsPerPixel <= PreviewView.MAX_ZOOM; cellsPerPixel *= 2)
             pixels[cellsPerPixel] = new TileCache<Color32>(cells / cellsPerPixel);
@@ -41,10 +41,11 @@ internal sealed class PreviewCache
     }
 
     // Cells outside the world read as known and empty
-    public bool TryGetSample(Vector2Int cell, out float height, out Biome biome)
+    public bool TryGetSample(Vector2Int cell, out float height, out Biome biome, out float lava)
     {
         height = 0f;
         biome = default;
+        lava = 0f;
 
         if (IsOutside(cell))
             return true;
@@ -52,13 +53,13 @@ internal sealed class PreviewCache
         if (!samples.TryGet(cell.x, cell.y, out var sample))
             return false;
 
-        (height, biome) = sample;
+        (height, biome, lava) = sample;
         return true;
     }
 
-    public void SetSample(Vector2Int cell, float height, Biome biome)
+    public void SetSample(Vector2Int cell, float height, Biome biome, float lava)
     {
-        samples.Set(cell.x, cell.y, (height, biome));
+        samples.Set(cell.x, cell.y, (height, biome, lava));
         empty = false;
     }
 

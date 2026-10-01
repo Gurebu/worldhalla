@@ -81,6 +81,7 @@ internal sealed class PreviewRender
             var point = world.RenderPoint(x, z);
             grid.heights[row * grid.size + i] = point.height;
             grid.biomes[row * grid.size + i] = point.biome;
+            grid.lava[row * grid.size + i] = point.lava;
 
         });
     }

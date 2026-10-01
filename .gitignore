@@ -55,3 +55,6 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Palette lab world data: recorded from a generator, never committed
+Tools/PaletteLab/data/

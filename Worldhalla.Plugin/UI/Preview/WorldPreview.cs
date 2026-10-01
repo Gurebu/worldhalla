@@ -112,7 +112,7 @@ internal sealed class WorldPreview
             return null;
 
         cache ??= new PreviewCache(GetWorldRadius(state), PreviewView.CELLS);
-        wholeDetails ??= DetailsRender.Start(state, cache, PreviewView.Whole, DetailsRender.COARSEST_BLOCK, new RichPreviewStyle());
+        wholeDetails ??= DetailsRender.Start(state, cache, PreviewView.Whole, DetailsRender.COARSEST_BLOCK, new HdrPreviewStyle());
 
         if (pendingDetails is { IsReady: true })
         {
@@ -128,7 +128,7 @@ internal sealed class WorldPreview
             if (view.IsWhole)
                 details = wholeDetails;
             else
-                pendingDetails = DetailsRender.Start(state, cache, view, CoarsestBlock(view), new RichPreviewStyle());
+                pendingDetails = DetailsRender.Start(state, cache, view, CoarsestBlock(view), new HdrPreviewStyle());
         }
 
         return details;

@@ -11,6 +11,7 @@ internal sealed class PreviewGrid
     public readonly float step;
     public readonly float[] heights;
     public readonly Biome[] biomes;
+    public readonly float[] lava;
 
     public PreviewGrid(int size, float radius) : this(size, radius, -radius * Vector2.one, 2f * radius / size)
     {
@@ -24,6 +25,7 @@ internal sealed class PreviewGrid
         this.step = step;
         heights = new float[size * size];
         biomes = new Biome[size * size];
+        lava = new float[size * size];
     }
 
     public Vector2 Position(int i, int row)
@@ -39,6 +41,11 @@ internal sealed class PreviewGrid
     public Biome Biome(int i, int row)
     {
         return biomes[row * size + i];
+    }
+
+    public float Lava(int i, int row)
+    {
+        return lava[row * size + i];
     }
 
     public Vector2 Gradient(int i, int row)

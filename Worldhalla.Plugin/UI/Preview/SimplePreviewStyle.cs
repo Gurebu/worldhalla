@@ -7,9 +7,10 @@ internal sealed class SimplePreviewStyle : IPreviewStyle
 {
     private const float DEEP_WATER = -20f;
     private const float SWAMP_WATER = -2f;
+    private const float SHALLOW_WATER_STOPS = 0.25f;
 
-    private static readonly Color ShallowWater = Rgb(30, 58, 96);
-    private static readonly Color DeepWater = Rgb(25, 50, 86);
+    private static readonly Color DeepWater = PreviewPalette.Water;
+    private static readonly Color ShallowWater = Brighter(PreviewPalette.Water, SHALLOW_WATER_STOPS);
 
     public Color Paint(PreviewGrid grid, int i, int row)
     {
@@ -19,19 +20,15 @@ internal sealed class SimplePreviewStyle : IPreviewStyle
         if (height <= 0f && !(biome == Biome.Swamp && height > SWAMP_WATER))
             return height < DEEP_WATER ? DeepWater : ShallowWater;
 
-        return biome switch
-        {
-            Biome.Meadows => Rgb(146, 168, 92),
-            Biome.BlackForest => Rgb(107, 117, 63),
-            Biome.Swamp => Rgb(163, 115, 89),
-            Biome.Mountain => Rgb(217, 222, 230),
-            Biome.Plains => Rgb(222, 196, 120),
-            Biome.Mistlands => Rgb(124, 106, 136),
-            Biome.AshLands => Rgb(122, 52, 45),
-            Biome.DeepNorth => Rgb(230, 238, 247),
-            _ => Rgb(146, 168, 92),
-        };
+        return PreviewPalette.Of(biome);
     }
 
-    private static Color Rgb(byte r, byte g, byte b) => new Color32(r, g, b, 255);
+    private static Color Brighter(Color color, float stops)
+    {
+        var linear = PreviewPalette.Linear(color) * Mathf.Pow(2f, stops);
+        return new Color(
+            PreviewPalette.ToSrgb(Mathf.Clamp01(linear.x)),
+            PreviewPalette.ToSrgb(Mathf.Clamp01(linear.y)),
+            PreviewPalette.ToSrgb(Mathf.Clamp01(linear.z)));
+    }
 }

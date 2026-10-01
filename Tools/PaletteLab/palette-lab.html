@@ -1,0 +1,677 @@
+<!--
+  Preview Palette Lab: tunes the detailed world preview's look (UI/Preview/HdrPreviewStyle, HdrPreviewSettings and
+  PreviewPalette) on recorded world data. Its defaults mirror those classes; keep the two in step.
+
+  World data is not part of the repository. Put it in data/ next to this page and serve the folder over HTTP
+  (e.g. `python3 -m http.server` here, then open http://localhost:8000/palette-lab.html):
+    data/whole.txt              the whole world at 1x
+    data/tiles/t_<x>_<z>.txt    the whole world at 4x, as 4x4 tiles of 1024x1024, x and z from 0 (west, south)
+  Each file is base64 of a gzipped little-endian record: int32 size, float32 x0, z0, step, then size*size points
+  in rows of increasing z, each int16 height in decimetres above water level, uint8 biome, uint8 lava (0-255).
+  Biome indices: 0 none, 1 meadows, 2 swamp, 3 mountain, 4 black forest, 5 plains, 6 ash lands, 7 deep north,
+  8 ocean, 9 mistlands.
+-->
+<title>Preview Palette Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a map bench on the left (reference vs. candidate), a long instrument rack of controls on the right */
+:root {
+  --bg: #16181c;
+  --panel: #1d2026;
+  --line: #2c3038;
+  --fg: #e3e5e8;
+  --muted: #8d939d;
+  --accent: #d9a441;
+  --map-ground: #101215;
+  --font-ui: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 14px; }
+.app { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; padding: 16px; height: 100%; box-sizing: border-box; }
+.bench { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 20px; }
+h1 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: 0.01em; text-wrap: balance; }
+.sub { color: var(--muted); font-size: 13px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { background: transparent; color: var(--muted); border: 0; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--fg); box-shadow: inset 0 -2px 0 var(--accent); }
+.seg button:focus-visible, .btn:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.where { font-family: var(--font-data); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.maps { flex: 1; min-height: 0; display: grid; gap: 12px; grid-template-columns: 1fr 1fr; align-content: start; }
+.maps.single { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+figure { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+figcaption { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 26px; }
+figcaption .ms { font-family: var(--font-data); text-transform: none; letter-spacing: 0; }
+.frame { position: relative; background: var(--map-ground); border: 1px solid var(--line); border-radius: 4px; aspect-ratio: 1; width: 100%; max-width: 100%; overflow: hidden; touch-action: none; }
+.frame.pick { cursor: zoom-in; }
+.frame.pan { cursor: grab; }
+.frame.pan.dragging { cursor: grabbing; }
+.maps.single .frame { max-width: min(100%, calc(100vh - 150px)); }
+.maps.single figure { width: 100%; align-items: center; }
+canvas { display: block; width: 100%; height: 100%; }
+.frame canvas.over { position: absolute; inset: 0; }
+.divider { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); pointer-events: none; }
+.tag { position: absolute; top: 8px; font-size: 11px; padding: 2px 6px; background: rgba(16,18,21,0.75); color: var(--fg); border-radius: 3px; letter-spacing: 0.06em; text-transform: uppercase; }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; background: rgba(16,18,21,0.6); pointer-events: none; }
+.rack { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; }
+.rack section { padding: 12px 14px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+.rack h2 { font-size: 11px; font-weight: 600; margin: 0 0 2px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); }
+.row { display: grid; grid-template-columns: 112px minmax(0, 1fr) 58px; gap: 8px; align-items: center; }
+.row label { font-size: 13px; color: var(--fg); }
+.row output { font-family: var(--font-data); font-size: 12px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.swatches { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.swatch { display: flex; align-items: center; gap: 6px; font-size: 12px; min-width: 0; }
+.swatch span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+input[type="color"] { width: 28px; height: 24px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: transparent; flex: none; cursor: pointer; }
+select { background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; font: inherit; font-size: 12px; text-transform: none; letter-spacing: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.btn.primary { border-color: var(--accent); color: var(--accent); }
+textarea { width: 100%; box-sizing: border-box; min-height: 90px; resize: vertical; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 4px; font-family: var(--font-data); font-size: 11px; padding: 6px; }
+.note { color: var(--muted); font-size: 12px; line-height: 1.45; margin: 0; }
+.status { font-size: 12px; color: var(--muted); min-height: 1.2em; }
+@media (max-width: 900px) {
+  .app { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .rack { overflow: visible; }
+  .maps { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+
+<div class="app">
+  <div class="bench">
+    <header>
+      <h1>Preview Palette Lab</h1>
+      <span class="sub">The candidate is the detailed preview's style; the references are the styles it replaced and the small preview.</span>
+    </header>
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Area">
+        <button id="area-whole" aria-pressed="true">Whole world · 1x</button>
+        <button id="area-zoom" aria-pressed="false">Close-up · 4x</button>
+      </div>
+      <div class="seg" role="group" aria-label="View">
+        <button id="view-side" aria-pressed="true">Side by side</button>
+        <button id="view-swipe" aria-pressed="false">Swipe</button>
+        <button id="view-new" aria-pressed="false">Candidate only</button>
+      </div>
+      <span class="where" id="where"></span>
+    </div>
+    <div class="maps" id="maps">
+      <figure id="fig-ref">
+        <figcaption>
+          <select id="reference" aria-label="Reference style">
+            <option value="rich">Rich (old detailed preview)</option>
+            <option value="simple">Small preview (old colours)</option>
+            <option value="shared">Small preview</option>
+          </select>
+          <span class="ms" id="ms-ref"></span>
+        </figcaption>
+        <div class="frame pick" id="frame-ref"><canvas id="ref" width="1024" height="1024"></canvas><div class="loading" id="loading-ref">Unpacking world data…</div></div>
+      </figure>
+      <figure id="fig-new">
+        <figcaption><span>Candidate</span><span class="ms" id="ms-new"></span></figcaption>
+        <div class="frame pick" id="frame-new">
+          <canvas id="cand" width="1024" height="1024"></canvas>
+          <canvas id="swipe-ref" class="over" width="1024" height="1024" hidden></canvas>
+          <div class="divider" id="divider" hidden></div>
+          <span class="tag" id="tag-left" style="left:8px" hidden>Reference</span>
+          <span class="tag" id="tag-right" style="right:8px" hidden>Candidate</span>
+          <div class="loading" id="loading-new" hidden>Loading close-up…</div>
+        </div>
+      </figure>
+    </div>
+    <p class="note" id="hint">Click anywhere on the map to open a 4x close-up there.</p>
+  </div>
+
+  <aside class="rack" aria-label="Candidate controls">
+    <section>
+      <h2>Biome colours</h2>
+      <div class="swatches" id="swatches"></div>
+      <p class="note">One base colour per biome, in sRGB. Height and terrain shading come from the lighting below, not from extra colours.</p>
+    </section>
+    <section id="sec-light"><h2>Sun and relief</h2></section>
+    <section id="sec-height"><h2>Height</h2></section>
+    <section id="sec-fog"><h2>Height fog</h2>
+ <div class="swatches"><label class="swatch"><input type="color" id="fogColor"><span>Fog colour</span></label></div>
+      <p class="note">Settles over land only; water is left clear.</p>
+    </section>
+    <section id="sec-tone"><h2>Exposure</h2>
+      <div class="row"><label for="tonemap">Tone mapper</label>
+        <select id="tonemap"><option value="neutral">Neutral (Khronos)</option><option value="aces">ACES</option><option value="clamp">Clamp</option></select><span></span></div>
+    </section>
+    <section id="sec-water"><h2>Water</h2>
+      <div class="swatches">
+        <label class="swatch"><input type="color" id="water"><span>Deep water</span></label>
+        <label class="swatch"><input type="color" id="sky"><span>Sky reflection</span></label>
+      </div>
+    </section>
+    <section id="sec-lava"><h2>Lava</h2>
+      <div class="swatches"><label class="swatch"><input type="color" id="lavaColor"><span>Glow colour</span></label></div>
+    </section>
+    <section id="sec-lines"><h2>Lines</h2></section>
+    <section>
+      <h2>Settings</h2>
+      <div class="actions">
+        <button class="btn primary" id="copy">Copy settings</button>
+        <button class="btn" id="apply">Apply pasted settings</button>
+        <button class="btn" id="reset">Reset</button>
+      </div>
+      <textarea id="json" spellcheck="false" aria-label="Settings as JSON"></textarea>
+      <div class="status" id="status"></div>
+    </section>
+  </aside>
+</div>
+
+<script>
+const RADIUS = 10500;
+const CELLS = 4096, VIEW = 1024, TILE = 1024;
+const LINE_REACH = 4;
+const BIOMES = [
+  [1, "Meadows"], [4, "Black Forest"], [2, "Swamp"], [3, "Mountain"], [5, "Plains"],
+  [9, "Mistlands"], [6, "Ashlands"], [7, "Deep North"], [8, "Ocean floor"],
+];
+
+const DEFAULTS = {
+  biomes: { 1: "#92a85c", 2: "#915231", 3: "#d9dee6", 4: "#6b753f", 5: "#d7b46e", 6: "#7a342d", 7: "#e6eef7", 8: "#c2b280", 9: "#7c6a88" },
+  sunAzimuth: 275, sunElevation: 65, slopeExaggeration: 2.5, shadowFill: 0.12,
+  lowStops: -0.6, highStops: -0.2, heightScale: 169.8,
+  fogColor: "#c64600", fogAmount: 0, fogHeight: 5.24,
+  exposure: 0.95, saturation: 1, tonemap: "neutral",
+  water: "#193256", sky: "#62a0ea", reflection: 0.05,
+  absorptionR: 4.592, absorptionG: 0.7612, absorptionB: 0.4302, abyssScale: 15.29,
+  lavaColor: "#ff4f00", lavaIntensity: 0.8,
+  coastline: 0.25, coastlineWidth: 0.75, isolines: 0.125, isolineWidth: 1, grid: 0.3,
+};
+
+// [section, key, label, min, max, step, format, logarithmic]
+const SLIDERS = [
+  ["sec-light", "sunAzimuth", "Sun azimuth", 0, 360, 1, v => `${v}°`],
+  ["sec-light", "sunElevation", "Sun elevation", 5, 90, 1, v => `${v}°`],
+  ["sec-light", "slopeExaggeration", "Relief", 0, 40, 0.5, v => `×${v}`],
+  ["sec-light", "shadowFill", "Shadow fill", 0, 1, 0.01, v => v.toFixed(2)],
+  ["sec-height", "lowStops", "At sea level", -2, 1, 0.05, v => `${v.toFixed(2)} EV`],
+  ["sec-height", "highStops", "At altitude", -1, 2, 0.05, v => `${v.toFixed(2)} EV`],
+  ["sec-height", "heightScale", "Height scale", 10, 1000, 0, v => `${v.toFixed(0)} m`, true],
+  ["sec-fog", "fogAmount", "Amount", 0, 1, 0.01, v => v.toFixed(2)],
+  ["sec-fog", "fogHeight", "Thickness", 5, 500, 0, v => `${v.toFixed(0)} m`, true],
+  ["sec-tone", "exposure", "Exposure", -2, 3, 0.05, v => `${v.toFixed(2)} EV`],
+  ["sec-tone", "saturation", "Saturation", 0, 2, 0.01, v => v.toFixed(2)],
+  ["sec-water", "reflection", "Reflection", 0, 0.5, 0.01, v => v.toFixed(2)],
+  ["sec-water", "absorptionR", "Absorb red", 0.001, 5, 0, v => `${v.toPrecision(2)}/m`, true],
+  ["sec-water", "absorptionG", "Absorb green", 0.001, 5, 0, v => `${v.toPrecision(2)}/m`, true],
+  ["sec-water", "absorptionB", "Absorb blue", 0.001, 5, 0, v => `${v.toPrecision(2)}/m`, true],
+  ["sec-water", "abyssScale", "Abyss depth", 2, 5000, 0, v => `${v.toFixed(0)} m`, true],
+  ["sec-lava", "lavaIntensity", "Glow", 0, 6, 0.05, v => v.toFixed(2)],
+  ["sec-lines", "coastline", "Coastline", 0, 1, 0.01, v => v.toFixed(2)],
+  ["sec-lines", "coastlineWidth", "Coast width", 0.25, 2 * LINE_REACH, 0.05, v => `${v.toFixed(2)} px`],
+  ["sec-lines", "isolines", "Isolines", 0, 0.5, 0.005, v => v.toFixed(3)],
+  ["sec-lines", "isolineWidth", "Isoline width", 0.25, 2 * LINE_REACH, 0.05, v => `${v.toFixed(2)} px`],
+  ["sec-lines", "grid", "Grid", 0, 1, 0.01, v => v.toFixed(2)],
+];
+const COLORS = ["water", "sky", "lavaColor", "fogColor"];
+const LOG_STEPS = 1000;
+const STORE_KEY = "preview-palette-lab";
+
+let params = load();
+let whole = null;
+let zoom = null;
+let zoomOrigin = { x: 1282, z: 1711 };
+let area = "whole";
+let view = "side";
+let reference = "rich";
+
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (saved) return merge(saved);
+  } catch {}
+  return structuredClone(DEFAULTS);
+}
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(params)); } catch {} }
+function merge(obj) {
+  const p = structuredClone(DEFAULTS);
+  for (const k of Object.keys(p)) if (k in obj) p[k] = k === "biomes" ? { ...p.biomes, ...obj.biomes } : obj[k];
+  return p;
+}
+
+// ---------- data ----------
+// Each file: [int size][float x0][float z0][float step], then per point int16 height (dm), byte biome, byte lava
+async function gunzip(bytes) {
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return new Response(stream).arrayBuffer();
+}
+function parse(buf) {
+  const dv = new DataView(buf);
+  const size = dv.getInt32(0, true), x0 = dv.getFloat32(4, true), z0 = dv.getFloat32(8, true), step = dv.getFloat32(12, true);
+  const n = size * size, height = new Float32Array(n), biome = new Uint8Array(n), lava = new Float32Array(n);
+  for (let k = 0, o = 16; k < n; k++, o += 4) {
+    height[k] = dv.getInt16(o, true) / 10; biome[k] = dv.getUint8(o + 2); lava[k] = dv.getUint8(o + 3) / 255;
+  }
+  return { size, x0, z0, step, height, biome, lava };
+}
+
+const tiles = new Map();
+function tile(tx, tz) {
+  const key = `${tx}_${tz}`;
+  if (!tiles.has(key))
+    tiles.set(key, fetch(`data/tiles/t_${key}.txt`).then(r => {
+      if (!r.ok) throw new Error(`tile ${key} answered ${r.status}`);
+      return r.text();
+    }).then(text => gunzip(Uint8Array.from(atob(text.trim()), c => c.charCodeAt(0)))).then(parse));
+  return tiles.get(key);
+}
+
+// A close-up is a 1024² window into the 4096² lattice of the whole world at 4x, assembled from up to four tiles
+async function closeUp(ox, oz) {
+  const need = [];
+  for (let tz = Math.floor(oz / TILE); tz <= Math.floor((oz + VIEW - 1) / TILE); tz++)
+    for (let tx = Math.floor(ox / TILE); tx <= Math.floor((ox + VIEW - 1) / TILE); tx++) need.push([tx, tz]);
+  const loaded = await Promise.all(need.map(([tx, tz]) => tile(tx, tz)));
+  const step = 2 * RADIUS / CELLS;
+  const d = { size: VIEW, x0: -RADIUS + ox * step, z0: -RADIUS + oz * step, step,
+    height: new Float32Array(VIEW * VIEW), biome: new Uint8Array(VIEW * VIEW), lava: new Float32Array(VIEW * VIEW) };
+  need.forEach(([tx, tz], n) => {
+    const t = loaded[n];
+    for (let j = 0; j < VIEW; j++) {
+      const cz = oz + j - tz * TILE; if (cz < 0 || cz >= TILE) continue;
+      for (let i = 0; i < VIEW; i++) {
+        const cx = ox + i - tx * TILE; if (cx < 0 || cx >= TILE) continue;
+        const s = cz * TILE + cx, k = j * VIEW + i;
+        d.height[k] = t.height[s]; d.biome[k] = t.biome[s]; d.lava[k] = t.lava[s];
+      }
+    }
+  });
+  return prepare(d);
+}
+
+const ISOLINES = [20, 40, 60, 100, 140, 180, 220, 260, 300, 340, 380, 420, 460];
+function band(h) { let b = 0; while (b < ISOLINES.length && h >= ISOLINES[b]) b++; return b; }
+
+// Everything the sliders can't change is computed once per map. Contour lines are traced per grid cell with marching
+// squares, and each pixel keeps its distance to the nearest traced segment, up to LINE_REACH pixels away
+
+function contourDistances(d, level) {
+  const { size, height } = d, dist = new Float32Array(size * size).fill(LINE_REACH + 1);
+  const pts = [];
+  const cross = (x1, y1, h1, x2, y2, h2) => {
+    if ((h1 > level) === (h2 > level)) return;
+    const t = (level - h1) / (h2 - h1);
+    pts.push(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t);
+  };
+  for (let j = 0; j < size - 1; j++) for (let i = 0; i < size - 1; i++) {
+    const a = height[j * size + i], b = height[j * size + i + 1], c = height[(j + 1) * size + i + 1], e = height[(j + 1) * size + i];
+    const above = a > level;
+    if (above === (b > level) && above === (c > level) && above === (e > level)) continue;
+    pts.length = 0;
+    cross(i, j, a, i + 1, j, b);
+    cross(i + 1, j, b, i + 1, j + 1, c);
+    cross(i + 1, j + 1, c, i, j + 1, e);
+    cross(i, j + 1, e, i, j, a);
+    for (let s = 0; s + 3 < pts.length; s += 4) splat(dist, size, pts[s], pts[s + 1], pts[s + 2], pts[s + 3]);
+  }
+  return dist;
+}
+
+function splat(dist, size, x1, y1, x2, y2) {
+  const minX = Math.max(0, Math.floor(Math.min(x1, x2) - LINE_REACH)), maxX = Math.min(size - 1, Math.ceil(Math.max(x1, x2) + LINE_REACH));
+  const minY = Math.max(0, Math.floor(Math.min(y1, y2) - LINE_REACH)), maxY = Math.min(size - 1, Math.ceil(Math.max(y1, y2) + LINE_REACH));
+  const dx = x2 - x1, dy = y2 - y1, len2 = dx * dx + dy * dy;
+  for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) {
+    const t = len2 > 0 ? Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / len2)) : 0;
+    const ex = x1 + dx * t - x, ey = y1 + dy * t - y, dd = Math.sqrt(ex * ex + ey * ey);
+    const k = y * size + x;
+    if (dd < dist[k]) dist[k] = dd;
+  }
+}
+
+function prepare(d) {
+  const { size, height } = d, n = size * size;
+  const H = (i, j) => height[Math.min(size - 1, Math.max(0, j)) * size + Math.min(size - 1, Math.max(0, i))];
+  d.gx = new Float32Array(n); d.gz = new Float32Array(n); d.richLines = new Uint8Array(n);
+  d.gridCov = new Float32Array(n); d.alpha = new Float32Array(n);
+  for (let j = 0; j < size; j++) for (let i = 0; i < size; i++) {
+    const k = j * size + i, h = H(i, j);
+    d.gx[k] = (H(i + 1, j) - H(i - 1, j)) / (2 * d.step); d.gz[k] = (H(i, j + 1) - H(i, j - 1)) / (2 * d.step);
+    const land = h > 0;
+    if (land !== H(i + 1, j) > 0 || land !== H(i, j + 1) > 0) d.richLines[k] = 1;
+    else { const b = band(h); if (b !== band(H(i + 1, j)) || b !== band(H(i, j + 1))) d.richLines[k] = 2; }
+    const x = d.x0 + (i + 0.5) * d.step, z = d.z0 + (j + 0.5) * d.step, len = Math.hypot(x, z);
+    const ring = Math.round(len / 1000) * 1000;
+    const ringDist = ring > 0 && ring < RADIUS ? Math.abs(len - ring) : Infinity;
+    const dist = Math.min(len, ringDist, Math.abs(x), Math.abs(z), Math.abs(x - z) / Math.SQRT2, Math.abs(x + z) / Math.SQRT2);
+    d.gridCov[k] = Math.min(1, Math.max(0, 1 - dist / d.step));
+    d.alpha[k] = Math.min(1, Math.max(0, (RADIUS - len) / d.step + 0.5));
+  }
+  d.coastDist = contourDistances(d, 0);
+  d.isoDist = new Float32Array(n).fill(LINE_REACH + 1);
+  for (const level of ISOLINES) {
+    const dist = contourDistances(d, level);
+    for (let k = 0; k < n; k++) if (dist[k] < d.isoDist[k]) d.isoDist[k] = dist[k];
+  }
+  return d;
+}
+
+// ---------- color helpers ----------
+const hex = h => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255];
+const toLinear = c => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+const toSrgb = c => c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+const linear = h => hex(h).map(toLinear);
+const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+const GROUND = [0x10 / 255, 0x12 / 255, 0x15 / 255];
+const GRID_LINE = [245 / 255, 245 / 255, 220 / 255];
+
+function write(img, k, r, g, b, d, gridStrength) {
+  const cov = gridStrength * d.gridCov[k], a = d.alpha[k];
+  const o = ((d.size - 1 - ((k / d.size) | 0)) * d.size + k % d.size) * 4;
+  r = clamp01(r + (GRID_LINE[0] - r) * cov); g = clamp01(g + (GRID_LINE[1] - g) * cov); b = clamp01(b + (GRID_LINE[2] - b) * cov);
+  img[o] = Math.round((GROUND[0] + (r - GROUND[0]) * a) * 255);
+  img[o + 1] = Math.round((GROUND[1] + (g - GROUND[1]) * a) * 255);
+  img[o + 2] = Math.round((GROUND[2] + (b - GROUND[2]) * a) * 255);
+  img[o + 3] = 255;
+}
+
+// ---------- Rich (port of Worldhalla's RichPreviewStyle) ----------
+const rgb = (r, g, b) => [r / 255, g / 255, b / 255];
+const RICH = {
+  1: [rgb(50, 205, 50), rgb(152, 251, 152)], 4: [rgb(85, 107, 47), rgb(154, 205, 50)], 2: [rgb(139, 69, 19), rgb(205, 133, 63)],
+  3: [rgb(175, 238, 238), rgb(240, 255, 255)], 5: [rgb(218, 165, 32), rgb(240, 230, 140)], 9: [rgb(138, 43, 226), rgb(221, 160, 221)],
+  6: [rgb(56, 52, 52), rgb(146, 99, 99)], 7: [rgb(255, 222, 173), rgb(255, 248, 220)],
+};
+const DEEP = rgb(0, 0, 0), MID = rgb(70, 130, 180), SHALLOW = rgb(64, 224, 208), SWAMP_WATER = rgb(47, 79, 79);
+const RICH_LIGHT = (() => { const v = [-1, 1, 2.5], l = Math.hypot(...v); return v.map(x => x / l); })();
+const invLerp = (a, b, v) => clamp01((v - a) / (b - a));
+const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
+function renderRich(d, img) {
+  for (let k = 0; k < d.size * d.size; k++) {
+    const h = d.height[k], b = d.biome[k];
+    let c;
+    if (h > 0) {
+      const [lo, hi] = RICH[b] || RICH[1];
+      c = mix(lo, hi, b === 3 ? invLerp(50, 400, h) : invLerp(0, 70, h));
+    } else {
+      c = h < -30 ? mix(DEEP, MID, invLerp(-300, -30, h)) : mix(MID, SHALLOW, invLerp(-30, 0, h));
+      if (b === 2) c = mix(c, SWAMP_WATER, invLerp(-2.5, -1, h));
+    }
+    let nx = -d.gx[k] * 20, ny = -d.gz[k] * 20, nz = 1; const nl = Math.hypot(nx, ny, nz); nx /= nl; ny /= nl; nz /= nl;
+    const lightness = 0.5 + 0.5 * Math.max(-1, nx * RICH_LIGHT[0] + ny * RICH_LIGHT[1] + nz * RICH_LIGHT[2]);
+    const attenuation = h >= 0 ? 1 : Math.exp(0.05 * h);
+    c = mix(c.map(x => x * lightness), c, 0.1 + 0.9 * clamp01(1 - attenuation));
+    if (d.richLines[k] === 1) c = mix(c, [0, 0, 0], 0.3); else if (d.richLines[k] === 2) c = mix(c, [0, 0, 0], 0.125);
+    write(img, k, c[0], c[1], c[2], d, 0.5);
+  }
+}
+
+// ---------- Small preview (port of Worldhalla's SimplePreviewStyle, without its 3x supersampling) ----------
+const SIMPLE = { 1: rgb(146, 168, 92), 4: rgb(107, 117, 63), 2: rgb(163, 115, 89), 3: rgb(217, 222, 230), 5: rgb(222, 196, 120),
+  9: rgb(124, 106, 136), 6: rgb(122, 52, 45), 7: rgb(230, 238, 247) };
+const SIMPLE_SHALLOW = rgb(30, 58, 96), SIMPLE_DEEP = rgb(25, 50, 86);
+
+function renderSimple(d, img) {
+  for (let k = 0; k < d.size * d.size; k++) {
+    const h = d.height[k], b = d.biome[k];
+    const c = h <= 0 && !(b === 2 && h > -2) ? (h < -20 ? SIMPLE_DEEP : SIMPLE_SHALLOW) : (SIMPLE[b] || SIMPLE[1]);
+    write(img, k, c[0], c[1], c[2], d, 0);
+  }
+}
+
+// The small preview drawn from the candidate's palette: flat biome colours, deep water in the water colour and shallow
+// water a quarter stop brighter, as the current small preview's two blues are
+function renderShared(d, img) {
+  const land = []; for (let b = 0; b < 10; b++) land[b] = hex(params.biomes[b] || params.biomes[1]);
+  const deep = hex(params.water), shallow = linear(params.water).map(v => toSrgb(clamp01(v * Math.pow(2, 0.25))));
+  for (let k = 0; k < d.size * d.size; k++) {
+    const h = d.height[k], b = d.biome[k];
+    const c = h <= 0 && !(b === 2 && h > -2) ? (h < -20 ? deep : shallow) : land[b] || land[1];
+    write(img, k, c[0], c[1], c[2], d, 0);
+  }
+}
+
+function renderReference(d, canvas) {
+  const t0 = performance.now();
+  const ctx = canvas.getContext("2d"), image = ctx.createImageData(d.size, d.size);
+  (reference === "simple" ? renderSimple : reference === "shared" ? renderShared : renderRich)(d, image.data);
+  ctx.putImageData(image, 0, 0);
+  return performance.now() - t0;
+}
+
+// ---------- Candidate ----------
+// Tone mappers write into out[] to keep the per-pixel loop free of allocations
+function neutral(r, g, b, out) {
+  const start = 0.8 - 0.04, desat = 0.15;
+  const x = Math.min(r, g, b), offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
+  r -= offset; g -= offset; b -= offset;
+  const peak = Math.max(r, g, b);
+  if (peak < start) { out[0] = r; out[1] = g; out[2] = b; return; }
+  const d = 1 - start, newPeak = 1 - d * d / (peak + d - start), s = newPeak / peak;
+  const f = 1 - 1 / (desat * (peak - newPeak) + 1);
+  out[0] = r * s + (newPeak - r * s) * f; out[1] = g * s + (newPeak - g * s) * f; out[2] = b * s + (newPeak - b * s) * f;
+}
+const acesCh = x => clamp01(x * (2.51 * x + 0.03) / (x * (2.43 * x + 0.59) + 0.14));
+function aces(r, g, b, out) { out[0] = acesCh(r); out[1] = acesCh(g); out[2] = acesCh(b); }
+function clampAll(r, g, b, out) { out[0] = clamp01(r); out[1] = clamp01(g); out[2] = clamp01(b); }
+
+function renderCandidate(d, canvas, p) {
+  const t0 = performance.now();
+  const ctx = canvas.getContext("2d"), image = ctx.createImageData(d.size, d.size), img = image.data;
+  const albedo = []; for (let b = 0; b < 10; b++) albedo[b] = linear(p.biomes[b] || p.biomes[1]);
+  const az = p.sunAzimuth * Math.PI / 180, el = p.sunElevation * Math.PI / 180;
+  const Lx = Math.sin(az) * Math.cos(el), Ly = Math.cos(az) * Math.cos(el), Lz = Math.sin(el);
+  const exposure = Math.pow(2, p.exposure);
+  const water = linear(p.water).map(v => v * exposure), sky = linear(p.sky).map(v => v * exposure), lava = linear(p.lavaColor);
+  const fog = linear(p.fogColor).map(v => v * exposure);
+  const tonemap = p.tonemap === "aces" ? aces : p.tonemap === "clamp" ? clampAll : neutral;
+  const span = p.highStops - p.lowStops, base = p.exposure + p.lowStops, refl = p.reflection, fill = p.shadowFill, ex = p.slopeExaggeration;
+  const coastHalf = p.coastlineWidth / 2 + 0.5, isoHalf = p.isolineWidth / 2 + 0.5;
+  const m = [0, 0, 0];
+
+  for (let k = 0; k < d.size * d.size; k++) {
+    const h = d.height[k], a = albedo[d.biome[k]] || albedo[1];
+    const nx = -d.gx[k] * ex, ny = -d.gz[k] * ex, nl = Math.sqrt(nx * nx + ny * ny + 1);
+    const direct = Math.max(0, (nx * Lx + ny * Ly + Lz) / nl) / Lz;
+    const g = (fill + (1 - fill) * direct) * Math.pow(2, base + span * (1 - Math.exp(-Math.max(h, 0) / p.heightScale)));
+    let r, gr, b;
+    if (h < 0) {
+      const depth = -h, abyss = Math.exp(-depth / p.abyssScale);
+      const tr = Math.exp(-p.absorptionR * depth), tg = Math.exp(-p.absorptionG * depth), tb = Math.exp(-p.absorptionB * depth);
+      r = a[0] * g * tr + water[0] * abyss * (1 - tr);
+      gr = a[1] * g * tg + water[1] * abyss * (1 - tg);
+      b = a[2] * g * tb + water[2] * abyss * (1 - tb);
+      r += (sky[0] - r) * refl; gr += (sky[1] - gr) * refl; b += (sky[2] - b) * refl;
+    } else {
+      const glow = d.lava[k] * p.lavaIntensity;
+      r = a[0] * g + glow * lava[0]; gr = a[1] * g + glow * lava[1]; b = a[2] * g + glow * lava[2];
+    }
+    if (h >= 0) {
+      const haze = p.fogAmount * Math.exp(-h / p.fogHeight);
+      r += (fog[0] - r) * haze; gr += (fog[1] - gr) * haze; b += (fog[2] - b) * haze;
+    }
+
+    tonemap(r, gr, b, m);
+    const lum = 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2];
+    r = toSrgb(clamp01(lum + (m[0] - lum) * p.saturation));
+    gr = toSrgb(clamp01(lum + (m[1] - lum) * p.saturation));
+    b = toSrgb(clamp01(lum + (m[2] - lum) * p.saturation));
+    const coast = p.coastline * clamp01(coastHalf - d.coastDist[k]);
+    const iso = p.isolines * clamp01(isoHalf - d.isoDist[k]);
+    const keep = (1 - coast) * (1 - iso);
+    write(img, k, r * keep, gr * keep, b * keep, d, p.grid);
+  }
+  ctx.putImageData(image, 0, 0);
+  return performance.now() - t0;
+}
+
+// ---------- UI ----------
+const $ = id => document.getElementById(id);
+const current = () => area === "whole" ? whole : zoom;
+let pending = false;
+function schedule() {
+  save(); syncJson();
+  if (pending) return; pending = true;
+  requestAnimationFrame(() => { pending = false; drawCandidate(); });
+}
+function drawCandidate() {
+  const d = current(); if (!d) return;
+  $("ms-new").textContent = `${renderCandidate(d, $("cand"), params).toFixed(0)} ms`;
+  if (reference === "shared") drawReference();
+}
+function drawReference() {
+  const d = current(); if (!d) return;
+  $("ms-ref").textContent = `${renderReference(d, $("ref")).toFixed(0)} ms`;
+  const swipe = $("swipe-ref").getContext("2d");
+  swipe.clearRect(0, 0, VIEW, VIEW);
+  swipe.drawImage($("ref"), 0, 0);
+}
+function drawAll() { drawReference(); drawCandidate(); updateWhere(); }
+
+function updateWhere() {
+  if (area === "whole") { $("where").textContent = ""; return; }
+  const step = 2 * RADIUS / CELLS;
+  const cx = -RADIUS + (zoomOrigin.x + VIEW / 2) * step, cz = -RADIUS + (zoomOrigin.z + VIEW / 2) * step;
+  $("where").textContent = `centre x ${cx.toFixed(0)}, z ${cz.toFixed(0)}`;
+}
+
+function sliderToValue(s, raw) { const [, , , min, max, , , log] = s; return log ? min * Math.pow(max / min, raw / LOG_STEPS) : raw; }
+function valueToSlider(s, v) { const [, , , min, max, , , log] = s; return log ? Math.round(LOG_STEPS * Math.log(v / min) / Math.log(max / min)) : v; }
+
+function buildControls() {
+  const sw = $("swatches");
+  for (const [id, name] of BIOMES) {
+    const l = document.createElement("label"); l.className = "swatch";
+    l.innerHTML = `<input type="color" id="biome-${id}"><span>${name}</span>`;
+    sw.append(l);
+    l.querySelector("input").addEventListener("input", e => { params.biomes[id] = e.target.value; schedule(); });
+  }
+  for (const s of SLIDERS) {
+    const [sec, key, name, min, max, step, fmt, log] = s;
+    const row = document.createElement("div"); row.className = "row";
+    row.innerHTML = log
+      ? `<label for="s-${key}">${name}</label><input type="range" id="s-${key}" min="0" max="${LOG_STEPS}" step="1"><output id="o-${key}"></output>`
+      : `<label for="s-${key}">${name}</label><input type="range" id="s-${key}" min="${min}" max="${max}" step="${step}"><output id="o-${key}"></output>`;
+    $(sec).append(row);
+    row.querySelector("input").addEventListener("input", e => {
+      params[key] = sliderToValue(s, parseFloat(e.target.value));
+      $(`o-${key}`).textContent = fmt(params[key]); schedule();
+    });
+  }
+  for (const key of COLORS) $(key).addEventListener("input", e => { params[key] = e.target.value; schedule(); });
+  $("tonemap").addEventListener("change", e => { params.tonemap = e.target.value; schedule(); });
+}
+function syncControls() {
+  for (const [id] of BIOMES) $(`biome-${id}`).value = params.biomes[id];
+  for (const s of SLIDERS) { const [, key, , , , , fmt] = s; $(`s-${key}`).value = valueToSlider(s, params[key]); $(`o-${key}`).textContent = fmt(params[key]); }
+  for (const key of COLORS) $(key).value = params[key];
+  $("tonemap").value = params.tonemap;
+  syncJson();
+}
+function syncJson() { $("json").value = JSON.stringify(params, null, 1); }
+function status(text) { $("status").textContent = text; }
+
+$("copy").addEventListener("click", () => {
+  const text = JSON.stringify(params, null, 1);
+  navigator.clipboard.writeText(text).then(() => status("Copied settings to the clipboard."),
+    () => { $("json").select(); status("Copying was blocked. The settings are selected below; copy them with Ctrl+C."); });
+});
+$("apply").addEventListener("click", () => {
+  try { params = merge(JSON.parse($("json").value)); syncControls(); schedule(); status("Applied the pasted settings."); }
+  catch (e) { status(`These settings aren't valid JSON: ${e.message}`); }
+});
+$("reset").addEventListener("click", () => { params = structuredClone(DEFAULTS); syncControls(); schedule(); status("Back to the default settings."); });
+$("reference").addEventListener("change", e => { reference = e.target.value; drawReference(); });
+
+// ---------- area, view, close-up navigation ----------
+let loadToken = 0;
+async function openCloseUp(ox, oz) {
+  zoomOrigin = { x: Math.max(0, Math.min(CELLS - VIEW, Math.round(ox))), z: Math.max(0, Math.min(CELLS - VIEW, Math.round(oz))) };
+  const token = ++loadToken;
+  $("loading-new").hidden = false;
+  try {
+    const d = await closeUp(zoomOrigin.x, zoomOrigin.z);
+    if (token !== loadToken) return;
+    zoom = d; setArea("zoom");
+  } catch (e) {
+    status(`Couldn't load the close-up: ${e.message}`);
+  } finally {
+    if (token === loadToken) $("loading-new").hidden = true;
+  }
+}
+function setArea(a) {
+  if (a === "zoom" && !zoom) { openCloseUp(zoomOrigin.x, zoomOrigin.z); return; }
+  area = a;
+  $("area-whole").setAttribute("aria-pressed", a === "whole"); $("area-zoom").setAttribute("aria-pressed", a === "zoom");
+  for (const id of ["frame-ref", "frame-new"]) { $(id).classList.toggle("pick", a === "whole"); $(id).classList.toggle("pan", a === "zoom"); }
+  $("hint").textContent = a === "whole" ? "Click anywhere on the map to open a 4x close-up there." : "Drag to move the close-up; it redraws when you let go.";
+  drawAll();
+}
+function setView(v) {
+  view = v;
+  for (const x of ["side", "swipe", "new"]) $(`view-${x}`).setAttribute("aria-pressed", v === x);
+  $("fig-ref").hidden = v !== "side";
+  $("maps").classList.toggle("single", v !== "side");
+  for (const id of ["swipe-ref", "divider", "tag-left", "tag-right"]) $(id).hidden = v !== "swipe";
+  setSwipe(0.5);
+}
+function setSwipe(f) {
+  $("swipe-ref").style.clipPath = `inset(0 ${(1 - f) * 100}% 0 0)`;
+  $("divider").style.left = `calc(${f * 100}% - 1px)`;
+}
+
+// Pointer handling shared by both frames: a click on the whole world opens a close-up there, a drag on a close-up moves it
+let drag = null;
+const CANVASES = ["ref", "cand", "swipe-ref"];
+function onDown(e) {
+  drag = { frame: e.currentTarget, x: e.clientX, y: e.clientY, moved: false };
+  e.currentTarget.setPointerCapture(e.pointerId);
+  if (area === "zoom") e.currentTarget.classList.add("dragging");
+}
+function onMove(e) {
+  const frame = e.currentTarget, r = frame.getBoundingClientRect();
+  if (view === "swipe" && frame.id === "frame-new" && !(drag && drag.moved && area === "zoom")) setSwipe(clamp01((e.clientX - r.left) / r.width));
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (Math.hypot(dx, dy) > 4) drag.moved = true;
+  if (area === "zoom" && drag.moved) for (const id of CANVASES) $(id).style.transform = `translate(${dx}px, ${dy}px)`;
+}
+function onUp(e) {
+  if (!drag) return;
+  const frame = drag.frame, r = frame.getBoundingClientRect(), scale = VIEW / r.width;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y, moved = drag.moved;
+  drag = null; frame.classList.remove("dragging");
+  for (const id of CANVASES) $(id).style.transform = "";
+  if (area === "whole" && !moved) {
+    const px = (e.clientX - r.left) * scale, py = (e.clientY - r.top) * scale;
+    const cellX = px * (CELLS / VIEW), cellZ = (VIEW - py) * (CELLS / VIEW);
+    openCloseUp(cellX - VIEW / 2, cellZ - VIEW / 2);
+  } else if (area === "zoom" && moved) {
+    openCloseUp(zoomOrigin.x - dx * scale, zoomOrigin.z + dy * scale);
+  }
+}
+for (const id of ["frame-ref", "frame-new"]) {
+  $(id).addEventListener("pointerdown", onDown);
+  $(id).addEventListener("pointermove", onMove);
+  $(id).addEventListener("pointerup", onUp);
+  $(id).addEventListener("pointercancel", () => { drag = null; for (const c of CANVASES) $(c).style.transform = ""; });
+}
+$("area-whole").addEventListener("click", () => setArea("whole"));
+$("area-zoom").addEventListener("click", () => setArea("zoom"));
+$("view-side").addEventListener("click", () => setView("side"));
+$("view-swipe").addEventListener("click", () => setView("swipe"));
+$("view-new").addEventListener("click", () => setView("new"));
+
+buildControls(); syncControls();
+(async () => {
+  try {
+    const text = await fetch("data/whole.txt").then(r => { if (!r.ok) throw new Error(`data/whole.txt answered ${r.status}`); return r.text(); });
+    whole = prepare(parse(await gunzip(Uint8Array.from(atob(text.trim()), c => c.charCodeAt(0)))));
+    $("loading-ref").remove();
+    drawAll();
+  } catch (e) {
+    $("loading-ref").textContent = `Couldn't unpack the world data: ${e.message}`;
+  }
+})();
+</script>

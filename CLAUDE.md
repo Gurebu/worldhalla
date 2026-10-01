@@ -230,6 +230,12 @@ real vanilla world. The class carries no Harmony attributes so `PatchAll` never 
 originals' patch lists before and after copying. HarmonyX 2.7 can't apply detours under .NET 8, so the test host
 crashes on any real patch or reverse patch; tests can only run transpilers as plain functions.
 
+Both previews take their colours from `UI/Preview/PreviewPalette`: one sRGB colour per biome and one for water, so a
+new biome needs one entry there. The small preview paints them flat; the detailed one (`HdrPreviewStyle`) lights them
+in linear space with the knobs in `HdrPreviewSettings`. `Tools/PaletteLab/palette-lab.html` tunes those same values in
+a browser and mirrors their defaults, so a change to the style or its defaults goes into both. The lab's world data
+lives in its git-ignored `data/` folder (format in the page's header comment) and is never committed.
+
 `Patches/ServerStartupPatch` is the dedicated server's side of world creation, which never passes
 through that dialog: `World.GetCreateWorld` (called only from `FejdStartup.ParseServerArguments`)
 gets the generator named by `-wh guid <guid>` right after `new World(name, seed)`, for the same

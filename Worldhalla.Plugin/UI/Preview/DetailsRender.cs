@@ -188,7 +188,7 @@ internal sealed class DetailsRender
                 return;
 
             var cell = gridOrigin + new Vector2Int(i, row) * spacing;
-            if (!cache.TryGetSample(cell, out var height, out var biome))
+            if (!cache.TryGetSample(cell, out var height, out var biome, out var lava))
             {
                 if (!query)
                     return;
@@ -196,12 +196,13 @@ internal sealed class DetailsRender
                 ready = true;
                 var position = cache.Position(cell);
                 var point = world.RenderPoint(position.x, position.y);
-                (height, biome) = (point.height, point.biome);
-                cache.SetSample(cell, height, biome);
+                (height, biome, lava) = (point.height, point.biome, point.lava);
+                cache.SetSample(cell, height, biome, lava);
             }
 
             grid.heights[index] = height;
             grid.biomes[index] = biome;
+            grid.lava[index] = lava;
             known[index] = true;
         });
     }
