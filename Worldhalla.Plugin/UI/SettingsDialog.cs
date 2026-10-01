@@ -1,3 +1,4 @@
+using GUIFramework;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -31,6 +32,7 @@ public class SettingsDialog : MonoBehaviour
     internal Button cancelButton = null!;
     internal TMP_Text labelTemplate = null!;
     internal TMP_Dropdown dropdownTemplate = null!;
+    internal GuiInputField textFieldTemplate = null!;
     internal UIGroupHandler group = null!;
 
     private readonly List<Action> unbind = [];
@@ -105,6 +107,7 @@ public class SettingsDialog : MonoBehaviour
         var field = control switch
         {
             Select select => BindSelect(select),
+            TextField textField => BindTextField(textField),
             _ => throw new NotSupportedException($"Control {control.GetType().Name} isn't supported by this Worldhalla version"),
         };
         Place((RectTransform)field.transform, y, FIELD_HEIGHT);
@@ -134,6 +137,27 @@ public class SettingsDialog : MonoBehaviour
         select.Changed += Show;
         unbind.Add(() => select.Changed -= Show);
         return dropdown.gameObject;
+    }
+
+    private GameObject BindTextField(TextField textField)
+    {
+        var input = Instantiate(textFieldTemplate.gameObject, rows).GetComponent<GuiInputField>();
+        input.gameObject.SetActive(true);
+        input.VirtualKeyboardTitle = textField.Label;
+        input.SetTextWithoutNotify(textField.Text);
+        input.onValueChanged.AddListener(text => textField.Text = text);
+
+        // Typing raises Changed too, and resetting the same text would move the caret
+        void Show()
+        {
+            if (input.text != textField.Text)
+                input.SetTextWithoutNotify(textField.Text);
+            Validate();
+        }
+
+        textField.Changed += Show;
+        unbind.Add(() => textField.Changed -= Show);
+        return input.gameObject;
     }
 
     private void Validate()

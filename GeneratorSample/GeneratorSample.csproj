@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <LangVersion>12.0</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="BepInEx.BaseLib" Version="5.4.21" IncludeAssets="compile" PrivateAssets="all" />
+        <PackageReference Include="DotnetNoise" Version="1.0.0" />
+        <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.40" PrivateAssets="all" />
+        <PackageReference Include="UnityEngine.Modules" Version="6000.0.75" IncludeAssets="compile" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Worldhalla.API\Worldhalla.API.csproj" Private="false" />
+    </ItemGroup>
+
+</Project>

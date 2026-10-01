@@ -1,3 +1,4 @@
+using GUIFramework;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -302,6 +303,9 @@ internal static class WorldCreationDialogBuilder
         var dropdown = NewDropdown(startup, frame);
         dropdown.gameObject.SetActive(false);
 
+        var textField = NewTextField(startup.m_newWorldSeed, frame);
+        textField.gameObject.SetActive(false);
+
         var settings = overlay.AddComponent<SettingsDialog>();
         settings.frame = frame;
         settings.title = title;
@@ -312,6 +316,7 @@ internal static class WorldCreationDialogBuilder
         settings.group = NewOverlayGroup(overlay);
         settings.labelTemplate = rowLabel;
         settings.dropdownTemplate = dropdown;
+        settings.textFieldTemplate = textField;
         settings.Initialize();
         return settings;
     }
@@ -533,6 +538,27 @@ internal static class WorldCreationDialogBuilder
         dropdown.itemText.richText = true;
         dropdown.onValueChanged = new TMP_Dropdown.DropdownEvent();
         return dropdown;
+    }
+
+    private static GuiInputField NewTextField(GuiInputField template, Transform parent)
+    {
+        var gameObject = Object.Instantiate(template.gameObject, parent);
+        gameObject.name = "TextField";
+        StripLocalization(gameObject);
+
+        var field = gameObject.GetComponent<GuiInputField>();
+        if (field.placeholder != null)
+            Object.DestroyImmediate(field.placeholder.gameObject);
+
+        field.onValueChanged = new TMP_InputField.OnChangeEvent();
+        field.onEndEdit = new TMP_InputField.SubmitEvent();
+        field.onSubmit = new TMP_InputField.SubmitEvent();
+        field.OnInputSubmit = new OnInputSubmitEvent();
+        field.contentType = TMP_InputField.ContentType.Standard;
+        field.lineType = TMP_InputField.LineType.SingleLine;
+        field.characterLimit = 0;
+        field.text = "";
+        return field;
     }
 
     // Settings menu dropdowns may carry a side caption next to the box, besides the one showing the selected value

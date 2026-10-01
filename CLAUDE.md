@@ -75,6 +75,11 @@ arrived at.
   `OnDestroy`. Patches live under `Patches/`, Harmony helpers under `Extensions/`.
 - **Worldhalla.Plugin.Tests** — NUnit suite. Runs the transpilers over the game's real IL without
   launching it; skips rather than fails when no Valheim install is present.
+- **GeneratorSample** — a minimal generator mod (moniker `GS`): noise islands, distance-banded biomes and one
+  text-field setting. It is the reference for what a consumer needs, so it stays small and references only the API,
+  BepInEx, Unity and its noise package, never the game. `ILRepack.targets` merges `DotnetNoise` into the build output
+  itself, so `GeneratorSample.dll` is the whole plugin. Without `IWorldGeography` it must keep vanilla's polar boundaries and the water
+  gap along them.
 - **ChunkWatcher** — a standalone profiling mod, unrelated to the framework at assembly level but
   shipped alongside it as the tool for measuring worldgen cost. See below.
 
