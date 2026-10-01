@@ -230,9 +230,15 @@ internal static class WorldCreationDialogBuilder
         Place(title.transform, 0f, y, DETAILS_MAP_SIZE, DETAILS_TITLE_HEIGHT);
         y -= DETAILS_TITLE_HEIGHT + BUTTON_GAP;
 
-        var map = NewRawImage(frameRect, "Map", Shapes.Disc(WorldPreview.DETAILS_SIZE, DiscColor), false);
+        var map = new GameObject("Map", typeof(RectTransform), typeof(RectMask2D), typeof(Image));
+        map.transform.SetParent(frameRect, false);
+        map.GetComponent<Image>().color = Color.clear;
         Place(map.transform, 0f, y, DETAILS_MAP_SIZE, DETAILS_MAP_SIZE);
-        var ring = NewRawImage(map.transform, "Ring", Shapes.Ring(WorldPreview.DETAILS_SIZE, RING_WIDTH * 2f, RingColor), false);
+        var whole = NewRawImage(map.transform, "Whole", Texture2D.blackTexture, false);
+        Stretch(whole.rectTransform);
+        var view = NewRawImage(map.transform, "View", Shapes.Disc(PreviewView.SIZE, DiscColor), false);
+        Stretch(view.rectTransform);
+        var ring = NewRawImage(map.transform, "Ring", Shapes.Ring(PreviewView.SIZE, RING_WIDTH * 2f, RingColor), false);
         Stretch(ring.rectTransform);
         y -= DETAILS_MAP_SIZE + BUTTON_GAP;
 
@@ -241,7 +247,10 @@ internal static class WorldCreationDialogBuilder
 
         dialog.detailsOverlay = overlay;
         dialog.detailsFrame = frameRect;
-        dialog.detailsImage = map;
+        dialog.detailsImage = view;
+        dialog.detailsWholeImage = whole;
+        dialog.detailsInput = map.AddComponent<DragAndScroll>();
+        dialog.detailsRing = ring.gameObject;
         dialog.detailsCloseButton = close;
 
         overlay.SetActive(false);

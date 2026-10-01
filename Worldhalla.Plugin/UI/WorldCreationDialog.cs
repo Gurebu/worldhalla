@@ -50,13 +50,19 @@ public class WorldCreationDialog : MonoBehaviour
     internal GameObject detailsOverlay = null!;
     internal RectTransform detailsFrame = null!;
     internal RawImage detailsImage = null!;
+    internal RawImage detailsWholeImage = null!;
+    internal DragAndScroll detailsInput = null!;
+    internal GameObject detailsRing = null!;
     internal Button detailsCloseButton = null!;
     internal SettingsDialog settingsDialog = null!;
 
     private WorldPreview preview = null!;
     private PreviewTexture? previewTexture;
     private PreviewTexture? detailsTexture;
+    private PreviewTexture? detailsWholeTexture;
     private Texture? detailsPlaceholder;
+    private PreviewView detailsView = PreviewView.Whole;
+    private PreviewView detailsDragStart;
 
     private List<KeyValuePair<string, IWorldGenerator>> generators = [];
     private ISettings? settings;
@@ -84,7 +90,8 @@ public class WorldCreationDialog : MonoBehaviour
     {
         preview = new WorldPreview(previewSize);
         previewTexture = new PreviewTexture(previewSize);
-        detailsTexture = new PreviewTexture(WorldPreview.DETAILS_SIZE);
+        detailsTexture = new PreviewTexture(PreviewView.SIZE);
+        detailsWholeTexture = new PreviewTexture(PreviewView.SIZE);
         detailsPlaceholder = detailsImage.texture;
 
         seedField.onValueChanged.AddListener(_ => OnSeedChanged());
@@ -95,6 +102,9 @@ public class WorldCreationDialog : MonoBehaviour
         hideButton.onClick.AddListener(Hide);
         detailsButton.onClick.AddListener(OpenDetails);
         detailsCloseButton.onClick.AddListener(CloseDetails);
+        detailsInput.DragStarted += () => detailsDragStart = detailsView;
+        detailsInput.Dragged += PanDetails;
+        detailsInput.Scrolled += ZoomDetails;
         worldSettingsButton.onClick.AddListener(() => Logger.LogInfo("World settings screen is not implemented yet"));
         generatorSettingsButton.onClick.AddListener(OpenGeneratorSettings);
     }
@@ -265,7 +275,24 @@ public class WorldCreationDialog : MonoBehaviour
         var scale = Mathf.Min(1f, available.x / frame.x, available.y / frame.y);
         detailsFrame.localScale = new Vector3(scale, scale, 1f);
 
+        detailsView = PreviewView.Whole;
         detailsOverlay.SetActive(true);
+    }
+
+    private void PanDetails(Vector2 offset)
+    {
+        detailsView = detailsDragStart.Panned(ToDetailsPixels(offset));
+    }
+
+    private void ZoomDetails(Vector2 at, float scroll)
+    {
+        if (scroll != 0f)
+            detailsView = detailsView.Zoomed(ToDetailsPixels(at) + 0.5f * PreviewView.SIZE * Vector2.one, scroll > 0f);
+    }
+
+    private Vector2 ToDetailsPixels(Vector2 local)
+    {
+        return local * (PreviewView.SIZE / ((RectTransform)detailsInput.transform).rect.width);
     }
 
     private void CloseDetails()
@@ -323,15 +350,37 @@ public class WorldCreationDialog : MonoBehaviour
         if (!detailsOverlay.activeSelf)
             return;
 
-        if (preview.EnsureDetails() is { } render)
+        detailsRing.SetActive(detailsView.IsWhole);
+
+        var render = preview.EnsureDetails(detailsView);
+        var whole = preview.WholeDetails;
+
+        detailsWholeImage.enabled = whole != null;
+        if (whole != null)
+        {
+            detailsWholeTexture!.Show(whole);
+            detailsWholeImage.texture = detailsWholeTexture.texture;
+            Place(detailsWholeImage, whole.view.PlacementIn(detailsView));
+        }
+
+        detailsImage.enabled = render == null || render != whole;
+        if (render != null)
         {
             detailsTexture!.Show(render);
             detailsImage.texture = detailsTexture.texture;
+            Place(detailsImage, render.view.PlacementIn(detailsView));
         }
         else
         {
             detailsImage.texture = detailsPlaceholder;
+            Place(detailsImage, new Rect(0f, 0f, 1f, 1f));
         }
+    }
+
+    private static void Place(RawImage image, Rect placement)
+    {
+        image.rectTransform.anchorMin = placement.min;
+        image.rectTransform.anchorMax = placement.max;
     }
 
     private void RefreshButtons()

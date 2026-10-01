@@ -4,8 +4,8 @@ namespace Worldhalla.Plugin.UI.Preview;
 
 internal sealed class PreviewTexture
 {
-    private PreviewRender? uploaded;
-    private int uploadedRows;
+    private object? uploaded;
+    private int uploadedRevision;
 
     public readonly Texture2D texture;
 
@@ -14,14 +14,18 @@ internal sealed class PreviewTexture
         texture = Shapes.NewTexture(size);
     }
 
-    public void Show(PreviewRender render)
+    public void Show(PreviewRender render) => Show(render, render.PaintedRows, render.pixels);
+
+    public void Show(DetailsRender render) => Show(render, render.Revision, render.pixels);
+
+    private void Show(object render, int revision, Color32[] pixels)
     {
-        if (render == uploaded && render.PaintedRows == uploadedRows)
+        if (render == uploaded && revision == uploadedRevision)
             return;
 
         uploaded = render;
-        uploadedRows = render.PaintedRows;
-        texture.SetPixels32(render.pixels);
+        uploadedRevision = revision;
+        texture.SetPixels32(pixels);
         texture.Apply(false);
     }
 }

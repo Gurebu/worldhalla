@@ -14,7 +14,6 @@ internal sealed class WorldPreview
         Failed,
     }
 
-    public const int DETAILS_SIZE = 1024;
     private const int PREVIEW_SUPERSAMPLING = 3;
     private const float DEFAULT_WORLD_RADIUS = 10500f;
 
@@ -28,8 +27,12 @@ internal sealed class WorldPreview
     private GeneratedWorld? state;
     private Exception? failure;
 
+    private PreviewCache? cache;
+    private DetailsRender? wholeDetails;
+    private DetailsRender? details;
+    private DetailsRender? pendingDetails;
+
     public PreviewRender? Main { get; private set; }
-    public PreviewRender? Details { get; private set; }
 
     public WorldPreview(int previewSize)
     {
@@ -51,6 +54,8 @@ internal sealed class WorldPreview
     }
 
     public bool CanShowDetails => state != null;
+
+    public DetailsRender? WholeDetails => wholeDetails;
 
     public float? GenerationProgress => runningVersion == version ? running?.Progress : null;
 
@@ -94,17 +99,48 @@ internal sealed class WorldPreview
             Main = PreviewRender.Start(state, GetWorldRadius(state), previewSize, PREVIEW_SUPERSAMPLING, new SimplePreviewStyle());
     }
 
-    public PreviewRender? EnsureDetails()
+    // The whole world is rendered once and kept, to show wherever a zoomed render has nothing yet. The shown render stays
+    // up until the next one has painted what the cache holds. A view that changes meanwhile waits for that, which spares
+    // restarting on every frame of a drag
+    public DetailsRender? EnsureDetails(PreviewView view)
     {
-        if (state != null && Details == null)
-            Details = PreviewRender.Start(state, GetWorldRadius(state), DETAILS_SIZE, 1, new RichPreviewStyle());
+        if (state == null)
+            return null;
 
-        return Details;
+        cache ??= new PreviewCache(GetWorldRadius(state), PreviewView.CELLS);
+        wholeDetails ??= DetailsRender.Start(state, cache, PreviewView.Whole, DetailsRender.COARSEST_BLOCK, new RichPreviewStyle());
+
+        if (pendingDetails is { IsReady: true })
+        {
+            details = pendingDetails;
+            pendingDetails = null;
+        }
+
+        if (pendingDetails == null && (details == null || !details.view.Equals(view)))
+        {
+            if (details != wholeDetails)
+                details?.Cancel();
+
+            if (view.IsWhole)
+                details = wholeDetails;
+            else
+                pendingDetails = DetailsRender.Start(state, cache, view, CoarsestBlock(view), new RichPreviewStyle());
+        }
+
+        return details;
+    }
+
+    // Blocks as coarse as the whole world's pixels would only cover it up with something no better
+    private int CoarsestBlock(PreviewView view)
+    {
+        return wholeDetails!.IsComplete
+            ? Math.Max(1, PreviewView.MAX_ZOOM / (2 * view.cellsPerPixel))
+            : DetailsRender.COARSEST_BLOCK;
     }
 
     public Exception? GetFailure()
     {
-        return failure ?? Main?.Error;
+        return failure ?? Main?.Error ?? wholeDetails?.Error ?? details?.Error;
     }
 
     private static WorldGeneration Start(Func<WorldGeneration> startGeneration)
@@ -123,9 +159,14 @@ internal sealed class WorldPreview
     {
         running?.Cancel();
         Main?.Cancel();
-        Details?.Cancel();
+        wholeDetails?.Cancel();
+        details?.Cancel();
+        pendingDetails?.Cancel();
         Main = null;
-        Details = null;
+        wholeDetails = null;
+        details = null;
+        pendingDetails = null;
+        cache = null;
         state = null;
         failure = null;
     }
