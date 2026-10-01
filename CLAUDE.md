@@ -223,6 +223,18 @@ vanilla's name and seed fields and its Done/Cancel buttons are moved into it rat
 validation, `OnNewWorldDone` and the panel's show/hide paths keep working unchanged. Moving them must happen before
 the panel is first activated: `UIGamePad` caches its parent `UIGroupHandler` in `Awake`.
 
+All new UI must be usable with a controller; nobody on the project tests with one routinely, so it has to be designed in
+rather than discovered. Valheim's model, which ours follows:
+- Every pop-up gets its own `UIGroupHandler` that outranks the screen beneath it. That turns off the screen's hotkeys
+  and focus, and its `m_defaultElement` is what receives focus.
+- Hotkeys are `UIGamePad` components with an on-screen hint (B backs out, X confirms, as on vanilla's Done/Cancel).
+  `NewButton` strips the template's hotkey unless it is given a gamepad button, since a stray copy of Cancel's B would
+  fire alongside the real one.
+- Pointer-only input (drag, scroll wheel) needs a stick or button equivalent, as the detailed preview's pan and zoom have.
+- A selectable control needs a visible selected state.
+
+The vanilla bindings and groups can be read from the start-menu bundle (see Inspecting game UI).
+
 The dialog's world preview samples vanilla worlds through `UI/Preview/Vanilla/VanillaRiverPlacement`: Harmony
 **reverse patches** that copy vanilla's river placement into stub methods, rewritten to draw from `PreviewRandom`
 (a bit-exact reimplementation of `UnityEngine.Random`, verified once in game) so they can run off the main thread. They must stay copies. Nothing there may patch `WorldGenerator` itself, which places the rivers of every

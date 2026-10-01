@@ -31,10 +31,12 @@ public class SettingsDialog : MonoBehaviour
     internal Button cancelButton = null!;
     internal TMP_Text labelTemplate = null!;
     internal TMP_Dropdown dropdownTemplate = null!;
+    internal UIGroupHandler group = null!;
 
     private readonly List<Action> unbind = [];
     private ISettingsForm? form;
     private Action<ISettings>? accepted;
+    private GameObject? firstField;
 
     public bool IsOpen => form != null;
 
@@ -67,6 +69,7 @@ public class SettingsDialog : MonoBehaviour
 
         title.text = heading;
         Layout(settingsForm.Controls.Count);
+        group.m_defaultElement = firstField != null ? firstField : cancelButton.gameObject;
         gameObject.SetActive(true);
         Validate();
     }
@@ -88,6 +91,7 @@ public class SettingsDialog : MonoBehaviour
 
         form = null;
         accepted = null;
+        firstField = null;
     }
 
     private float AddRow(Control control, float y)
@@ -104,6 +108,8 @@ public class SettingsDialog : MonoBehaviour
             _ => throw new NotSupportedException($"Control {control.GetType().Name} isn't supported by this Worldhalla version"),
         };
         Place((RectTransform)field.transform, y, FIELD_HEIGHT);
+        if (firstField == null)
+            firstField = field;
 
         return y - FIELD_HEIGHT - ROW_GAP;
     }

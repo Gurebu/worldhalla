@@ -30,6 +30,11 @@ internal static class WorldCreationDialogBuilder
     private const float EDIT_BUTTON_WIDTH = 80f;
     private const float ICON_BUTTON_SIZE = FIELD_HEIGHT;
     private const string REFRESH_ICON_CHILD = "Image";
+    private const int OVERLAY_GROUP_PRIORITY = 2;
+    private const float PREVIEW_HIGHLIGHT = 1.6f;
+    private const string GAMEPAD_BACK = "ButtonB";
+    private const string GAMEPAD_CONFIRM = "ButtonX";
+    private const string GAMEPAD_ACTION = "ButtonY";
 
     private const float DETAILS_MAP_SIZE = 1024f;
     private const float DETAILS_PADDING = 12f;
@@ -152,11 +157,11 @@ internal static class WorldCreationDialogBuilder
 
         dialog.previewImage = preview;
         dialog.previewButton = preview.gameObject.AddComponent<Button>();
-        dialog.previewButton.targetGraphic = preview;
-        dialog.previewButton.transition = Selectable.Transition.None;
 
         var ring = NewRawImage(preview.transform, "Ring", Shapes.Ring(size, RING_WIDTH, RingColor), false);
         Stretch(ring.rectTransform);
+        dialog.previewButton.targetGraphic = ring;
+        dialog.previewButton.colors = RingHighlight(dialog.previewButton.colors);
 
         var spinner = NewRawImage(preview.transform, "Spinner", Shapes.Arc(SPINNER_SIZE, 4f, 270f, SpinnerColor), false);
         spinner.rectTransform.sizeDelta = new Vector2(SPINNER_DISPLAY_SIZE, SPINNER_DISPLAY_SIZE);
@@ -243,8 +248,10 @@ internal static class WorldCreationDialogBuilder
         Stretch(ring.rectTransform);
         y -= DETAILS_MAP_SIZE + BUTTON_GAP;
 
-        var close = NewButton(cancel, frameRect, "Close", "$wh_preview_close", 1f);
-        var locations = NewButton(cancel, frameRect, "Locations", "$wh_preview_locations", 1f);
+        var close = NewButton(cancel, frameRect, "Close", "$wh_preview_close", 1f, GAMEPAD_BACK);
+        var locations = NewButton(cancel, frameRect, "Locations", "$wh_preview_locations", 1f, GAMEPAD_ACTION);
+        close.navigation = locations.navigation = new Navigation { mode = Navigation.Mode.None };
+        dialog.detailsGroup = NewOverlayGroup(overlay);
         Place(locations.transform, -(LOCATIONS_BUTTON_WIDTH + BUTTON_GAP) / 2f, y, LOCATIONS_BUTTON_WIDTH, MAIN_BUTTON_HEIGHT);
         Place(close.transform, (CLOSE_BUTTON_WIDTH + BUTTON_GAP) / 2f, y, CLOSE_BUTTON_WIDTH, MAIN_BUTTON_HEIGHT);
 
@@ -300,8 +307,9 @@ internal static class WorldCreationDialogBuilder
         settings.title = title;
         settings.rows = rows;
         settings.error = error;
-        settings.okButton = NewButton(cancel, frame, "Ok", "$wh_settings_ok", 1f);
-        settings.cancelButton = NewButton(cancel, frame, "Cancel", "$wh_settings_cancel", 1f);
+        settings.okButton = NewButton(cancel, frame, "Ok", "$wh_settings_ok", 1f, GAMEPAD_CONFIRM);
+        settings.cancelButton = NewButton(cancel, frame, "Cancel", "$wh_settings_cancel", 1f, GAMEPAD_BACK);
+        settings.group = NewOverlayGroup(overlay);
         settings.labelTemplate = rowLabel;
         settings.dropdownTemplate = dropdown;
         settings.Initialize();
@@ -413,7 +421,28 @@ internal static class WorldCreationDialogBuilder
         return button;
     }
 
-    private static Button NewButton(Button template, Transform parent, string name, string? text, float fontScale)
+    // Only the colours' ratios matter: the ring's own colour is its normal look, brightened while selected
+    private static ColorBlock RingHighlight(ColorBlock colors)
+    {
+        var normal = Color.white / PREVIEW_HIGHLIGHT;
+        normal.a = 1f;
+        colors.normalColor = normal;
+        colors.highlightedColor = colors.selectedColor = colors.pressedColor = Color.white;
+        colors.colorMultiplier = PREVIEW_HIGHLIGHT;
+        return colors;
+    }
+
+    // Outranks the create-world panel's group, which then turns off its hotkeys and stops taking focus
+    private static UIGroupHandler NewOverlayGroup(GameObject overlay)
+    {
+        overlay.AddComponent<CanvasGroup>();
+        var group = overlay.AddComponent<UIGroupHandler>();
+        group.m_groupPriority = OVERLAY_GROUP_PRIORITY;
+        return group;
+    }
+
+    // The template must carry a UIGamePad when a gamepad button is given; its hint is relabelled for that button
+    private static Button NewButton(Button template, Transform parent, string name, string? text, float fontScale, string? gamepadButton = null)
     {
         var gameObject = Object.Instantiate(template.gameObject, parent);
         gameObject.name = name;
@@ -421,6 +450,12 @@ internal static class WorldCreationDialogBuilder
 
         foreach (var gamePad in gameObject.GetComponentsInChildren<UIGamePad>(true))
         {
+            if (gamepadButton != null)
+            {
+                SetGamepadButton(gamePad, gamepadButton);
+                continue;
+            }
+
             if (gamePad.m_hint != null)
                 Object.DestroyImmediate(gamePad.m_hint);
             Object.DestroyImmediate(gamePad);
@@ -441,6 +476,21 @@ internal static class WorldCreationDialogBuilder
         label.fontSizeMax *= fontScale;
         label.fontSizeMin *= fontScale;
         return button;
+    }
+
+    // Hints read "$KEY_<button>", which Localization resolves to the "Joy<button>" binding while a gamepad is active
+    private static void SetGamepadButton(UIGamePad gamePad, string button)
+    {
+        gamePad.m_zinputKey = "Joy" + button;
+        gamePad.m_keyCode = KeyCode.None;
+        if (gamePad.m_hint == null)
+            return;
+
+        foreach (var hint in gamePad.m_hint.GetComponentsInChildren<TMP_Text>(true))
+            hint.text = "$KEY_" + button;
+        foreach (var hint in gamePad.m_hint.GetComponentsInChildren<Text>(true))
+            hint.text = "$KEY_" + button;
+        gamePad.m_hint.AddComponent<Localize>();
     }
 
     private static TMP_Text NewSummary(TMP_InputField fieldTemplate, RectTransform panel, string name, ref float y)

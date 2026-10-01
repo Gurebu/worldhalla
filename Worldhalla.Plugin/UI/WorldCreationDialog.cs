@@ -24,6 +24,8 @@ public class WorldCreationDialog : MonoBehaviour
     private const float LOCATION_ICON_SIZE = 32f;
     private const float CAPTION_FONT_SIZE = 16f;
     private const float CAPTION_WIDTH = 240f;
+    private const float GAMEPAD_PAN_PIXELS_PER_SECOND = 600f;
+    private const float GAMEPAD_DEAD_ZONE = 0.2f;
 
     private const string SPOILER_HEADER = "$wh_spoiler_header";
     private const string SPOILER_TEXT = "$wh_spoiler_text";
@@ -59,6 +61,7 @@ public class WorldCreationDialog : MonoBehaviour
     internal RawImage detailsImage = null!;
     internal RawImage detailsWholeImage = null!;
     internal DragAndScroll detailsInput = null!;
+    internal UIGroupHandler detailsGroup = null!;
     internal GameObject detailsRing = null!;
     internal Button detailsCloseButton = null!;
     internal Button locationsButton = null!;
@@ -72,6 +75,7 @@ public class WorldCreationDialog : MonoBehaviour
     private Texture? detailsPlaceholder;
     private PreviewView detailsView = PreviewView.Whole;
     private PreviewView detailsDragStart;
+    private Vector2 gamepadPan;
 
     private List<KeyValuePair<string, IWorldGenerator>> generators = [];
     private ISettings? settings;
@@ -173,6 +177,7 @@ public class WorldCreationDialog : MonoBehaviour
 
         preview.Tick();
         ReportFailure();
+        NavigateDetails();
         RefreshPreview();
         RefreshDetails();
         RefreshButtons();
@@ -298,6 +303,7 @@ public class WorldCreationDialog : MonoBehaviour
         detailsFrame.localScale = new Vector3(scale, scale, 1f);
 
         detailsView = PreviewView.Whole;
+        gamepadPan = Vector2.zero;
         detailsOverlay.SetActive(true);
     }
 
@@ -404,6 +410,26 @@ public class WorldCreationDialog : MonoBehaviour
     {
         if (scroll != 0f)
             detailsView = detailsView.Zoomed(ToDetailsPixels(at) + 0.5f * PreviewView.SIZE * Vector2.one, scroll > 0f);
+    }
+
+    // Pans at a constant screen speed whatever the zoom; the remainder carries over since a view moves by whole pixels
+    private void NavigateDetails()
+    {
+        if (!detailsOverlay.activeSelf || !detailsGroup.IsActive)
+            return;
+
+        var stick = ZInput.GetJoyLeftStick();
+        if (stick.magnitude > GAMEPAD_DEAD_ZONE)
+        {
+            gamepadPan -= stick * (GAMEPAD_PAN_PIXELS_PER_SECOND * Time.unscaledDeltaTime);
+            var pixels = new Vector2(Mathf.Round(gamepadPan.x), Mathf.Round(gamepadPan.y));
+            gamepadPan -= pixels;
+            detailsView = detailsView.Panned(pixels);
+        }
+
+        var zoomIn = ZInput.GetButtonDown("JoyMapZoomIn");
+        if (zoomIn || ZInput.GetButtonDown("JoyMapZoomOut"))
+            detailsView = detailsView.Zoomed(0.5f * PreviewView.SIZE * Vector2.one, zoomIn);
     }
 
     private Vector2 ToDetailsPixels(Vector2 local)
