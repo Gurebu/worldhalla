@@ -166,7 +166,6 @@ internal sealed class LocationSimulation
 
             try
             {
-                using var scope = WorldGeneratorSimulation.Use(generator);
                 slice.Restart();
                 more = steps.MoveNext();
             }
@@ -287,7 +286,7 @@ internal sealed class LocationSimulation
 
         if (location.m_inForest)
         {
-            var forestFactor = WorldGenerator.GetForestFactor(point);
+            var forestFactor = generator.GetWorld()?.ForestFactor(point) ?? WorldGenerator.GetForestFactor(point);
             if (forestFactor < location.m_forestTresholdMin || forestFactor > location.m_forestTresholdMax)
                 return null;
         }

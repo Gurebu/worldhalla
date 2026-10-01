@@ -4,7 +4,6 @@ using UnityEngine;
 using Worldhalla.API.World;
 using Worldhalla.Plugin.Extensions;
 using Worldhalla.Plugin.Internal;
-using Worldhalla.Plugin.UI.Preview.Locations;
 using Logger = Worldhalla.Plugin.Internal.Logger;
 
 namespace Worldhalla.Plugin.Patches;
@@ -13,7 +12,6 @@ namespace Worldhalla.Plugin.Patches;
 [HarmonyPatch(typeof(WorldGenerator))]
 public static class WorldGeneratorPatch
 {
-    private const float FOREST_FACTOR_MULTIPLIER = 2.15f;
     private const int KEEPALIVE_INTERVAL_MS = 1000;
     private static readonly ThreadLocal<(IWorldState, Vector2, IWorldState.PointData)> cache = new();
 
@@ -142,10 +140,10 @@ public static class WorldGeneratorPatch
         ref Vector3 pos,
         ref float __result)
     {
-        if (WorldGeneratorSimulation.Current.GetWorld() is not {} world)
+        if (WorldGenerator.instance.GetWorld() is not {} world)
             return true;
         
-        __result = FOREST_FACTOR_MULTIPLIER * (1 - world.State.GetForestation(pos.x, pos.z));
+        __result = world.ForestFactor(pos);
 
         return false;
     }
@@ -153,7 +151,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.IsAshlands))]
     private static bool IsAshlands(float x, float y, ref bool __result)
     {
-        if (WorldGeneratorSimulation.Current.GetWorld()?.State is not IWorldGeography geography)
+        if (WorldGenerator.instance.GetWorld()?.State is not IWorldGeography geography)
             return true;
 
         __result = geography.IsAshlands(x, y);
@@ -164,7 +162,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.IsDeepnorth))]
     private static bool IsDeepnorth(float x, float y, ref bool __result)
     {
-        if (WorldGeneratorSimulation.Current.GetWorld()?.State is not IWorldGeography geography)
+        if (WorldGenerator.instance.GetWorld()?.State is not IWorldGeography geography)
             return true;
 
         __result = geography.IsDeepNorth(x, y);
@@ -175,7 +173,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.GetAshlandsOceanGradient), typeof(float), typeof(float))]
     private static bool GetAshlandsOceanGradient(float x, float y, ref float __result)
     {
-        if (WorldGeneratorSimulation.Current.GetWorld()?.State is not IWorldGeography geography)
+        if (WorldGenerator.instance.GetWorld()?.State is not IWorldGeography geography)
             return true;
 
         __result = geography.GetAshlandsOceanGradient(x, y);
@@ -186,7 +184,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.DeepNorthWaveFade))]
     private static bool DeepNorthWaveFade(float wx, float wy, ref double __result)
     {
-        if (WorldGeneratorSimulation.Current.GetWorld()?.State is not IWorldGeography geography)
+        if (WorldGenerator.instance.GetWorld()?.State is not IWorldGeography geography)
             return true;
 
         __result = geography.GetDeepNorthWaveFade(wx, wy);

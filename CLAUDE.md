@@ -242,6 +242,12 @@ real vanilla world. The class carries no Harmony attributes so `PatchAll` never 
 originals' patch lists before and after copying. HarmonyX 2.7 can't apply detours under .NET 8, so the test host
 crashes on any real patch or reverse patch; tests can only run transpilers as plain functions.
 
+The detailed preview's location simulation (`UI/Preview/Locations`) queries a generator that is not
+`WorldGenerator.instance`. `WorldGeneratorPatch`'s static hooks (`IsAshlands`, `GetForestFactor`, ...) only know the
+running world, so the simulation must reach a Worldhalla world through instance methods alone, which the patch routes
+through `__instance.GetWorld()`. A static it needs gets a shared helper both sides call, as `GeneratedWorld.ForestFactor`
+is; calling the static would silently answer with vanilla's layout.
+
 Both previews take their colours from `UI/Preview/PreviewPalette`: one sRGB colour per biome and one for water, so a
 new biome needs one entry there. The small preview paints them flat; the detailed one (`HdrPreviewStyle`) lights them
 in linear space with the knobs in `HdrPreviewSettings`. `Tools/PaletteLab/palette-lab.html` tunes those same values in

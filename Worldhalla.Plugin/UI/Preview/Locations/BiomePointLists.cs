@@ -24,8 +24,6 @@ internal static class BiomePointLists
 
         Parallel.For(0, SIZE, new ParallelOptions { CancellationToken = token }, y =>
         {
-            using var scope = WorldGeneratorSimulation.Use(generator);
-
             for (var x = 0; x < SIZE; x++)
             {
                 var wx = AltBiomeWorldData.MapSpaceToWorldSpace(x);
