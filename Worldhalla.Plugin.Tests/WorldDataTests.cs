@@ -343,7 +343,7 @@ public class WorldDataTests
         WorldPatch.ReadHeader("world_name", package, out _);
         package.ReadInt();
 
-        var (_, settings) = RiverheimMigration.MigratoryRead(package);
+        var (_, settings) = RiverheimMigration.ReleaseMigratoryRead(package);
 
         Assert.That(Hex(settings), Is.EqualTo(LEGACY_SETTINGS_BYTES));
     }

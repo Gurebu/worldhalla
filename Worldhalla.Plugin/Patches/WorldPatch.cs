@@ -136,7 +136,7 @@ public static class WorldPatch
         {
             var migrate = formatInfo.IsLegacyRiverheim();
             (worldgenGuid, settings) = migrate
-                ? RiverheimMigration.MigratoryRead(package)
+                ? RiverheimMigration.ReleaseMigratoryRead(package)
                 : ReadPayload(package);
         }
         catch (Exception e)

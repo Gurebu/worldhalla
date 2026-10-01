@@ -9,16 +9,20 @@ public static class RiverheimMigration
     private const string SETTING_PRESET = "preset";
     private const string SETTING_PRESET_VERSION = "preset.version";
     
-    public static (string, byte[]) MigratoryRead(ZPackage package)
+    public static (string, byte[]) ReleaseMigratoryRead(ZPackage package)
     {
         var count = package.ReadNumItems();
         if (count != SETTING_COUNT)
             throw new Exception($"legacy world holds {count} settings, expected {SETTING_COUNT}");
 
-        ReadLegacySettingName(package, SETTING_PRESET);
+        var namePreset = package.ReadString();
+        if (namePreset != SETTING_PRESET)
+            throw new Exception($"legacy world holds setting '{namePreset}' where '{SETTING_PRESET}' was expected");
         var preset = package.ReadString();
 
-        ReadLegacySettingName(package, SETTING_PRESET_VERSION);
+        var namePresetVersion = package.ReadString();
+        if (namePresetVersion != SETTING_PRESET_VERSION)
+            throw new Exception($"legacy world holds setting '{namePresetVersion}' where '{SETTING_PRESET_VERSION}' was expected");
         var presetVersion = package.ReadInt();
 
         var settings = new ZPackage();
@@ -30,12 +34,5 @@ public static class RiverheimMigration
         settings.Write(presetVersion);
 
         return (GUID, settings.GetArray());
-    }
-
-    private static void ReadLegacySettingName(ZPackage package, string expected)
-    {
-        var name = package.ReadString();
-        if (name != expected)
-            throw new Exception($"legacy world holds setting '{name}' where '{expected}' was expected");
     }
 }
