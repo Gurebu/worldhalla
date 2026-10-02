@@ -166,7 +166,7 @@ public class MyGenerator : IWorldGenerator { }
 The GUID in the attribute is the generator's identity: it is what worlds store and what peers
 compare. It lives only there, not on `IWorldGenerator`, so there is a single source for it. Inside
 the plugin it travels next to the generator: `Registry.Generators` is keyed by it, and a `World`
-carries it in its extension data (`GetWorldgenGuid()`), even when the generator isn't installed.
+carries it in its `WorldgenBinding` (`GetWorldgen().Guid`), even when the generator isn't installed.
 The type needs a parameterless constructor.
 
 **Discovery runs in `WorldhallaPlugin.Start`, and must not move to `Awake`.** BepInEx loads a
@@ -295,8 +295,11 @@ offset from a different baseline).
 
 ### Extending game types
 
-`Core/Extensions/WorldExtension` attaches Worldhalla's per-world state (worldgen, settings) to `World`
-through a `ConditionalWeakTable`. That is the intended way to add fields to a game type: treat them
+`Core/Extensions/WorldExtension` attaches Worldhalla's per-world state to `World` through a
+`ConditionalWeakTable`: a single `WorldgenBinding`, absent for a vanilla world. An `InstalledWorldgen` holds the
+generator and its settings; a `MissingWorldgen` holds only the GUID and the settings blob as read, so the world can
+be saved without its generator. Anything deciding whether a world is a Worldhalla world checks for a binding, not a
+generator. That is the intended way to add fields to a game type: treat them
 as first-class fields and set them where vanilla sets its own (e.g. next to the name and seed at
 construction), rather than carrying values across calls in temporary statics.
 

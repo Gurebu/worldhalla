@@ -64,8 +64,7 @@ public static class ServerStartupPatch
         if (ResolveRequest(ParseCommandLine()) is not var (guid, worldgen, settings))
             return;
 
-        world.SetWorldgen(guid, worldgen);
-        world.SetSettings(settings);
+        world.SetWorldgen(new InstalledWorldgen(guid, worldgen, settings));
 
         Logger.LogInfo($"Creating world '{world.m_name}' with worldgen '{guid}'");
     }

@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using HarmonyLib;
 using UnityEngine;
-using Worldhalla.API;
 using Worldhalla.API.World;
 using Worldhalla.Plugin.Core.Extensions;
 using Worldhalla.Plugin.Localization;
@@ -21,12 +20,12 @@ public static class WorldGeneratorPatch
     private static bool Pregenerate(WorldGenerator __instance)
     {
         var world = __instance.m_world;
-        if (world.m_menu || world.GetWorldgen() is not { } worldgen)
+        if (world.m_menu || world.GetWorldgen() is not InstalledWorldgen worldgen)
             return true;
 
         try
         {
-            __instance.SetWorld(world.TakeGeneratedWorld() ?? Generate(world, worldgen));
+            __instance.SetWorld(worldgen.TakeHandedOver() ?? Generate(world, worldgen));
         }
         catch (Exception e)
         {
@@ -36,12 +35,12 @@ public static class WorldGeneratorPatch
         return false;
     }
 
-    public static GeneratedWorld Generate(World world, IWorldGenerator worldgen)
+    public static GeneratedWorld Generate(World world, InstalledWorldgen worldgen)
     {
         if (world.m_seed == 0)
             throw new InvalidOperationException($"Seed is 0 for world '{world.m_name}', but it is not a menu world");
 
-        var generation = WorldGenerationTask.Start(worldgen, world.m_seed, world.GetSettings());
+        var generation = WorldGenerationTask.Start(worldgen.Generator, world.m_seed, worldgen.Settings);
 
         var keepingAlive = true;
         while (!generation.Wait(KEEPALIVE_INTERVAL_MS))
@@ -54,11 +53,11 @@ public static class WorldGeneratorPatch
     }
 
     // Vanilla's own exit for a world that failed to load: the game logs out without saving and the menu reports it
-    private static void FailWorldLoad(World world, IWorldGenerator worldgen, Exception e)
+    private static void FailWorldLoad(World world, InstalledWorldgen worldgen, Exception e)
     {
-        Logger.LogError($"'{world.GetWorldgenGuid()}' failed to generate world '{world.m_name}', leaving without saving: {e}");
+        Logger.LogError($"'{worldgen.Guid}' failed to generate world '{world.m_name}', leaving without saving: {e}");
 
-        failureMessage = Translations.Get("$wh_generation_failed", worldgen.Name);
+        failureMessage = Translations.Get("$wh_generation_failed", worldgen.Generator.Name);
         ZNet.m_loadError = true;
 
         if (ZNet.instance != null && ZNet.instance.IsDedicated())

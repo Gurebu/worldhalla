@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Emit;
 using HarmonyLib;
+using Worldhalla.Plugin.Core;
 using Worldhalla.Plugin.Core.Extensions;
 using Worldhalla.Plugin.UI;
 
@@ -20,8 +21,7 @@ public static class CreateWorldPanelPatch
         if (GetDialog(startup) is not { SelectedWorldgenGuid: { } guid, SelectedWorldgen: { } worldgen } dialog)
             return;
 
-        startup.m_world.SetWorldgen(guid, worldgen);
-        startup.m_world.SetSettings(dialog.Settings);
+        startup.m_world.SetWorldgen(new InstalledWorldgen(guid, worldgen, dialog.Settings));
     }
 
     // Built before the create-world panel is first shown, so the vanilla widgets moved into it wake up under their new parent

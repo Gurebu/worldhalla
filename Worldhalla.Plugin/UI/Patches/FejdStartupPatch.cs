@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using HarmonyLib;
 using UnityEngine.UI;
+using Worldhalla.Plugin.Core;
 using Worldhalla.Plugin.Core.Extensions;
 using Worldhalla.Plugin.Core.Patches;
 using Worldhalla.Plugin.Localization;
@@ -18,12 +19,13 @@ public static class FejdStartupPatch
         var world = startup.m_world;
 
         return world != null && !startup.m_startingWorld && world.m_dataError == World.SaveDataError.None &&
-               world.IsLegacyFormat();
+               world.GetWorldgen() is InstalledWorldgen { LegacyFormat: true };
     }
 
     private static void ConfirmMigration(World world, Action start)
     {
-        var text = Translations.Get("$wh_migration_text", world.m_name, world.GetWorldgen()!.Name);
+        var worldgen = (InstalledWorldgen)world.GetWorldgen()!;
+        var text = Translations.Get("$wh_migration_text", world.m_name, worldgen.Generator.Name);
 
         UnifiedPopup.Push(new YesNoPopup(Translations.Get(MIGRATION_HEADER), text, () =>
         {

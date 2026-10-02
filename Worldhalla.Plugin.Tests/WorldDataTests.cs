@@ -43,14 +43,16 @@ public class WorldDataTests
         Registry.PurgeAll();
     }
 
-    private static World NewWorld(bool custom = true)
+    private static World NewWorld(bool custom = true, ISettings settings = null)
     {
         var world = new World { m_name = "test" };
         if (custom)
-            world.SetWorldgen(WORLDGEN, Generator);
+            world.SetWorldgen(new InstalledWorldgen(WORLDGEN, Generator, settings ?? Generator.DefaultSettings));
 
         return world;
     }
+
+    private static InstalledWorldgen Installed(World world) => (InstalledWorldgen)world.GetWorldgen();
 
     /*
      * A .fwl as worlds carried it before the format version byte existed: an all ones header, the
@@ -81,8 +83,8 @@ public class WorldDataTests
 
     private static ZPackage CurrentPackage(ISettings settings = null, string worldgenId = null)
     {
-        var world = NewWorld();
-        world.SetSettings(settings ?? new TestSettings("written"));
+        settings ??= new TestSettings("written");
+        var world = NewWorld(settings: settings);
 
         var package = new ZPackage();
 
@@ -99,7 +101,7 @@ public class WorldDataTests
 
             payload.Write(worldgenId);
             payload.Write(new ZPackage().GetArray());
-            payload.Write(world.GetSettings().SaveToBinaryBlob());
+            payload.Write(settings.SaveToBinaryBlob());
 
             package.Write(payload.GetArray());
         }
@@ -156,7 +158,7 @@ public class WorldDataTests
         Assert.That(package.ReadInt(), Is.EqualTo((int)Version.World.DeepNorth));
 
         Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
-        Assert.That(world.IsVanillaWorld(), Is.True);
+        Assert.That(world.GetWorldgen(), Is.Null);
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 
@@ -186,8 +188,8 @@ public class WorldDataTests
         package.ReadInt();
 
         Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
-        Assert.That(world.GetSettings(), Is.EqualTo(new TestSettings("round tripped")));
-        Assert.That(world.IsLegacyFormat(), Is.False);
+        Assert.That(Installed(world).Settings, Is.EqualTo(new TestSettings("round tripped")));
+        Assert.That(Installed(world).LegacyFormat, Is.False);
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 
@@ -195,7 +197,7 @@ public class WorldDataTests
     public void SettinglessWorldRoundTripsAndLeavesTheCursorOnVanillaData()
     {
         var written = new World { m_name = "test" };
-        written.SetWorldgen(SETTINGLESS_WORLDGEN, SettinglessGenerator);
+        written.SetWorldgen(new InstalledWorldgen(SETTINGLESS_WORLDGEN, SettinglessGenerator, null));
 
         var package = new ZPackage();
 
@@ -211,8 +213,8 @@ public class WorldDataTests
         package.ReadInt();
 
         Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
-        Assert.That(world.GetWorldgen(), Is.SameAs(SettinglessGenerator));
-        Assert.That(world.GetSettings(), Is.Null);
+        Assert.That(Installed(world).Generator, Is.SameAs(SettinglessGenerator));
+        Assert.That(Installed(world).Settings, Is.Null);
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 
@@ -259,7 +261,8 @@ public class WorldDataTests
 
         Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
         Assert.That(world.m_dataError, Is.EqualTo(World.SaveDataError.BadVersion));
-        Assert.That(world.GetWorldgenGuid(), Is.EqualTo("dev.someone.else"));
+        Assert.That(world.GetWorldgen(), Is.InstanceOf<MissingWorldgen>());
+        Assert.That(world.GetWorldgen()!.Guid, Is.EqualTo("dev.someone.else"));
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 
@@ -279,7 +282,7 @@ public class WorldDataTests
         WorldPatch.WriteWorldData(written, world);
         written.SetPos(0);
 
-        Assert.That(world.IsVanillaWorld(), Is.False);
+        Assert.That(world.GetWorldgen(), Is.InstanceOf<MissingWorldgen>());
         Assert.That(WorldPatch.ReadHeader("world_name", written, out var writtenInfo), Is.True);
         Assert.That(writtenInfo.isModded, Is.True);
 
@@ -301,7 +304,7 @@ public class WorldDataTests
         package.ReadInt();
 
         Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
-        Assert.That(world.GetSettings(), Is.EqualTo(limit));
+        Assert.That(Installed(world).Settings, Is.EqualTo(limit));
     }
 
     [Test, RequiresValheim]
@@ -356,11 +359,11 @@ public class WorldDataTests
         package.ReadInt();
         WorldPatch.ReadWorldData("world_name", package, world, formatInfo);
 
-        Assert.That(world.IsLegacyFormat(), Is.True);
+        Assert.That(Installed(world).LegacyFormat, Is.True);
 
         WorldPatch.WriteWorldData(new ZPackage(), world);
 
-        Assert.That(world.IsLegacyFormat(), Is.False);
+        Assert.That(Installed(world).LegacyFormat, Is.False);
     }
 
     [Test, RequiresValheim]

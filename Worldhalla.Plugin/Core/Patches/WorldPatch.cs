@@ -61,25 +61,27 @@ public static class WorldPatch
 
     internal static void WriteHeader(ZPackage package, World world)
     {
-        if (world.IsVanillaWorld())
+        if (world.GetWorldgen() == null)
             return;
-        
+
         package.Write(CUSTOM_WORLDGEN_FLAG | FORMAT_VERSION);
     }
 
     internal static void WriteWorldData(ZPackage package, World world)
     {
-        if (world.IsVanillaWorld())
+        if (world.GetWorldgen() is not { } worldgen)
             return;
-        
+
         var payload = new ZPackage();
 
-        payload.Write(world.GetWorldgenGuid()!);
+        payload.Write(worldgen.Guid);
         payload.Write(new ZPackage().GetArray());
-        payload.Write(world.SaveSettings());
+        payload.Write(worldgen.SaveSettings());
 
         package.Write(payload.GetArray());
-        world.SetLegacyFormat(false);
+
+        if (worldgen is InstalledWorldgen installed)
+            installed.LegacyFormat = false;
     }
 
     internal static bool ReadHeader(string name, ZPackage package, out FormatInfo formatInfo)
@@ -147,16 +149,17 @@ public static class WorldPatch
         if (!Registry.FindByGuid(worldgenGuid, out var worldgen))
         {
             Logger.LogInfo($"Missing generator for guid '{worldgenGuid}', marking world '{name}' unloadable");
-            world.SetUnknownWorldgen(worldgenGuid, settings);
+            world.SetWorldgen(new MissingWorldgen(worldgenGuid, settings));
             world.m_dataError = World.SaveDataError.BadVersion;
             return true;
         }
 
         try
         {
-            world.SetWorldgen(worldgenGuid, worldgen);
-            world.SetSettings(worldgen.LoadSettings(settings));
-            world.SetLegacyFormat(formatInfo.IsLegacyRiverheim());
+            world.SetWorldgen(new InstalledWorldgen(worldgenGuid, worldgen, worldgen.LoadSettings(settings))
+            {
+                LegacyFormat = formatInfo.IsLegacyRiverheim(),
+            });
         }
         catch (SettingsException e)
         {

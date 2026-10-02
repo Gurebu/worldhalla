@@ -3,6 +3,7 @@ using HarmonyLib;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Worldhalla.Plugin.Core;
 using Worldhalla.Plugin.Core.Extensions;
 using Worldhalla.Plugin.Localization;
 
@@ -41,10 +42,12 @@ public static class WorldListPatch
 
     private static string GetMoniker(World world)
     {
-        if (world.GetWorldgenGuid() == null)
-            return "";
-
-        var moniker = world.GetWorldgen()?.Moniker ?? UNKNOWN_MONIKER;
+        var moniker = world.GetWorldgen() switch
+        {
+            null => "",
+            InstalledWorldgen installed => installed.Generator.Moniker,
+            _ => UNKNOWN_MONIKER,
+        };
 
         return moniker.Length > MONIKER_LENGTH ? moniker.Substring(0, MONIKER_LENGTH) : moniker;
     }
@@ -75,14 +78,15 @@ public static class WorldListPatch
         if (tooltip == null)
             return;
 
-        if (world.GetWorldgenGuid() is not { } guid)
+        if (world.GetWorldgen() is not { } worldgen)
             return;
 
-        var text = world.GetWorldgen() is { } worldgen
-            ? Translations.Get("$wh_tooltip_name", worldgen.Name)
+        var installed = worldgen as InstalledWorldgen;
+        var text = installed != null
+            ? Translations.Get("$wh_tooltip_name", installed.Generator.Name)
             : Translations.Get("$wh_tooltip_unknown");
-        text += $"\n{Translations.Get("$wh_tooltip_guid", guid)}";
-        if (world.GetSettings() is { } settings)
+        text += $"\n{Translations.Get("$wh_tooltip_guid", worldgen.Guid)}";
+        if (installed?.Settings is { } settings)
             text += $"\n{settings.Summary().TrimEnd()}";
 
         if (tooltip.m_text != "")

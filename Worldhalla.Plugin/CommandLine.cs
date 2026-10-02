@@ -40,10 +40,9 @@ public static class CommandLine
             apply(options, args[++i]);
         }
 
-        if (options.settings != null && options.worldgenGuid == null)
-            throw new ServerStartupException($"'{PREFIX} settings' needs a worldgen to apply to, pass one with '{PREFIX} guid'");
-
-        return options;
+        return options is { settings: not null, worldgenGuid: null }
+            ? throw new ServerStartupException($"'{PREFIX} settings' needs a worldgen to apply to, pass one with '{PREFIX} guid'")
+            : options;
     }
 
     private static void SetOnce(ref string? field, string value, string what)

@@ -99,7 +99,6 @@ public static class ZNetPatch
         var handshake = new ZPackage();
 
         handshake.Write(PluginInfo.PLUGIN_VERSION);
-
         handshake.Write(Registry.Generators.Count);
 
         foreach (var (guid, generator) in Registry.Generators)
@@ -147,10 +146,9 @@ public static class ZNetPatch
     private static bool RPC_PeerInfo(ZNet __instance, ZRpc rpc)
     {
         var world = ZNet.World;
-        if (!__instance.IsServer() || world.GetWorldgen() is not { } worldgen)
+        if (!__instance.IsServer() || world.GetWorldgen() is not InstalledWorldgen { Guid: var guid, Generator: var worldgen })
             return true;
 
-        var guid = world.GetWorldgenGuid()!;
         var peer = rpc.GetSocket().GetEndPointString();
         var refusing = $"Refusing peer {peer}: world '{world.m_name}' is created with '{guid}' {worldgen.Version}";
 
@@ -234,16 +232,15 @@ public static class ZNetPatch
     [HarmonyPriority(Priority.VeryHigh), HarmonyPrefix, HarmonyPatch(nameof(ZNet.SendPeerInfo))]
     private static void SendPeerInfo(ZNet __instance, ZRpc rpc)
     {
-        var world = ZNet.World;
-        if (!__instance.IsServer() || world.GetWorldgen() is not { } worldgen)
+        if (!__instance.IsServer() || ZNet.World.GetWorldgen() is not InstalledWorldgen worldgen)
             return;
 
         var package = new ZPackage();
 
         package.Write(PluginInfo.PLUGIN_VERSION);
-        package.Write(world.GetWorldgenGuid()!);
+        package.Write(worldgen.Guid);
         package.Write(new ZPackage().GetArray());
-        package.Write(world.SaveSettings());
+        package.Write(worldgen.SaveSettings());
 
         rpc.Invoke(WORLD_RPC, package);
     }
@@ -298,12 +295,12 @@ public static class ZNetPatch
                 Translations.Get("$wh_refused_settings_failed", worldgen.Name));
         }
 
-        world.SetWorldgen(worldgenType, worldgen);
-        world.SetSettings(settings);
+        var binding = new InstalledWorldgen(worldgenType, worldgen, settings);
+        world.SetWorldgen(binding);
 
         try
         {
-            world.SetGeneratedWorld(WorldGeneratorPatch.Generate(world, worldgen));
+            binding.HandOver(WorldGeneratorPatch.Generate(world, binding));
         }
         catch (Exception e)
         {
