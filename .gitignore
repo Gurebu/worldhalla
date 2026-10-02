@@ -58,3 +58,7 @@ nunit-*.xml
 
 # Palette lab world data: recorded from a generator, never committed
 Tools/PaletteLab/data/
+
+# JetBrains Rider
+.idea/
+*.DotSettings.user
