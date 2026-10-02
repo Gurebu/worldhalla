@@ -10,6 +10,7 @@ wh_settings_build_failed,The generator couldn't build these settings
 wh_preview_title,World preview
 wh_preview_locations,Show locations
 wh_preview_locations_progress,Placing locations $1%
+wh_preview_locations_lpa,"With Location Placement Accelerator, locations can only be previewed in its Vanilla placement mode"
 wh_preview_close,Close
 wh_preview_click_to_reveal,Click to reveal
 wh_preview_enter_seed,Enter a seed

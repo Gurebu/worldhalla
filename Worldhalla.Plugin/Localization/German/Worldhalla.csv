@@ -10,6 +10,7 @@ wh_settings_build_failed,Der Generator konnte diese Einstellungen nicht überneh
 wh_preview_title,Weltvorschau
 wh_preview_locations,Orte anzeigen
 wh_preview_locations_progress,Orte werden platziert $1%
+wh_preview_locations_lpa,"Mit Location Placement Accelerator lassen sich Orte nur in dessen Platzierungsmodus Vanilla vorhersagen"
 wh_preview_close,Schließen
 wh_preview_click_to_reveal,Klicken zum Aufdecken
 wh_preview_enter_seed,Seed eingeben

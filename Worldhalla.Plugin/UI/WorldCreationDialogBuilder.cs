@@ -256,6 +256,17 @@ internal static class WorldCreationDialogBuilder
         Place(locations.transform, -(LOCATIONS_BUTTON_WIDTH + BUTTON_GAP) / 2f, y, LOCATIONS_BUTTON_WIDTH, MAIN_BUTTON_HEIGHT);
         Place(close.transform, (CLOSE_BUTTON_WIDTH + BUTTON_GAP) / 2f, y, CLOSE_BUTTON_WIDTH, MAIN_BUTTON_HEIGHT);
 
+        var note = NewLabel(labelTemplate, frameRect, "LocationsNote", "$wh_preview_locations_lpa");
+        note.horizontalAlignment = HorizontalAlignmentOptions.Right;
+        note.verticalAlignment = VerticalAlignmentOptions.Middle;
+        note.textWrappingMode = TextWrappingModes.Normal;
+        note.enableAutoSizing = false;
+        note.fontSize *= SUMMARY_FONT_SCALE;
+        note.raycastTarget = false;
+        var noteRight = -(LOCATIONS_BUTTON_WIDTH + BUTTON_GAP) / 2f - LOCATIONS_BUTTON_WIDTH / 2f - BUTTON_GAP;
+        var noteWidth = DETAILS_MAP_SIZE / 2f + noteRight;
+        Place(note.transform, noteRight - noteWidth / 2f, y, noteWidth, MAIN_BUTTON_HEIGHT);
+
         dialog.detailsOverlay = overlay;
         dialog.detailsFrame = frameRect;
         dialog.detailsImage = view;
@@ -264,6 +275,7 @@ internal static class WorldCreationDialogBuilder
         dialog.detailsRing = ring.gameObject;
         dialog.detailsCloseButton = close;
         dialog.locationsButton = locations;
+        dialog.locationsNote = note.gameObject;
         dialog.captionTemplate = labelTemplate;
 
         overlay.SetActive(false);

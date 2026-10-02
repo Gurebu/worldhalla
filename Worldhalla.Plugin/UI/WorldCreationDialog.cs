@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using Worldhalla.API;
 using Worldhalla.API.Settings;
 using Worldhalla.API.World;
+using Worldhalla.Plugin.Compat;
 using Worldhalla.Plugin.Extensions;
 using Worldhalla.Plugin.Internal;
 using Worldhalla.Plugin.UI.Preview;
@@ -66,6 +67,7 @@ public class WorldCreationDialog : MonoBehaviour
     internal GameObject detailsRing = null!;
     internal Button detailsCloseButton = null!;
     internal Button locationsButton = null!;
+    internal GameObject locationsNote = null!;
     internal TMP_Text captionTemplate = null!;
     internal SettingsDialog settingsDialog = null!;
 
@@ -91,6 +93,8 @@ public class WorldCreationDialog : MonoBehaviour
     private TMP_Text locationsLabel = null!;
     private readonly List<(RectTransform icon, Vector3 position)> locationIcons = [];
     private Material? captionMaterial;
+
+    private static bool LocationsSimulable => LocationPlacementAccelerator.PlacesLikeVanilla;
 
     private KeyValuePair<string, IWorldGenerator>? Selected
     {
@@ -305,6 +309,8 @@ public class WorldCreationDialog : MonoBehaviour
 
     private void OpenDetails()
     {
+        locationsNote.SetActive(!LocationsSimulable);
+
         var available = ((RectTransform)detailsOverlay.transform).rect.size * DETAILS_SCREEN_FRACTION;
         var frame = detailsFrame.sizeDelta;
         var scale = Mathf.Min(1f, available.x / frame.x, available.y / frame.y);
@@ -318,7 +324,7 @@ public class WorldCreationDialog : MonoBehaviour
     // Experimental: logs where the priority locations of the previewed world would be placed
     private void SimulateLocations()
     {
-        if (preview.World is not { } world || world == simulatedWorld || previewSeed == null)
+        if (!LocationsSimulable || preview.World is not { } world || world == simulatedWorld || previewSeed == null)
             return;
 
         simulatedWorld = world;
@@ -554,7 +560,7 @@ public class WorldCreationDialog : MonoBehaviour
 
         hideButton.interactable = revealed;
         detailsButton.interactable = revealed && preview.CanShowDetails;
-        locationsButton.interactable = preview.World != null && preview.World != simulatedWorld;
+        locationsButton.interactable = LocationsSimulable && preview.World != null && preview.World != simulatedWorld;
         locationsLabel.text = simulationProgress is { } progress
             ? Translations.Get(LOCATIONS_PROGRESS, Mathf.FloorToInt(progress.Fraction * 100f).ToString())
             : Translations.Get(LOCATIONS);
