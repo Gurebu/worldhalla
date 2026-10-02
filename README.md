@@ -1,37 +1,31 @@
 # Worldhalla
 
-Worldhalla isn't a world generator itself; it's a framework Valheim mod writers can use to free
-themselves from the tedious parts of modding world generation:
-save file integration, networking and patching the game.
+Worldhalla is a modding framework for Valheim that helps both users and mod authors to manage worlds created by
+different generation algorithms. The task it aims to solve is crucial because of how Valheim's world generation
+works: terrain is always generated in runtime by the game's code and should that code change, so will the terrain
+while all the objects including player builds will stay in their place, potentially putting them under the ground
+or into the air where they will break.
 
-To the user, Worldhalla provides a way to manage per-world information about which mod generated
-a particular world and what mod-specific settings it used, without the risk of loading a world with
-the wrong mod setup and wrecking builds due to changed terrain.
+To the user, Worldhalla provides a way to manage per-world information: which mod was used to create a world and what
+particular settings did it have. It makes it possible to use several worldgen mods together and makes it impossible
+to load a world with the wrong mod. It also provides a number of helpful facilities and UI improvements further
+described in the plugin's [README](./Worldhalla.Plugin/README.md). In the future it will also enable postprocessing
+settings that are valid for any world generation.
 
-The save file format also guarantees that a vanilla client can't accidentally load modded worlds and
-wreck them the same way: vanilla sees all Worldhalla worlds as `[BAD_VERSION]`.
+To the mod author, Worldhalla will do the heavy lifting of patching the game to use your world generator, saving and
+loading settings from the save file, properly distributing your world over the network and managing incompatibilities.
+All you need to do is write the generation algorithm itself, wire it to Worldhalla's API and guarantee that generation
+stays reproducible across versions with the same seeds and settings. You can find further integration details in the
+API's [README](./Worldhalla.API/README.md).
 
-## Dedicated servers
+Worldhalla's core patches have initially been written for
+[Riverheim](https://thunderstore.io/c/valheim/p/Gurebu/Riverheim/) and thus have stood the test of time. Riverheim
+itself will now be a Worldhalla plugin and won't do any game patching anymore.
 
-A dedicated server creates the world named by `-world` when it doesn't exist yet. By default that
-world is vanilla; to have a generator create it instead, pass its GUID:
+Across the board the design vision is "if Valheim had an official world generation modding API, it would have been
+Worldhalla".
 
-```
-valheim_server -world MyWorld -wh guid dev.gurebu.riverheim.stable
-```
-
-Settings for the new world are passed as a single string, whose format is up to the generator
-(`IWorldGenerator.ParseCommandLineSettings`); without it the generator's defaults are used:
-
-```
-valheim_server -world MyWorld -wh guid dev.gurebu.riverheim.stable -wh settings "preset builtin.amur"
-```
-
-These options only apply to worlds being created: an existing world keeps the generator it was made
-with, and the server logs a warning if that differs from the one requested. The server refuses to
-start, rather than falling back to vanilla, if the GUID belongs to no installed generator, if the generator rejects the settings, or if a
-world with that name exists but can't be loaded — vanilla would silently replace such a world with
-a new one.
+## Plugin architecture
 
 ## Save file format
 
@@ -115,51 +109,6 @@ Worldhalla's own generator-agnostic settings, and a blob of settings data that i
 generator to read and write. Worldhalla's settings blob is empty for now; it is reserved for
 settings like world size multipliers. The generator's blob may take at most 64 KiB; settings
 describe a world rather than carry its data.
-
-## Modding instructions
-
-Reference `Worldhalla.API`, implement `IWorldGenerator`, and label the class:
-
-```csharp
-[BepInPlugin("dev.you.mygen", "MyGen", "1.0.0")]
-[BepInDependency("dev.gurebu.worldhalla")]
-public class MyPlugin : BaseUnityPlugin { }
-
-[WorldhallaPlugin("dev.you.mygen")]
-public class MyGenerator : IWorldGenerator
-{
-    public string Moniker => "MG";
-    public string Name => "My Generator";
-    public string Version => "1.0.0";
-    public IWorldGenerator.Feature[] Features => [];
-
-    public ISettings DefaultSettings => new MySettings();
-    public ISettings DeserializeSettings(byte[] data, out string error) { ... }
-    public ISettings? ParseSettings(string settings, out string error) { ... }
-    public IWorldState Generate(int seed, ISettings? settings, IProgress<float> progress, CancellationToken cancellation) { ... }
-}
-```
-
-Reference the API as compile-only and don't ship it.
-
-### Guidelines
-
-#### Stable output
-
-Valheim never saves a world's baseline terrain: every chunk is regenerated from the generator each
-time it loads. What it does save — objects placed when a zone was first generated, and terrain edits
-stored as offsets — is only valid against the terrain it was created on. A generator must therefore
-return the same output for the same seed and settings forever: across its own updates, across
-platforms and across runtimes.
-
-#### Version
-
-In multiplayer, every client computes terrain locally. A client may only join a world created with
-your generator if it reports exactly the same `Version` string as the server. Change it whenever the
-same seed and settings may produce different terrain, deliberately or not. Returning your plugin
-version is the safe choice. Keeping the string unchanged across a release lets players on
-different versions of your mod play together, so do that only when you're sure the terrain is
-identical.
 
 <!-- TODO -->
 
