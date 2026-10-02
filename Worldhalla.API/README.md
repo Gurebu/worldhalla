@@ -3,9 +3,9 @@
 To create a world generator for Worldhalla, you have to roll a BepInEx plugin and have a class somewhere inside
 your .dll that implements `Worldhalla.API.IWorldGenerator` and registers with Worldhalla using `[WorldhallaPlugin(GUID)]`.
 
-There's a [Sample project](../GeneratorSample) that shows a minimal viable integration you can take a look at. It's
-a functioning world generator so if you build it and throw into your BepInEx plugins folder, it will work and enable
-world generation with its particular (rather simple) algorithm.
+There's a [Sample project](https://github.com/Gurebu/worldhalla/tree/master/GeneratorSample) that shows a minimal
+viable integration you can take a look at. It's a functioning world generator so if you build it and throw into your
+BepInEx plugins folder, it will work and enable world generation with its particular (rather simple) algorithm.
 
 ## Guidelines
 
@@ -143,7 +143,7 @@ the `<settings>` string as input.
 
 Finally, when a user creates your world in-game, they also need a way to specify the settings. Worldhalla will ask your
 mod for the settings form it presents to the user and then get back to you with the values the user has entered. See
-the [Sample Project](../GeneratorSample) for how it's done.
+the [Sample Project](https://github.com/Gurebu/worldhalla/tree/master/GeneratorSample) for how it's done.
 
 ### IWorldGeography
 

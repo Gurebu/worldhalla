@@ -120,6 +120,10 @@ API-only `Worldhalla.dll` a build output may carry — gives that consumer a dif
 `IWorldGenerator` than the registry it registers into. Consumers must reference the API as
 compile-only and never ship it.
 
+The API also ships to NuGet as package `Worldhalla` (`dotnet pack Worldhalla.API -c Release`). It is
+reference-only: the assembly goes under `ref/` with no `lib/`, so a consumer referencing the package
+can't ship or merge a second copy of the API. Its `Version` must match the plugin's.
+
 Note: a project that references `ILRepack.Lib.MSBuild.Task` without supplying its own
 `ILRepack.targets` gets the package's fallback target, which auto-merges **in Release only** with
 no `LibraryPath` and fails to resolve Harmony.

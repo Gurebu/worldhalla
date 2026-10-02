@@ -12,10 +12,30 @@
             when it merges the plugin in, so the mark has to be here, not just on the plugin.
         -->
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Version>0.1.0</Version>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
+
+        <PackageId>Worldhalla</PackageId>
+        <Authors>Gurebu</Authors>
+        <Description>API for Worldhalla, a Valheim world generation framework. Compile-time reference only; the runtime comes from the Worldhalla plugin.</Description>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/Gurebu/worldhalla</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/Gurebu/worldhalla</RepositoryUrl>
+        <PackageTags>valheim;bepinex;worldgen;modding</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <!-- Reference-only package: consumers compile against it, the Worldhalla plugin provides it at runtime -->
+        <IncludeBuildOutput>false</IncludeBuildOutput>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" PrivateAssets="All" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="/" />
+        <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="ref/netstandard2.1/" Visible="false" />
+        <None Include="$(OutputPath)$(AssemblyName).xml" Pack="true" PackagePath="ref/netstandard2.1/" Visible="false" />
     </ItemGroup>
 
 </Project>

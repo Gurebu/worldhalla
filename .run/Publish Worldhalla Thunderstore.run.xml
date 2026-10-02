@@ -1,0 +1,10 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Publish Worldhalla Thunderstore" type="DotNetFolderPublish" factoryName="Publish to folder">
+    <riderPublish configuration="Release" delete_existing_files="true" platform="Any CPU" target_folder="$PROJECT_DIR$/Worldhalla.Plugin/bin/Release/netstandard2.1/publish" target_framework="netstandard2.1" uuid_high="6017957330761435968" uuid_low="-4733934446942018953" />
+    <method v="2" />
+  </configuration>
+  <configuration default="false" name="Publish Worldhalla Thunderstore" type="DotNetFolderPublish" factoryName="Publish to folder">
+    <riderPublish configuration="Release" delete_existing_files="true" platform="Any CPU" target_folder="$PROJECT_DIR$/Worldhalla.Plugin/bin/Release/netstandard2.1/publish" target_framework="netstandard2.1" uuid_high="6017957330761435968" uuid_low="-4733934446942018953" />
+    <method v="2" />
+  </configuration>
+</component>
