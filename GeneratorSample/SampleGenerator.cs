@@ -19,7 +19,7 @@ public class SampleGenerator : IWorldGenerator, ISettingsHandler
 
     public ISettings DefaultSettings => new SampleSettings(SampleSettings.DEFAULT_ISLAND_SCALE);
 
-    public string CommandLineUsage => $"<island scale, {SampleSettings.MIN_ISLAND_SCALE} to {SampleSettings.MAX_ISLAND_SCALE}>";
+    public string CommandLineUsage => $"scale <island scale, {SampleSettings.MIN_ISLAND_SCALE} to {SampleSettings.MAX_ISLAND_SCALE}>";
 
     public ISettings BuildSettingsFromBinaryBlob(byte[] data)
     {
@@ -28,8 +28,10 @@ public class SampleGenerator : IWorldGenerator, ISettingsHandler
 
     public ISettings BuildSettingsFromCommandLine(string settings)
     {
-        if (!float.TryParse(settings, NumberStyles.Float, CultureInfo.InvariantCulture, out var islandScale))
-            throw new SettingsException($"Expected an island scale, got '{settings}'");
+        var words = settings.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length != 2 || words[0] != "scale" ||
+            !float.TryParse(words[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var islandScale))
+            throw new SettingsException($"Expected 'scale <island scale>', got '{settings}'");
 
         return SampleSettings.Checked(islandScale);
     }

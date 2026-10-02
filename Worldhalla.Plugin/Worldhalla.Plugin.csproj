@@ -53,6 +53,7 @@
         <ThunderstoreIcon>thunderstore/icon.png</ThunderstoreIcon>
         <ThunderstoreReadme>README.md</ThunderstoreReadme>
         <ThunderstoreChangelog>CHANGELOG.md</ThunderstoreChangelog>
+        <ThunderstoreWebsiteUrl>https://github.com/Gurebu/worldhalla</ThunderstoreWebsiteUrl>
     </PropertyGroup>
 
     <ItemGroup>
