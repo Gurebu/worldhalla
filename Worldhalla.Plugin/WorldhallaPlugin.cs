@@ -12,6 +12,8 @@ public class WorldhallaPlugin : BaseUnityPlugin
 {
     private const string GUID = "dev.gurebu.worldhalla";
 
+    private bool disabled;
+
     public void Awake()
     {
         Internal.Logger.SetLogger((level, message) =>
@@ -32,6 +34,9 @@ public class WorldhallaPlugin : BaseUnityPlugin
             }
         });
 
+        if (StandDownForOutdatedRiverheim())
+            return;
+
         var worldListPatch = Config.Bind("Compatibility", "WorldListPatch", true,
             "Shows the world generator in the world list and its tooltip. Disable to improve compatibility with mods that change the world list.");
 
@@ -50,7 +55,28 @@ public class WorldhallaPlugin : BaseUnityPlugin
     
     public void Start()
     {
+        if (disabled)
+            return;
+
+        // An outdated Riverheim loaded after Awake has seen Worldhalla's patches go in, so they come out again
+        if (StandDownForOutdatedRiverheim())
+        {
+            Harmony.UnpatchID(GUID);
+            return;
+        }
+
         Registry.DiscoverGenerators();
+    }
+
+    private bool StandDownForOutdatedRiverheim()
+    {
+        if (ModCompat.FindOutdatedRiverheim() is not { } riverheim)
+            return false;
+
+        Logger.LogError($"{riverheim.Metadata.Name} {riverheim.Metadata.Version} ({riverheim.Metadata.GUID}) is incompatible with " +
+                        "Worldhalla. Update it to 1.3 or newer; until then Worldhalla stays inactive.");
+        disabled = true;
+        return true;
     }
 
     public void OnDestroy()
