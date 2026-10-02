@@ -1,4 +1,5 @@
 using UnityEngine;
+using Object = UnityEngine.Object;
 using Logger = Worldhalla.Plugin.Internal.Logger;
 
 namespace Worldhalla.Plugin.UI.Preview.Locations;
@@ -48,10 +49,23 @@ internal sealed class MapIcons
         var locations = minimap.m_locationIcons
             .Where(icon => icon.m_icon != null)
             .GroupBy(icon => icon.m_name)
-            .ToDictionary(group => group.Key, group => GameAssets.Copy(group.First().m_icon));
+            .ToDictionary(group => group.Key, group => Outlined(group.First().m_icon));
 
         var boss = minimap.m_icons.FirstOrDefault(icon => icon.m_name == Minimap.PinType.Boss && icon.m_icon != null).m_icon;
 
-        return new MapIcons(locations, boss != null ? GameAssets.Copy(boss) : null);
+        return new MapIcons(locations, boss != null ? Outlined(boss) : null);
+    }
+
+    private static Texture2D Outlined(Sprite sprite)
+    {
+        var copy = GameAssets.Copy(sprite);
+        try
+        {
+            return IconOutline.Apply(copy);
+        }
+        finally
+        {
+            Object.Destroy(copy);
+        }
     }
 }

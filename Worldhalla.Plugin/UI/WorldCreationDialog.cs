@@ -24,6 +24,7 @@ public class WorldCreationDialog : MonoBehaviour
     private const float LOCATION_ICON_SIZE = 32f;
     private const float CAPTION_FONT_SIZE = 16f;
     private const float CAPTION_WIDTH = 240f;
+    private const float CAPTION_OUTLINE_WIDTH = 0.35f;
     private const float GAMEPAD_PAN_PIXELS_PER_SECOND = 600f;
     private const float GAMEPAD_DEAD_ZONE = 0.2f;
 
@@ -89,6 +90,7 @@ public class WorldCreationDialog : MonoBehaviour
     private LocationSimulation.Progress? simulationProgress;
     private TMP_Text locationsLabel = null!;
     private readonly List<(RectTransform icon, Vector3 position)> locationIcons = [];
+    private Material? captionMaterial;
 
     private KeyValuePair<string, IWorldGenerator>? Selected
     {
@@ -151,6 +153,12 @@ public class WorldCreationDialog : MonoBehaviour
     private void OnDisable()
     {
         ResetSession();
+    }
+
+    private void OnDestroy()
+    {
+        if (captionMaterial != null)
+            Destroy(captionMaterial);
     }
 
     private void ResetSession()
@@ -349,7 +357,7 @@ public class WorldCreationDialog : MonoBehaviour
             image.texture = location.icon;
             image.raycastTarget = false;
             var rect = image.rectTransform;
-            rect.sizeDelta = new Vector2(LOCATION_ICON_SIZE, LOCATION_ICON_SIZE);
+            rect.sizeDelta = LOCATION_ICON_SIZE * (1f + 2f * IconOutline.MARGIN) * Vector2.one;
             rect.anchoredPosition = Vector2.zero;
             locationIcons.Add((rect, location.position));
 
@@ -365,6 +373,7 @@ public class WorldCreationDialog : MonoBehaviour
         if (caption.GetComponent<Localize>() is { } localize)
             DestroyImmediate(localize);
 
+        caption.fontSharedMaterial = CaptionMaterial();
         caption.text = text;
         caption.fontSize = CAPTION_FONT_SIZE;
         caption.horizontalAlignment = HorizontalAlignmentOptions.Center;
@@ -377,6 +386,19 @@ public class WorldCreationDialog : MonoBehaviour
         rect.pivot = new Vector2(0.5f, 1f);
         rect.sizeDelta = new Vector2(CAPTION_WIDTH, CAPTION_FONT_SIZE * 1.5f);
         rect.anchoredPosition = Vector2.zero;
+    }
+
+    private Material CaptionMaterial()
+    {
+        if (captionMaterial != null)
+            return captionMaterial;
+
+        captionMaterial = new Material(captionTemplate.fontSharedMaterial);
+        // Dilating the face by the outline's width keeps the outline outside the glyph, as the game's own outlined fonts do
+        captionMaterial.SetFloat(ShaderUtilities.ID_FaceDilate, CAPTION_OUTLINE_WIDTH);
+        captionMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, CAPTION_OUTLINE_WIDTH);
+        captionMaterial.SetColor(ShaderUtilities.ID_OutlineColor, IconOutline.Ink);
+        return captionMaterial;
     }
 
     private void ClearLocationIcons()
