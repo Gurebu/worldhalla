@@ -103,6 +103,20 @@ public static class CodeMatcherExtension
         return matcher.Advance(1);
     }
 
+    public static CodeMatcher AdvanceToAfterWorldGeneratorInitialize(this CodeMatcher matcher)
+    {
+        matcher.MatchForward(true,
+            new CodeMatch(instruction => instruction.opcode == OpCodes.Call
+                                         && instruction.operand is MethodInfo method
+                                         && method.DeclaringType == typeof(WorldGenerator)
+                                         && method.Name == nameof(WorldGenerator.Initialize)));
+
+        if (matcher.IsInvalid)
+            throw new InvalidOperationException("Error patching, unable to find WorldGenerator initialization");
+
+        return matcher.Advance(1);
+    }
+
     public static CodeMatcher MatchBadVersionWorldConstructor(this CodeMatcher matcher, out Label label)
     {
         matcher.MatchForward(false,

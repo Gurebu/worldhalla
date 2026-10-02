@@ -255,12 +255,12 @@ vanilla peer drops all of them unread:
 
 | RPC | Direction | When | Payload |
 |---|---|---|---|
-| `WorldhallaHandshake` | client → server | in reply to `ClientHandshake`, so before the client's `PeerInfo` | `[string plugin version][int n]` then `n` × `[string worldgen id][string worldgen version]` |
+| `WorldhallaClientInfo` | client → server | in reply to `ClientHandshake`, so before the client's `PeerInfo` | `[string plugin version][int n]` then `n` × `[string worldgen id][string worldgen version]` |
 | `WorldhallaWorld` | server → client | right before the server's `PeerInfo`, Worldhalla worlds only | `[string plugin version][string worldgen id][byte[] worldhalla settings][byte[] generator settings]` |
 | `WorldhallaRefused` | server → client | right before the `Error(3)` that refuses a Worldhalla client | `[string plugin version][int reason][string worldgen id][string worldgen name][string worldgen version]` |
 
 - **Server.** A prefix on `RPC_PeerInfo` lets the vanilla path run untouched when the server's world
-  is vanilla. For a Worldhalla world, it looks at the client's recorded `WorldhallaHandshake` and
+  is vanilla. For a Worldhalla world, it looks at the client's recorded `WorldhallaClientInfo` and
   requires three things: the client's Worldhalla has the same major and minor version, the world's
   generator is installed, and its `IWorldGenerator.Version` is exactly the same string. Otherwise it
   logs the reason, sends `Error(3)` (which a vanilla client also understands) and skips the vanilla
@@ -269,8 +269,8 @@ vanilla peer drops all of them unread:
   `WorldGenerator.Initialize`, applies the stored `WorldhallaWorld`, if there is one, to the new
   `World`. With no stored message, the world is vanilla. As a backstop, the client still refuses
   (external error plus `Disconnect`) on a Worldhalla version mismatch or a generator it doesn't have. Rejecting
-  the settings and failing to generate the world can only happen here: the same hook runs the generator and
-  hands the result to `Pregenerate`, so a failure refuses the world before vanilla goes on with it.
+  the settings can only happen here. A second hook, right after `WorldGenerator.Initialize`, refuses the world when
+  `Pregenerate` failed to generate it, before vanilla samples it or marks the client connected.
 - **Keepalive.** The client generates the world inside its `RPC_PeerInfo`, while its main thread waits,
   and a waiting main thread answers no pings: past 30 s the server closes the connection. While
   `WorldGeneratorPatch.Generate` waits for the generator, it answers a

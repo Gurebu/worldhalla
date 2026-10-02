@@ -78,6 +78,14 @@ public class AnchorTests
     }
 
     [Test, RequiresValheim]
+    public void WorldGeneratorInitializeIsFoundInRpcPeerInfoAfterTheWorldGenVersionRead()
+    {
+        var matcher = Matcher(typeof(ZNet), nameof(ZNet.RPC_PeerInfo)).AdvanceToAfterWorldGenVersionRead();
+
+        Assert.DoesNotThrow(() => matcher.AdvanceToAfterWorldGeneratorInitialize());
+    }
+
+    [Test, RequiresValheim]
     public void BadVersionWorldConstructorIsFoundInWorldLoad()
     {
         var matcher = Matcher(typeof(World), nameof(World.LoadWorld));

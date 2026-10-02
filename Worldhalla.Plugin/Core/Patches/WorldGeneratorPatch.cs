@@ -25,17 +25,20 @@ public static class WorldGeneratorPatch
 
         try
         {
-            __instance.SetWorld(worldgen.TakeHandedOver() ?? Generate(world, worldgen));
+            __instance.SetWorld(Generate(world, worldgen));
         }
         catch (Exception e)
         {
-            FailWorldLoad(world, worldgen, e);
+            Logger.LogError($"'{worldgen.Guid}' failed to generate world '{world.m_name}': {e}");
+
+            if (ZNet.instance.IsServer())
+                FailWorldLoad(worldgen);
         }
 
         return false;
     }
 
-    public static GeneratedWorld Generate(World world, InstalledWorldgen worldgen)
+    private static GeneratedWorld Generate(World world, InstalledWorldgen worldgen)
     {
         if (world.m_seed == 0)
             throw new InvalidOperationException($"Seed is 0 for world '{world.m_name}', but it is not a menu world");
@@ -53,14 +56,12 @@ public static class WorldGeneratorPatch
     }
 
     // Vanilla's own exit for a world that failed to load: the game logs out without saving and the menu reports it
-    private static void FailWorldLoad(World world, InstalledWorldgen worldgen, Exception e)
+    private static void FailWorldLoad(InstalledWorldgen worldgen)
     {
-        Logger.LogError($"'{worldgen.Guid}' failed to generate world '{world.m_name}', leaving without saving: {e}");
-
         failureMessage = Translations.Get("$wh_generation_failed", worldgen.Generator.Name);
         ZNet.m_loadError = true;
 
-        if (ZNet.instance != null && ZNet.instance.IsDedicated())
+        if (ZNet.instance.IsDedicated())
             Application.Quit();
     }
 
@@ -184,7 +185,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.IsAshlands))]
     private static bool IsAshlands(float x, float y, ref bool __result)
     {
-        if (WorldGenerator.instance.GetWorld()?.State is not IWorldGeography geography)
+        if (WorldGenerator.instance.GetWorld()?.Geography is not { } geography)
             return true;
 
         __result = geography.IsAshlands(x, y);
@@ -195,7 +196,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.IsDeepnorth))]
     private static bool IsDeepnorth(float x, float y, ref bool __result)
     {
-        if (WorldGenerator.instance.GetWorld()?.State is not IWorldGeography geography)
+        if (WorldGenerator.instance.GetWorld()?.Geography is not { } geography)
             return true;
 
         __result = geography.IsDeepNorth(x, y);
@@ -206,7 +207,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.GetAshlandsOceanGradient), typeof(float), typeof(float))]
     private static bool GetAshlandsOceanGradient(float x, float y, ref float __result)
     {
-        if (WorldGenerator.instance.GetWorld()?.State is not IWorldGeography geography)
+        if (WorldGenerator.instance.GetWorld()?.Geography is not { } geography)
             return true;
 
         __result = geography.GetAshlandsOceanGradient(x, y);
@@ -217,7 +218,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.DeepNorthWaveFade))]
     private static bool DeepNorthWaveFade(float wx, float wy, ref double __result)
     {
-        if (WorldGenerator.instance.GetWorld()?.State is not IWorldGeography geography)
+        if (WorldGenerator.instance.GetWorld()?.Geography is not { } geography)
             return true;
 
         __result = geography.GetDeepNorthWaveFade(wx, wy);

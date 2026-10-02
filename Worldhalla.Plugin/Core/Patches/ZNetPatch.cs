@@ -13,50 +13,7 @@ namespace Worldhalla.Plugin.Core.Patches;
 [HarmonyPatch(typeof(ZNet))]
 public static class ZNetPatch
 {
-    /*
-     * TODO I don't like this comment, but what to write?
-     * 
-     * Peers only have to agree on Worldhalla when the shared world is a Worldhalla world, so nothing
-     * Worldhalla sends may change what a vanilla peer reads: vanilla's own packages go out untouched, and
-     * both RPCs below are unknown to a vanilla peer, which drops them unread.
-     *
-     * A client never reads the world's .fwl - it builds its World purely from the server's peer info - so
-     * the worldgen and its settings have to travel over the wire too, or the client silently generates a
-     * different world than the one the server loaded.
-     *
-     * WorldhallaHandshake, client to server, sent in reply to ClientHandshake and so ahead of the client's
-     * PeerInfo:
-     * - [string][1-255 bytes] plugin version
-     * - [int][4 bytes] number of installed generators, then for each:
-     *   - [string][1-255 bytes] custom worldgen ID
-     *   - [string][1-255 bytes] worldgen version
-     *
-     * WorldhallaWorld, server to client, directly ahead of the server's PeerInfo and only for a Worldhalla
-     * world:
-     * - [string][1-255 bytes] plugin version
-     * - [string][1-255 bytes] custom worldgen ID
-     * - [int][4 bytes] worldhalla settings blob length
-     * - [variable] worldhalla settings blob, as in the .fwl
-     * - [int][4 bytes] generator settings blob length
-     * - [variable] generator settings blob, as in the .fwl
-     *
-     * WorldhallaRefused, server to client, directly ahead of the Error that refuses a Worldhalla client, so
-     * the client can tell the player why:
-     * - [string][1-255 bytes] plugin version
-     * - [int][4 bytes] refusal reason
-     * - [string][1-255 bytes] custom worldgen ID
-     * - [string][1-255 bytes] worldgen name
-     * - [string][1-255 bytes] worldgen version
-     *
-     * Peers are compatible when the major and minor plugin versions match. The RPC names and the leading
-     * plugin version are fixed forever; the rest of a payload may only change with a minor version bump.
-     *
-     * Both must be sent before the sender's PeerInfo: a connection delivers in order, which is what makes
-     * them arrive before the PeerInfo they qualify, and a PlayFab socket starts compressing once PeerInfo
-     * has been handled (ISocket.VersionMatch).
-     */
-
-    private const string HANDSHAKE_RPC = "WorldhallaHandshake";
+    private const string CLIENT_INFO_RPC = "WorldhallaClientInfo";
     private const string WORLD_RPC = "WorldhallaWorld";
     private const string REFUSED_RPC = "WorldhallaRefused";
 
@@ -69,13 +26,13 @@ public static class ZNetPatch
 
     private static readonly System.Version LocalVersion = new(PluginInfo.PLUGIN_VERSION);
 
-    private class PeerHandshake
+    private class WorldhallaClientInfo
     {
         public string pluginVersion = "";
         public readonly Dictionary<string, string> generatorVersions = new();
     }
 
-    private static readonly ConditionalWeakTable<ZRpc, PeerHandshake> PeerHandshakes = new();
+    private static readonly ConditionalWeakTable<ZRpc, WorldhallaClientInfo> ClientInfos = new();
     private static readonly ConditionalWeakTable<ZRpc, ZPackage> ServerWorlds = new();
 
     private static string? refusalMessage;
@@ -84,7 +41,7 @@ public static class ZNetPatch
     private static void OnNewConnection(ZNet __instance, ZNetPeer peer)
     {
         if (__instance.IsServer())
-            peer.m_rpc.Register<ZPackage>(HANDSHAKE_RPC, RPC_WorldhallaHandshake);
+            peer.m_rpc.Register<ZPackage>(CLIENT_INFO_RPC, RPC_ReceiveClientInfo);
         else
         {
             refusalMessage = null;
@@ -107,21 +64,21 @@ public static class ZNetPatch
             handshake.Write(generator.Version);
         }
 
-        rpc.Invoke(HANDSHAKE_RPC, handshake);
+        rpc.Invoke(CLIENT_INFO_RPC, handshake);
     }
 
-    private static void RPC_WorldhallaHandshake(ZRpc rpc, ZPackage package)
+    private static void RPC_ReceiveClientInfo(ZRpc rpc, ZPackage package)
     {
-        var handshake = new PeerHandshake { pluginVersion = package.ReadString() };
+        var clientInfo = new WorldhallaClientInfo { pluginVersion = package.ReadString() };
 
-        if (IsCompatible(handshake.pluginVersion))
+        if (IsCompatible(clientInfo.pluginVersion))
         {
             var count = package.ReadInt();
             for (var i = 0; i < count; i++)
-                handshake.generatorVersions[package.ReadString()] = package.ReadString();
+                clientInfo.generatorVersions[package.ReadString()] = package.ReadString();
         }
 
-        PeerHandshakes.AddOrUpdate(rpc, handshake);
+        ClientInfos.AddOrUpdate(rpc, clientInfo);
     }
 
     private static bool IsCompatible(string remoteVersion)
@@ -131,12 +88,12 @@ public static class ZNetPatch
                && version.Minor == LocalVersion.Minor;
     }
 
-    private static Refusal? FindRefusal(PeerHandshake handshake, string guid, IWorldGenerator worldgen)
+    private static Refusal? FindRefusal(WorldhallaClientInfo info, string guid, IWorldGenerator worldgen)
     {
-        if (!IsCompatible(handshake.pluginVersion))
+        if (!IsCompatible(info.pluginVersion))
             return Refusal.WorldhallaVersion;
 
-        if (!handshake.generatorVersions.TryGetValue(guid, out var version))
+        if (!info.generatorVersions.TryGetValue(guid, out var version))
             return Refusal.GeneratorMissing;
 
         return version == worldgen.Version ? null : Refusal.GeneratorVersion;
@@ -152,17 +109,17 @@ public static class ZNetPatch
         var peer = rpc.GetSocket().GetEndPointString();
         var refusing = $"Refusing peer {peer}: world '{world.m_name}' is created with '{guid}' {worldgen.Version}";
 
-        if (!PeerHandshakes.TryGetValue(rpc, out var handshake))
+        if (!ClientInfos.TryGetValue(rpc, out var clientInfo))
         {
             Logger.LogWarning($"{refusing} and the peer does not run Worldhalla");
         }
-        else if (FindRefusal(handshake, guid, worldgen) is { } refusal)
+        else if (FindRefusal(clientInfo, guid, worldgen) is { } refusal)
         {
             var problem = refusal switch
             {
-                Refusal.WorldhallaVersion => $"runs Worldhalla {handshake.pluginVersion}, local is {LocalVersion}",
+                Refusal.WorldhallaVersion => $"runs Worldhalla {clientInfo.pluginVersion}, local is {LocalVersion}",
                 Refusal.GeneratorMissing => "does not have it installed",
-                _ => $"has version {handshake.generatorVersions[guid]}",
+                _ => $"has version {clientInfo.generatorVersions[guid]}",
             };
 
             Logger.LogWarning($"{refusing} and the peer {problem}");
@@ -170,7 +127,7 @@ public static class ZNetPatch
         }
         else
         {
-            Logger.LogInfo($"Peer {peer} runs Worldhalla {handshake.pluginVersion}");
+            Logger.LogInfo($"Peer {peer} runs Worldhalla {clientInfo.pluginVersion}");
             return true;
         }
 
@@ -295,20 +252,18 @@ public static class ZNetPatch
                 Translations.Get("$wh_refused_settings_failed", worldgen.Name));
         }
 
-        var binding = new InstalledWorldgen(worldgenType, worldgen, settings);
-        world.SetWorldgen(binding);
-
-        try
-        {
-            binding.HandOver(WorldGeneratorPatch.Generate(world, binding));
-        }
-        catch (Exception e)
-        {
-            return RefuseWorld(rpc, $"'{worldgenType}' failed to generate the world: {e}",
-                Translations.Get("$wh_generation_failed", worldgen.Name));
-        }
+        world.SetWorldgen(new InstalledWorldgen(worldgenType, worldgen, settings));
 
         return true;
+    }
+
+    private static bool RefuseUngeneratedWorld(ZRpc rpc)
+    {
+        if (ZNet.World.GetWorldgen() is not InstalledWorldgen worldgen || WorldGenerator.instance.GetWorld() != null)
+            return true;
+
+        return RefuseWorld(rpc, $"'{worldgen.Guid}' failed to generate the world",
+            Translations.Get("$wh_generation_failed", worldgen.Generator.Name));
     }
 
     private static bool RefuseWorld(ZRpc rpc, string reason, string message)
@@ -328,10 +283,16 @@ public static class ZNetPatch
     {
         return new CodeMatcher(instructions, generator)
             .AdvanceToAfterWorldGenVersionRead()
-            .CreateLabel(out var label)
+            .CreateLabel(out var applied)
             .InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_1))
             .InsertAndAdvance(CodeInstruction.Call(typeof(ZNetPatch), nameof(ApplyServerWorld)))
-            .InsertAndAdvance(new CodeInstruction(OpCodes.Brtrue_S, label))
+            .InsertAndAdvance(new CodeInstruction(OpCodes.Brtrue_S, applied))
+            .InsertAndAdvance(new CodeInstruction(OpCodes.Ret))
+            .AdvanceToAfterWorldGeneratorInitialize()
+            .CreateLabel(out var generated)
+            .InsertAndAdvance(new CodeInstruction(OpCodes.Ldarg_1))
+            .InsertAndAdvance(CodeInstruction.Call(typeof(ZNetPatch), nameof(RefuseUngeneratedWorld)))
+            .InsertAndAdvance(new CodeInstruction(OpCodes.Brtrue_S, generated))
             .InsertAndAdvance(new CodeInstruction(OpCodes.Ret))
             .InstructionEnumeration();
     }

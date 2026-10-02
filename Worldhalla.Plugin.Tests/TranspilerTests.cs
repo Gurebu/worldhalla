@@ -212,6 +212,12 @@ public class TranspilerTests
         var patched = ZNetPatch.TranspileRpcPeerInfo(original, generator).ToList();
 
         Assert.That(CallCount(patched, ZNetPatchType, "ApplyServerWorld"), Is.EqualTo(1));
-        Assert.That(patched, Has.Count.EqualTo(original.Count + 4));
+        Assert.That(CallCount(patched, ZNetPatchType, "RefuseUngeneratedWorld"), Is.EqualTo(1));
+        Assert.That(patched, Has.Count.EqualTo(original.Count + 8));
+
+        var initialize = IndexOfCall(patched, typeof(WorldGenerator), nameof(WorldGenerator.Initialize));
+        Assert.That(IndexOfCall(patched, ZNetPatchType, "ApplyServerWorld"), Is.LessThan(initialize));
+        Assert.That(IndexOfCall(patched, ZNetPatchType, "RefuseUngeneratedWorld"), Is.EqualTo(initialize + 2),
+            "the check does not directly follow WorldGenerator.Initialize");
     }
 }

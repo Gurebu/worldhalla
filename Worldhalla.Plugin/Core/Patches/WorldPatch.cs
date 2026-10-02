@@ -11,42 +11,6 @@ namespace Worldhalla.Plugin.Core.Patches;
 [HarmonyPatch(typeof(World))]
 public static class WorldPatch
 {
-    /*
-     * Save a negative int marker before world version to identify modded worlds
-     *
-     * If a modded game tries to load an unmodded world, the first int will be world version which is not going to match the marker
-     * If an unmodded game tries to load a modded world, first int will be the marker which is not a valid world version
-     *
-     * In both cases, worlds will fail to load without damage done
-     *
-     * The complete world format is:
-     * - [int][4 bytes] .fwl size
-     * ----------------- START OF CUSTOM HEADER -------------------
-     * - [uint][4 bytes] worldhalla header (this is what the unmodded game reads as world version):
-     *   - [bit 31] sign bit that doubles as the worldhalla world flag. Always on
-     *   - [bits 30-8] padding
-     *   - [bits 7-0] format version
-     * ------------------ END OF CUSTOM HEADER --------------------
-     * - [int][4 bytes] original world version
-     * ---------------- START OF CUSTOM WORLD DATA ----------------
-     * - [int][4 bytes] payload length
-     * - [variable] payload, itself a ZPackage holding:
-     *   - [string][1-255 bytes] custom worldgen ID
-     *   - [int][4 bytes] worldhalla settings blob length
-     *   - [variable] worldhalla settings blob, a ZPackage of worldhalla's own settings. Currently empty
-     *   - [int][4 bytes] generator settings blob length
-     *   - [variable] generator settings blob, opaque - written and read by the generator alone
-     * ----------------- END OF CUSTOM WORLD DATA -----------------
-     * - [...] original world data
-     *
-     * The payload is length-prefixed so a reader that does not care about its contents can skip it
-     * without parsing anything inside.
-     *
-     * Worlds written before the format version byte existed carry 0xff in its place, hold the
-     * worldgen ID before the original world version rather than after it, and store the settings
-     * inline with no length in front of them - see RiverheimMigration
-     */
-
     private const uint CUSTOM_WORLDGEN_FLAG = 0x80000000;
     private const uint FORMAT_VERSION_MASK = 0x000000ff;
     public const byte FORMAT_VERSION = 0x00;

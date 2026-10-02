@@ -186,7 +186,8 @@ throwing constructor costs that one mod its registration and nothing else.
 The header sits where vanilla reads the world version, and always has its sign bit set, so an
 unmodded game reads a modded world as an invalid version and refuses it instead of corrupting it.
 A modded game reading an unmodded world sees a plain version without the flag and defers to
-vanilla. The layout is documented at the top of `Core/Patches/WorldPatch.cs`; keep that comment true.
+vanilla. The layout is documented in the README's "Save file format" section, which third-party `.fwl`
+readers go by; keep it true.
 
 - `CUSTOM_WORLDGEN_FLAG = 0x80000000` — always set
 - low byte — format version, currently `0x00`
@@ -319,13 +320,13 @@ Not every game type is in `assembly_valheim.dll`: UI helpers such as `UITooltip`
 
 ### Multiplayer
 
-`Docs/VALHEIM_NETWORKING.md` maps the game's network stack (sockets, `ZRpc`, the `PeerInfo`
+`Worldhalla.Plugin/Core/NETWORKING.md` maps the game's network stack (sockets, `ZRpc`, the `PeerInfo`
 handshake, routed RPCs, ZDO sync) and Worldhalla's extension of it. Read it before touching
 `ZNetPatch`, and keep its Worldhalla section true.
 
 Compatibility is decided per world, not per peer. For a vanilla world, Worldhalla sends nothing and
 changes nothing, so vanilla and modded peers mix freely in both directions. For a Worldhalla world, the
-server requires a client `WorldhallaHandshake` from a Worldhalla with the same **major and minor**
+server requires a client `WorldhallaClientInfo` from a Worldhalla with the same **major and minor**
 version, and the world's generator at exactly the same `IWorldGenerator.Version`. The client then
 requires that generator to accept the settings.
 
@@ -336,7 +337,7 @@ requires that generator to accept the settings.
 
 - Never add fields to vanilla's packages. A vanilla peer reads them positionally. Anything
   Worldhalla needs to send goes in its own RPC, which a vanilla peer drops unread.
-- The RPC names `WorldhallaHandshake`/`WorldhallaWorld`/`WorldhallaRefused` and the leading plugin
+- The RPC names `WorldhallaClientInfo`/`WorldhallaWorld`/`WorldhallaRefused` and the leading plugin
   version string of their payloads are permanent: they are how two different versions find out that they disagree.
 - Anything sent during the handshake must go out before the sender's `PeerInfo`. See the doc for why.
 - Every refusal of a Worldhalla client, on either side, leaves a player-facing sentence that
