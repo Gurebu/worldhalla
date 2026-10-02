@@ -8,7 +8,7 @@ namespace Worldhalla.Plugin.UI.Preview;
  * exposure in stops, water absorbs each channel by depth over the ground beneath it, lava glows, and the result is tone
  * mapped back to sRGB. Contour lines are traced by marching squares in the cells around the sample.
  */
-internal sealed class HdrPreviewStyle : IPreviewStyle
+public sealed class HdrPreviewStyle : IPreviewStyle
 {
     private static readonly float[] Isolines = [20f, 40f, 60f, 100f, 140f, 180f, 220f, 260f, 300f, 340f, 380f, 420f, 460f];
     private static readonly Vector3 Luminance = new(0.2126f, 0.7152f, 0.0722f);

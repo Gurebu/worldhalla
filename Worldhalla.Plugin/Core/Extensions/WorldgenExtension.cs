@@ -1,7 +1,7 @@
 using Worldhalla.API;
 using Worldhalla.API.Settings;
 
-namespace Worldhalla.Plugin.Extensions;
+namespace Worldhalla.Plugin.Core.Extensions;
 
 public static class WorldgenExtension
 {

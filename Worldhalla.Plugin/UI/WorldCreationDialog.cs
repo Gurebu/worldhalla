@@ -7,11 +7,11 @@ using Worldhalla.API;
 using Worldhalla.API.Settings;
 using Worldhalla.API.World;
 using Worldhalla.Plugin.Compat;
-using Worldhalla.Plugin.Extensions;
-using Worldhalla.Plugin.Internal;
+using Worldhalla.Plugin.Core;
+using Worldhalla.Plugin.Core.Extensions;
+using Worldhalla.Plugin.Localization;
 using Worldhalla.Plugin.UI.Preview;
 using Worldhalla.Plugin.UI.Preview.Locations;
-using Logger = Worldhalla.Plugin.Internal.Logger;
 
 namespace Worldhalla.Plugin.UI;
 
@@ -38,38 +38,38 @@ public class WorldCreationDialog : MonoBehaviour
     private const string LOCATIONS = "$wh_preview_locations";
     private const string LOCATIONS_PROGRESS = "$wh_preview_locations_progress";
 
-    internal FejdStartup startup = null!;
-    internal GuiInputField nameField = null!;
-    internal GuiInputField seedField = null!;
-    internal TMP_Dropdown generatorDropdown = null!;
-    internal TMP_Text worldSettingsSummary = null!;
-    internal TMP_Text generatorSettingsSummary = null!;
-    internal RawImage previewImage = null!;
-    internal Button previewButton = null!;
-    internal TMP_Text previewLabel = null!;
-    internal RectTransform spinner = null!;
-    internal GameObject progress = null!;
-    internal Image progressFill = null!;
-    internal TMP_Text progressPercent = null!;
-    internal Texture2D discTexture = null!;
-    internal int previewSize;
-    internal Button hideButton = null!;
-    internal Button detailsButton = null!;
-    internal Button worldSettingsButton = null!;
-    internal Button generatorSettingsButton = null!;
-    internal Button newSeedButton = null!;
-    internal GameObject detailsOverlay = null!;
-    internal RectTransform detailsFrame = null!;
-    internal RawImage detailsImage = null!;
-    internal RawImage detailsWholeImage = null!;
-    internal DragAndScroll detailsInput = null!;
-    internal UIGroupHandler detailsGroup = null!;
-    internal GameObject detailsRing = null!;
-    internal Button detailsCloseButton = null!;
-    internal Button locationsButton = null!;
-    internal GameObject locationsNote = null!;
-    internal TMP_Text captionTemplate = null!;
-    internal SettingsDialog settingsDialog = null!;
+    public FejdStartup startup = null!;
+    public GuiInputField nameField = null!;
+    public GuiInputField seedField = null!;
+    public TMP_Dropdown generatorDropdown = null!;
+    public TMP_Text worldSettingsSummary = null!;
+    public TMP_Text generatorSettingsSummary = null!;
+    public RawImage previewImage = null!;
+    public Button previewButton = null!;
+    public TMP_Text previewLabel = null!;
+    public RectTransform spinner = null!;
+    public GameObject progress = null!;
+    public Image progressFill = null!;
+    public TMP_Text progressPercent = null!;
+    public Texture2D discTexture = null!;
+    public int previewSize;
+    public Button hideButton = null!;
+    public Button detailsButton = null!;
+    public Button worldSettingsButton = null!;
+    public Button generatorSettingsButton = null!;
+    public Button newSeedButton = null!;
+    public GameObject detailsOverlay = null!;
+    public RectTransform detailsFrame = null!;
+    public RawImage detailsImage = null!;
+    public RawImage detailsWholeImage = null!;
+    public DragAndScroll detailsInput = null!;
+    public UIGroupHandler detailsGroup = null!;
+    public GameObject detailsRing = null!;
+    public Button detailsCloseButton = null!;
+    public Button locationsButton = null!;
+    public GameObject locationsNote = null!;
+    public TMP_Text captionTemplate = null!;
+    public SettingsDialog settingsDialog = null!;
 
     private WorldPreview preview = null!;
     private PreviewTexture? previewTexture;
@@ -111,7 +111,9 @@ public class WorldCreationDialog : MonoBehaviour
 
     public ISettings? Settings => settings;
 
-    internal void Initialize()
+    public bool CanCreate => SelectedWorldgen == null || !string.IsNullOrEmpty(seedField.text);
+
+    public void Initialize()
     {
         preview = new WorldPreview(previewSize);
         previewTexture = new PreviewTexture(previewSize);
@@ -299,12 +301,12 @@ public class WorldCreationDialog : MonoBehaviour
 
         if (worldgen == null)
         {
-            preview.Request(() => WorldGeneration.Of(VanillaWorldState.Generate(seed)));
+            preview.Request(() => WorldGenerationTask.Of(VanillaWorldState.Generate(seed)));
             return;
         }
 
         var seedHash = seed.GetStableHashCode();
-        preview.Request(() => WorldGeneration.Start(worldgen, seedHash, worldSettings));
+        preview.Request(() => WorldGenerationTask.Start(worldgen, seedHash, worldSettings));
     }
 
     private void OpenDetails()

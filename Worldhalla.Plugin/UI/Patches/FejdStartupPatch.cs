@@ -1,10 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
 using HarmonyLib;
 using UnityEngine.UI;
-using Worldhalla.Plugin.Extensions;
-using Worldhalla.Plugin.Internal;
+using Worldhalla.Plugin.Core.Extensions;
+using Worldhalla.Plugin.Core.Patches;
+using Worldhalla.Plugin.Localization;
 
-namespace Worldhalla.Plugin.Patches;
+namespace Worldhalla.Plugin.UI.Patches;
 
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 [HarmonyPatch(typeof(FejdStartup))]
@@ -49,10 +50,14 @@ public static class FejdStartupPatch
     [HarmonyPostfix, HarmonyPatch(nameof(FejdStartup.ShowConnectError))]
     private static void ShowConnectError(FejdStartup __instance, ZNet.ConnectionStatus statusOverride)
     {
-        var message = ZNetPatch.TakeRefusalMessage();
+        var refusal = ZNetPatch.TakeRefusalMessage();
+        var failure = WorldGeneratorPatch.TakeFailureMessage();
         var status = statusOverride == ZNet.ConnectionStatus.None ? ZNet.GetConnectionStatus() : statusOverride;
 
-        if (message != null && status == ZNet.ConnectionStatus.ErrorVersion)
-            __instance.m_connectionFailedError.text = message;
+        if (refusal != null && status == ZNet.ConnectionStatus.ErrorVersion)
+            __instance.m_connectionFailedError.text = refusal;
+
+        if (failure != null && ZNet.m_loadError)
+            __instance.m_connectionFailedError.text = failure;
     }
 }

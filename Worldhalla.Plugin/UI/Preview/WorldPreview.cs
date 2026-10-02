@@ -1,9 +1,9 @@
 using Worldhalla.API.World;
-using Worldhalla.Plugin.Internal;
+using Worldhalla.Plugin.Core;
 
 namespace Worldhalla.Plugin.UI.Preview;
 
-internal sealed class WorldPreview
+public sealed class WorldPreview
 {
     public enum Phase
     {
@@ -19,9 +19,9 @@ internal sealed class WorldPreview
 
     private readonly int previewSize;
     private int version;
-    private Func<WorldGeneration>? wanted;
+    private Func<WorldGenerationTask>? wanted;
 
-    private WorldGeneration? running;
+    private WorldGenerationTask? running;
     private int runningVersion;
 
     private GeneratedWorld? state;
@@ -64,7 +64,7 @@ internal sealed class WorldPreview
     public float? GenerationProgress => runningVersion == version ? running?.Progress : null;
 
     // Generations run one at a time: a cancelled one is left to wind down before the latest request starts.
-    public void Request(Func<WorldGeneration> startGeneration)
+    public void Request(Func<WorldGenerationTask> startGeneration)
     {
         DropOutputs();
         version++;
@@ -147,7 +147,7 @@ internal sealed class WorldPreview
         return failure ?? Main?.Error ?? wholeDetails?.Error ?? details?.Error;
     }
 
-    private static WorldGeneration Start(Func<WorldGeneration> startGeneration)
+    private static WorldGenerationTask Start(Func<WorldGenerationTask> startGeneration)
     {
         try
         {
@@ -155,7 +155,7 @@ internal sealed class WorldPreview
         }
         catch (Exception e)
         {
-            return WorldGeneration.Of(Task.FromException<GeneratedWorld>(e));
+            return WorldGenerationTask.Of(Task.FromException<GeneratedWorld>(e));
         }
     }
 

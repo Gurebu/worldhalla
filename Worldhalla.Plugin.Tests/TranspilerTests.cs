@@ -5,7 +5,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
 using NUnit.Framework;
-using Worldhalla.Plugin.Patches;
+using Worldhalla.Plugin.Core.Patches;
+using Worldhalla.Plugin.UI.Patches;
 
 namespace Worldhalla.Plugin.Tests;
 

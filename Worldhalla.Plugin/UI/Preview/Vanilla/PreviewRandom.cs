@@ -16,7 +16,7 @@ public static class PreviewRandom
         }
     }
 
-    internal static IDisposable Use(UnityRandom random)
+    public static IDisposable Use(UnityRandom random)
     {
         if (current != null)
             throw new InvalidOperationException("A preview random generator is already in use on this thread");

@@ -50,7 +50,7 @@
         <ThunderstoreTeam>Gurebu</ThunderstoreTeam>
         <ThunderstoreName>Worldhalla</ThunderstoreName>
         <ThunderstoreDescription>A framework for custom world generation in Valheim.</ThunderstoreDescription>
-        <ThunderstoreIcon>thunderstore/icon.png</ThunderstoreIcon>
+        <ThunderstoreIcon>Assets/icon.png</ThunderstoreIcon>
         <ThunderstoreReadme>README.md</ThunderstoreReadme>
         <ThunderstoreChangelog>CHANGELOG.md</ThunderstoreChangelog>
         <ThunderstoreWebsiteUrl>https://github.com/Gurebu/worldhalla</ThunderstoreWebsiteUrl>
@@ -59,6 +59,10 @@
     <ItemGroup>
         <ThunderstoreDependency Include="denikson-BepInExPack_Valheim" Version="5.4.2202" />
         <ThunderstoreFile Include="$(TargetDir)merged/Worldhalla.dll" PackagePath="BepInEx/plugins/Worldhalla/" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Core\" />
     </ItemGroup>
 
     <Import Project="$(MSBuildThisFileDirectory)../BuildTools/Thunderstore.targets" />

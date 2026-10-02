@@ -5,7 +5,7 @@ namespace Worldhalla.Plugin.UI.Preview;
 
 // One sRGB colour per biome and one for water, shared by the small and the detailed preview. Biomes without a colour
 // of their own are drawn as meadows. Biome.Ocean is the colour of the ground under the sea
-internal static class PreviewPalette
+public static class PreviewPalette
 {
     public static readonly Color Water = Hex(0x193256);
 

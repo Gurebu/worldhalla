@@ -2,14 +2,14 @@ using UnityEngine;
 using Worldhalla.API;
 using Worldhalla.API.Settings;
 
-namespace Worldhalla.Plugin.Internal;
+namespace Worldhalla.Plugin.Core;
 
-internal sealed class WorldGeneration : IProgress<float>
+public sealed class WorldGenerationTask : IProgress<float>
 {
     private readonly CancellationTokenSource cancellation = new();
     private float progress = -1f;
 
-    private WorldGeneration(Func<WorldGeneration, Task<GeneratedWorld>> start)
+    private WorldGenerationTask(Func<WorldGenerationTask, Task<GeneratedWorld>> start)
     {
         Completion = start(this);
     }
@@ -18,18 +18,18 @@ internal sealed class WorldGeneration : IProgress<float>
 
     public float? Progress => Volatile.Read(ref progress) is var value and >= 0f ? value : null;
 
-    public static WorldGeneration Start(IWorldGenerator worldgen, int seed, ISettings? settings)
+    public static WorldGenerationTask Start(IWorldGenerator worldgen, int seed, ISettings? settings)
     {
-        return new WorldGeneration(generation => Task.Run(() =>
+        return new WorldGenerationTask(generation => Task.Run(() =>
         {
             var token = generation.cancellation.Token;
             return GeneratedWorld.Of(worldgen, worldgen.Generate(seed, settings, generation, token));
         }));
     }
 
-    public static WorldGeneration Of(Task<GeneratedWorld> task)
+    public static WorldGenerationTask Of(Task<GeneratedWorld> task)
     {
-        return new WorldGeneration(_ => task);
+        return new WorldGenerationTask(_ => task);
     }
 
     public void Cancel()

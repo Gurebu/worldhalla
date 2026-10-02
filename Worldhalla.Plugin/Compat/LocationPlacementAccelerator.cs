@@ -3,7 +3,7 @@ using BepInEx.Configuration;
 
 namespace Worldhalla.Plugin.Compat;
 
-internal static class LocationPlacementAccelerator
+public static class LocationPlacementAccelerator
 {
     private const string VANILLA_MODE = "Vanilla";
     private const string DEFAULT_MODE = "Survey";

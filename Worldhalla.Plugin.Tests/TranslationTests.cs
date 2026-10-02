@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
-using Worldhalla.Plugin.Internal;
+using Worldhalla.Plugin.Localization;
 
 namespace Worldhalla.Plugin.Tests;
 
@@ -33,8 +33,8 @@ public class TranslationTests
         using var reader = new StringReader(stream.ReadToEnd());
         header = reader.ReadLine()!;
 
-        var localization = (Localization)RuntimeHelpers.GetUninitializedObject(typeof(Localization));
-        var split = typeof(Localization).GetMethod("DoQuoteLineSplit", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var localization = (global::Localization)RuntimeHelpers.GetUninitializedObject(typeof(global::Localization));
+        var split = typeof(global::Localization).GetMethod("DoQuoteLineSplit", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
         return ((List<List<string>>)split.Invoke(localization, [reader])!)
             .Where(row => row.Count > 0 && row[0].Length > 0 && !row[0].StartsWith("//"))

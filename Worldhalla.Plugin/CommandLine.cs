@@ -1,12 +1,14 @@
-namespace Worldhalla.Plugin.Internal;
+using Worldhalla.Plugin.Core;
 
-internal sealed class CommandLineOptions
+namespace Worldhalla.Plugin;
+
+public sealed class CommandLineOptions
 {
     public string? worldgenGuid;
     public string? settings;
 }
 
-internal static class CommandLine
+public static class CommandLine
 {
     public const string PREFIX = "-wh";
 

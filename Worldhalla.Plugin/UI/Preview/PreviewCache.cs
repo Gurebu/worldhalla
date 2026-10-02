@@ -5,7 +5,7 @@ namespace Worldhalla.Plugin.UI.Preview;
 
 // Samples on a fixed lattice of cells over the whole world, and finished pixels for every zoom, addressed by the view's
 // own pixel grid at that zoom
-internal sealed class PreviewCache
+public sealed class PreviewCache
 {
     private const float OUTSIDE_MARGIN_CELLS = 2f;
 

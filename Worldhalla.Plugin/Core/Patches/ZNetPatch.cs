@@ -4,10 +4,10 @@ using System.Runtime.CompilerServices;
 using HarmonyLib;
 using Worldhalla.API;
 using Worldhalla.API.Settings;
-using Worldhalla.Plugin.Extensions;
-using Worldhalla.Plugin.Internal;
+using Worldhalla.Plugin.Core.Extensions;
+using Worldhalla.Plugin.Localization;
 
-namespace Worldhalla.Plugin.Patches;
+namespace Worldhalla.Plugin.Core.Patches;
 
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 [HarmonyPatch(typeof(ZNet))]
@@ -223,7 +223,7 @@ public static class ZNetPatch
         return Translations.Get("$wh_refused_worldhalla_version", serverVersion, LocalVersion.ToString());
     }
 
-    internal static string? TakeRefusalMessage()
+    public static string? TakeRefusalMessage()
     {
         var message = refusalMessage;
         refusalMessage = null;
@@ -300,6 +300,16 @@ public static class ZNetPatch
 
         world.SetWorldgen(worldgenType, worldgen);
         world.SetSettings(settings);
+
+        try
+        {
+            world.SetGeneratedWorld(WorldGeneratorPatch.Generate(world, worldgen));
+        }
+        catch (Exception e)
+        {
+            return RefuseWorld(rpc, $"'{worldgenType}' failed to generate the world: {e}",
+                Translations.Get("$wh_generation_failed", worldgen.Name));
+        }
 
         return true;
     }

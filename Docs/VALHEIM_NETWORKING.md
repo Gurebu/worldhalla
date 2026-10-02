@@ -246,7 +246,7 @@ game version, the network version (`40`), the world modifiers, the password flag
 `$error_needslocalupdatetojoin` / `$error_needsserverupdatetojoin`. Nothing mod-specific is
 advertised.
 
-## Worldhalla's extension (`Patches/ZNetPatch.cs`)
+## Worldhalla's extension (`Core/Patches/ZNetPatch.cs`)
 
 The goal is that peers only have to agree on Worldhalla when the **shared world** is a Worldhalla
 world. For a vanilla world it makes no difference whether either side has Worldhalla, or which
@@ -269,10 +269,11 @@ vanilla peer drops all of them unread:
   `WorldGenerator.Initialize`, applies the stored `WorldhallaWorld`, if there is one, to the new
   `World`. With no stored message, the world is vanilla. As a backstop, the client still refuses
   (external error plus `Disconnect`) on a Worldhalla version mismatch or a generator it doesn't have. Rejecting
-  the settings can only happen here.
-- **Keepalive.** `WorldGenerator.Initialize` runs inside the client's `RPC_PeerInfo`, so the client
-  generates the world while its main thread waits, and a waiting main thread answers no pings: past
-  30 s the server closes the connection. While `Pregenerate` waits for the generator, it answers a
+  the settings and failing to generate the world can only happen here: the same hook runs the generator and
+  hands the result to `Pregenerate`, so a failure refuses the world before vanilla goes on with it.
+- **Keepalive.** The client generates the world inside its `RPC_PeerInfo`, while its main thread waits,
+  and a waiting main thread answers no pings: past 30 s the server closes the connection. While
+  `WorldGeneratorPatch.Generate` waits for the generator, it answers a
   ping request of its own making on every peer once a second, through a reverse patch of vanilla's
   `ZRpc.ReceivePing` that leaves out other mods' patches, so the reply is vanilla's own. The server's
   `ReceivePing` resets the timeout on any reply, requested or not, and a Steam socket hands the
@@ -291,6 +292,7 @@ The resulting compatibility matrix (WH = Worldhalla installed):
 | Worldhalla | WH | WH, other major.minor | refused by the server |
 | Worldhalla | WH | WH, generator missing or at another version | refused by the server |
 | Worldhalla | WH | WH, settings rejected by the generator | refused by the client |
+| Worldhalla | WH | WH, generator fails to generate the world | refused by the client |
 | Worldhalla | WH | WH, same major.minor, same generator version | joins |
 
 Two peers compute the same terrain for a world only if they agree on three things:

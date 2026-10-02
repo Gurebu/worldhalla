@@ -1,10 +1,10 @@
 using Worldhalla.API.World;
-using Worldhalla.Plugin.Internal;
+using Worldhalla.Plugin.Core;
 using Worldhalla.Plugin.UI.Preview.Vanilla;
 
 namespace Worldhalla.Plugin.UI.Preview;
 
-internal sealed class VanillaWorldState : IWorldState
+public sealed class VanillaWorldState : IWorldState
 {
     private const float WATER_LEVEL = 30f;
 

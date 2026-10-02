@@ -2,9 +2,9 @@ using UnityEngine;
 using Worldhalla.API;
 using Worldhalla.API.World;
 
-namespace Worldhalla.Plugin.Internal;
+namespace Worldhalla.Plugin.Core;
 
-internal sealed class GeneratedWorld(IWorldState state, bool biomeBlending)
+public sealed class GeneratedWorld(IWorldState state, bool biomeBlending)
 {
     private const float FOREST_FACTOR_MULTIPLIER = 2.15f;
 

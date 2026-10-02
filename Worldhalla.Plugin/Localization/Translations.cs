@@ -1,26 +1,26 @@
 using System.Reflection;
 using UnityEngine;
 
-namespace Worldhalla.Plugin.Internal;
+namespace Worldhalla.Plugin.Localization;
 
-internal static class Translations
+public static class Translations
 {
     private const string FALLBACK_LANGUAGE = "English";
     private const string RESOURCE_ROOT = "Localization/";
 
     public static string Get(string key, params string[] words)
     {
-        return Localization.instance.Localize(key, words);
+        return global::Localization.instance.Localize(key, words);
     }
 
-    public static void Load(Localization localization, string language)
+    public static void Load(global::Localization localization, string language)
     {
         LoadLanguage(localization, FALLBACK_LANGUAGE);
         if (language != FALLBACK_LANGUAGE)
             LoadLanguage(localization, language);
     }
 
-    private static void LoadLanguage(Localization localization, string language)
+    private static void LoadLanguage(global::Localization localization, string language)
     {
         var assembly = Assembly.GetExecutingAssembly();
         var folder = $"{RESOURCE_ROOT}{language}/";

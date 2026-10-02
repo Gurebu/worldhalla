@@ -32,3 +32,4 @@ wh_refused_no_seed,The server's world has no seed.
 wh_refused_generator_unknown,"This world was created with '$1', which you don't have installed."
 wh_refused_settings_rejected,$1 can't load this world's settings: $2
 wh_refused_settings_failed,$1 failed to load this world's settings. See the log for details.
+wh_generation_failed,$1 failed to generate this world. See the log for details.

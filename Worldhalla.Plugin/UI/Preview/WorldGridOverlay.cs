@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Worldhalla.Plugin.UI.Preview;
 
-internal static class WorldGridOverlay
+public static class WorldGridOverlay
 {
     private const float RING_SPACING = 1000f;
     private const float LINE_WIDTH_PIXELS = 1f;

@@ -1,5 +1,4 @@
 using UnityEngine;
-using Logger = Worldhalla.Plugin.Internal.Logger;
 
 namespace Worldhalla.Plugin.UI.Preview.Locations;
 
@@ -8,7 +7,7 @@ namespace Worldhalla.Plugin.UI.Preview.Locations;
  * prefabs without instantiating anything: location and alt biome lists register themselves in static lists on Awake,
  * and the game would then see every location twice once a world loads.
  */
-internal sealed class LocationDefinitions
+public sealed class LocationDefinitions
 {
     private const string ZONE_SYSTEM_PATH = "Assets/Systems/_ZoneSystem.prefab";
 

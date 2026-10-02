@@ -3,10 +3,10 @@ using HarmonyLib;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using Worldhalla.Plugin.Extensions;
-using Worldhalla.Plugin.Internal;
+using Worldhalla.Plugin.Core.Extensions;
+using Worldhalla.Plugin.Localization;
 
-namespace Worldhalla.Plugin.Patches;
+namespace Worldhalla.Plugin.UI.Patches;
 
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 [HarmonyPatch(typeof(FejdStartup))]

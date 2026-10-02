@@ -3,7 +3,7 @@ using Worldhalla.API.World;
 
 namespace Worldhalla.Plugin.UI.Preview;
 
-internal sealed class SimplePreviewStyle : IPreviewStyle
+public sealed class SimplePreviewStyle : IPreviewStyle
 {
     private const float DEEP_WATER = -20f;
     private const float SWAMP_WATER = -2f;

@@ -4,7 +4,7 @@ using UnityEngine.EventSystems;
 namespace Worldhalla.Plugin.UI.Preview;
 
 // Positions are local to the rect and relative to its centre; a drag reports its offset from where it started
-internal sealed class DragAndScroll : MonoBehaviour, IBeginDragHandler, IDragHandler, IScrollHandler
+public sealed class DragAndScroll : MonoBehaviour, IBeginDragHandler, IDragHandler, IScrollHandler
 {
     private Vector2 dragStart;
 

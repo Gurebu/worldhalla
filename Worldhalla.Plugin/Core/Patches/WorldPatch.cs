@@ -3,10 +3,9 @@ using System.Reflection.Emit;
 using HarmonyLib;
 using Worldhalla.API.Settings;
 using Worldhalla.Plugin.Compat;
-using Worldhalla.Plugin.Extensions;
-using Worldhalla.Plugin.Internal;
+using Worldhalla.Plugin.Core.Extensions;
 
-namespace Worldhalla.Plugin.Patches;
+namespace Worldhalla.Plugin.Core.Patches;
 
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 [HarmonyPatch(typeof(World))]
@@ -50,9 +49,9 @@ public static class WorldPatch
 
     private const uint CUSTOM_WORLDGEN_FLAG = 0x80000000;
     private const uint FORMAT_VERSION_MASK = 0x000000ff;
-    internal const byte FORMAT_VERSION = 0x00;
+    public const byte FORMAT_VERSION = 0x00;
 
-    internal struct FormatInfo
+    public struct FormatInfo
     {
         public bool isModded;
         public byte version;
@@ -148,7 +147,7 @@ public static class WorldPatch
         if (!Registry.FindByGuid(worldgenGuid, out var worldgen))
         {
             Logger.LogInfo($"Missing generator for guid '{worldgenGuid}', marking world '{name}' unloadable");
-            world.SetUnknownWorldgen(worldgenGuid);
+            world.SetUnknownWorldgen(worldgenGuid, settings);
             world.m_dataError = World.SaveDataError.BadVersion;
             return true;
         }

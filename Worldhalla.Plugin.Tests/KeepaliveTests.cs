@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using NUnit.Framework;
-using Worldhalla.Plugin.Patches;
+using Worldhalla.Plugin.Core.Patches;
 
 namespace Worldhalla.Plugin.Tests;
 

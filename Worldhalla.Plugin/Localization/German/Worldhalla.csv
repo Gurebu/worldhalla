@@ -32,3 +32,4 @@ wh_refused_no_seed,Die Welt des Servers hat keinen Seed.
 wh_refused_generator_unknown,"Diese Welt wurde mit „$1“ erstellt, das du nicht installiert hast."
 wh_refused_settings_rejected,$1 kann die Einstellungen dieser Welt nicht laden: $2
 wh_refused_settings_failed,$1 konnte die Einstellungen dieser Welt nicht laden. Details stehen im Log.
+wh_generation_failed,$1 konnte diese Welt nicht erzeugen. Details stehen im Log.

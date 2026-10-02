@@ -1,6 +1,6 @@
 using UnityEngine;
 using Worldhalla.API.World;
-using Worldhalla.Plugin.Internal;
+using Worldhalla.Plugin.Core;
 
 namespace Worldhalla.Plugin.UI.Preview;
 
@@ -8,7 +8,7 @@ namespace Worldhalla.Plugin.UI.Preview;
 // pixel remembers the block size it was painted at, and a pass only repaints pixels coarser than itself. Before any of
 // them, pixels the cache already has finished are copied, and then those its samples are enough for are painted, so
 // revisited ground never shows up coarse
-internal sealed class DetailsRender
+public sealed class DetailsRender
 {
     private const byte UNPAINTED = byte.MaxValue;
     public const int COARSEST_BLOCK = 16;

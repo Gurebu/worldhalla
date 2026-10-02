@@ -1,11 +1,10 @@
 using UnityEngine;
 using Object = UnityEngine.Object;
-using Logger = Worldhalla.Plugin.Internal.Logger;
 
 namespace Worldhalla.Plugin.UI.Preview.Locations;
 
 // The minimap's icons for unique locations by location prefab name, and its boss pin
-internal sealed class MapIcons
+public sealed class MapIcons
 {
     private static readonly string[] MinimapPrefabs =
     [

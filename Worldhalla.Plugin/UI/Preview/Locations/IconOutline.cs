@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Worldhalla.Plugin.UI.Preview.Locations;
 
 // Surrounds a map icon with a dark outline and a soft drop shadow, so it reads on whatever terrain the preview paints
-internal static class IconOutline
+public static class IconOutline
 {
     private const float OUTLINE = 0.04f;
     private const float SHADOW_BLUR = 0.06f;

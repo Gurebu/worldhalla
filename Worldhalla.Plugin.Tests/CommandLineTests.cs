@@ -1,5 +1,5 @@
 using NUnit.Framework;
-using Worldhalla.Plugin.Internal;
+using Worldhalla.Plugin.Core;
 
 namespace Worldhalla.Plugin.Tests;
 

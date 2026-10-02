@@ -1,10 +1,10 @@
 using UnityEngine;
 using Worldhalla.API.World;
-using Worldhalla.Plugin.Internal;
+using Worldhalla.Plugin.Core;
 
 namespace Worldhalla.Plugin.UI.Preview;
 
-internal sealed class PreviewRender
+public sealed class PreviewRender
 {
     private readonly CancellationTokenSource cancellation = new();
     private volatile int paintedRows;

@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Worldhalla.Plugin.UI.Preview;
 
 // The detailed preview's look, beyond the palette. Tools/PaletteLab edits the same values on recorded world data
-internal sealed class HdrPreviewSettings
+public sealed class HdrPreviewSettings
 {
     public enum ToneMapper
     {

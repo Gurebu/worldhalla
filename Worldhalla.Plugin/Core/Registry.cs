@@ -3,9 +3,9 @@ using Worldhalla.API;
 using Worldhalla.API.Attributes;
 using Worldhalla.API.Settings;
 
-namespace Worldhalla.Plugin.Internal;
+namespace Worldhalla.Plugin.Core;
 
-internal static class Registry
+public static class Registry
 {
     private static readonly Dictionary<string, IWorldGenerator> WorldGenerators = new();
     private static readonly HashSet<Assembly> ScannedAssemblies = [];

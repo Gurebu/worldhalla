@@ -1,12 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using HarmonyLib;
 using UnityEngine;
+using Worldhalla.API;
 using Worldhalla.API.World;
-using Worldhalla.Plugin.Extensions;
-using Worldhalla.Plugin.Internal;
-using Logger = Worldhalla.Plugin.Internal.Logger;
+using Worldhalla.Plugin.Core.Extensions;
+using Worldhalla.Plugin.Localization;
 
-namespace Worldhalla.Plugin.Patches;
+namespace Worldhalla.Plugin.Core.Patches;
 
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 [HarmonyPatch(typeof(WorldGenerator))]
@@ -15,17 +15,33 @@ public static class WorldGeneratorPatch
     private const int KEEPALIVE_INTERVAL_MS = 1000;
     private static readonly ThreadLocal<(IWorldState, Vector2, IWorldState.PointData)> cache = new();
 
+    private static string? failureMessage;
+
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.Pregenerate))]
     private static bool Pregenerate(WorldGenerator __instance)
     {
         var world = __instance.m_world;
         if (world.m_menu || world.GetWorldgen() is not { } worldgen)
             return true;
-        
+
+        try
+        {
+            __instance.SetWorld(world.TakeGeneratedWorld() ?? Generate(world, worldgen));
+        }
+        catch (Exception e)
+        {
+            FailWorldLoad(world, worldgen, e);
+        }
+
+        return false;
+    }
+
+    public static GeneratedWorld Generate(World world, IWorldGenerator worldgen)
+    {
         if (world.m_seed == 0)
             throw new InvalidOperationException($"Seed is 0 for world '{world.m_name}', but it is not a menu world");
-        
-        var generation = WorldGeneration.Start(worldgen, world.m_seed, world.GetSettings());
+
+        var generation = WorldGenerationTask.Start(worldgen, world.m_seed, world.GetSettings());
 
         var keepingAlive = true;
         while (!generation.Wait(KEEPALIVE_INTERVAL_MS))
@@ -34,9 +50,27 @@ public static class WorldGeneratorPatch
                 keepingAlive = SendPingReplies();
         }
 
-        __instance.SetWorld(generation.Wait());
+        return generation.Wait();
+    }
 
-        return false;
+    // Vanilla's own exit for a world that failed to load: the game logs out without saving and the menu reports it
+    private static void FailWorldLoad(World world, IWorldGenerator worldgen, Exception e)
+    {
+        Logger.LogError($"'{world.GetWorldgenGuid()}' failed to generate world '{world.m_name}', leaving without saving: {e}");
+
+        failureMessage = Translations.Get("$wh_generation_failed", worldgen.Name);
+        ZNet.m_loadError = true;
+
+        if (ZNet.instance != null && ZNet.instance.IsDedicated())
+            Application.Quit();
+    }
+
+    public static string? TakeFailureMessage()
+    {
+        var message = failureMessage;
+        failureMessage = null;
+
+        return message;
     }
 
     /*
@@ -211,7 +245,6 @@ public static class WorldGeneratorPatch
         return false;
     }
 
-    // TODO take this from worldgen settings
     private const float heightOffset = 30.0f;
     
     private static float GetHeight(GeneratedWorld world, Biome biome, float wx, float wy, out Color mask)

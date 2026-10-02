@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Worldhalla.Plugin.UI.Preview;
 
-internal static class Shapes
+public static class Shapes
 {
     public static Texture2D NewTexture(int size)
     {

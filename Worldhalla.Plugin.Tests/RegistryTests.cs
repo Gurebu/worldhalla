@@ -3,7 +3,7 @@ using Worldhalla.API;
 using Worldhalla.API.Attributes;
 using Worldhalla.API.Settings;
 using Worldhalla.API.World;
-using Worldhalla.Plugin.Internal;
+using Worldhalla.Plugin.Core;
 
 namespace Worldhalla.Plugin.Tests;
 

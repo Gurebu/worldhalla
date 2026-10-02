@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Worldhalla.Plugin.UI;
 
 // Drawn to sit beside the game's own button icons (refresh_icon): 20 px, solid white, strokes about a sixth of the size
-internal static class Icons
+public static class Icons
 {
     private const int SIZE = 20;
     private const int SUBSAMPLES = 6;

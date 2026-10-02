@@ -2,7 +2,7 @@ using System.Runtime.CompilerServices;
 using Worldhalla.API;
 using Worldhalla.API.Settings;
 
-namespace Worldhalla.Plugin.Extensions;
+namespace Worldhalla.Plugin.Core.Extensions;
 
 public static class WorldExtension
 {
@@ -11,6 +11,8 @@ public static class WorldExtension
         public string? worldgenGuid;
         public IWorldGenerator? worldgen;
         public ISettings? settings;
+        public byte[]? unreadSettings;
+        public GeneratedWorld? generated;
         public bool legacyFormat;
     }
 
@@ -33,6 +35,9 @@ public static class WorldExtension
 
     public static byte[] SaveSettings(this World world)
     {
+        if (world.GetData() is { worldgen: null, unreadSettings: { } unread })
+            return unread;
+
         return world.GetSettings()?.SaveToBinaryBlob() ?? Array.Empty<byte>();
     }
     
@@ -42,9 +47,11 @@ public static class WorldExtension
         world.GetData().worldgen = worldgen;
     }
 
-    internal static void SetUnknownWorldgen(this World world, string guid)
+    // The blob stays as read, so saving the world without its generator installed keeps its settings
+    public static void SetUnknownWorldgen(this World world, string guid, byte[] settings)
     {
         world.GetData().worldgenGuid = guid;
+        world.GetData().unreadSettings = settings;
     }
 
     public static string? GetWorldgenGuid(this World world)
@@ -57,12 +64,25 @@ public static class WorldExtension
         return world.GetData().worldgen;
     }
     
-    internal static void SetLegacyFormat(this World world, bool legacyFormat)
+    public static void SetLegacyFormat(this World world, bool legacyFormat)
     {
         world.GetData().legacyFormat = legacyFormat;
     }
 
-    internal static bool IsLegacyFormat(this World world) => world.GetData().legacyFormat;
+    public static bool IsLegacyFormat(this World world) => world.GetData().legacyFormat;
 
-    public static bool IsVanillaWorld(this World world) => world.GetData().worldgen == null;
+    public static void SetGeneratedWorld(this World world, GeneratedWorld generated)
+    {
+        world.GetData().generated = generated;
+    }
+
+    public static GeneratedWorld? TakeGeneratedWorld(this World world)
+    {
+        var generated = world.GetData().generated;
+        world.GetData().generated = null;
+
+        return generated;
+    }
+
+    public static bool IsVanillaWorld(this World world) => world.GetData().worldgenGuid == null;
 }

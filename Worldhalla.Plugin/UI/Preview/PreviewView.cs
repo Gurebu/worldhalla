@@ -4,7 +4,7 @@ namespace Worldhalla.Plugin.UI.Preview;
 
 // A view is a square of SIZE pixels laid over the sample lattice, each pixel covering cellsPerPixel² cells. Its origin
 // stays a multiple of cellsPerPixel, so the cells one zoom samples are a subset of those the next zoom in samples
-internal readonly struct PreviewView : IEquatable<PreviewView>
+public readonly struct PreviewView : IEquatable<PreviewView>
 {
     public const int SIZE = 1024;
     public const int MAX_ZOOM = 4;

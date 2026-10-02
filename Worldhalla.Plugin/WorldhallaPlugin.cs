@@ -1,8 +1,9 @@
 using BepInEx;
 using HarmonyLib;
 using Worldhalla.Plugin.Compat;
-using Worldhalla.Plugin.Internal;
-using Worldhalla.Plugin.Patches;
+using Worldhalla.Plugin.Core;
+using Worldhalla.Plugin.Localization;
+using Worldhalla.Plugin.UI.Patches;
 
 namespace Worldhalla.Plugin;
 
@@ -16,17 +17,17 @@ public class WorldhallaPlugin : BaseUnityPlugin
 
     public void Awake()
     {
-        Internal.Logger.SetLogger((level, message) =>
+        Worldhalla.Plugin.Logger.SetLogger((level, message) =>
         {
             switch (level)
             {
-                case Internal.Logger.LogLevel.Info:
+                case Worldhalla.Plugin.Logger.LogLevel.Info:
                     Logger.LogInfo(message);
                     break;
-                case Internal.Logger.LogLevel.Warning:
+                case Worldhalla.Plugin.Logger.LogLevel.Warning:
                     Logger.LogWarning(message);
                     break;
-                case Internal.Logger.LogLevel.Error:
+                case Worldhalla.Plugin.Logger.LogLevel.Error:
                     Logger.LogError(message);
                     break;
                 default:
@@ -49,7 +50,7 @@ public class WorldhallaPlugin : BaseUnityPlugin
             harmony.CreateClassProcessor(type).Patch();
         }
 
-        if (Traverse.Create<Localization>().Field<Localization>("m_instance").Value is { } localization)
+        if (Traverse.Create<global::Localization>().Field<global::Localization>("m_instance").Value is { } localization)
             Translations.Load(localization, localization.GetSelectedLanguage());
     }
     

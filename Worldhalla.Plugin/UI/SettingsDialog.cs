@@ -4,8 +4,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using Worldhalla.API.Settings;
 using Worldhalla.API.Settings.Controls;
-using Worldhalla.Plugin.Internal;
-using Logger = Worldhalla.Plugin.Internal.Logger;
+using Worldhalla.Plugin.Core;
+using Worldhalla.Plugin.Localization;
 
 namespace Worldhalla.Plugin.UI;
 
@@ -24,16 +24,16 @@ public class SettingsDialog : MonoBehaviour
     private const float SCREEN_FRACTION = 0.95f;
     private const string BUILD_FAILED = "$wh_settings_build_failed";
 
-    internal RectTransform frame = null!;
-    internal TMP_Text title = null!;
-    internal RectTransform rows = null!;
-    internal TMP_Text error = null!;
-    internal Button okButton = null!;
-    internal Button cancelButton = null!;
-    internal TMP_Text labelTemplate = null!;
-    internal TMP_Dropdown dropdownTemplate = null!;
-    internal GuiInputField textFieldTemplate = null!;
-    internal UIGroupHandler group = null!;
+    public RectTransform frame = null!;
+    public TMP_Text title = null!;
+    public RectTransform rows = null!;
+    public TMP_Text error = null!;
+    public Button okButton = null!;
+    public Button cancelButton = null!;
+    public TMP_Text labelTemplate = null!;
+    public TMP_Dropdown dropdownTemplate = null!;
+    public GuiInputField textFieldTemplate = null!;
+    public UIGroupHandler group = null!;
 
     private readonly List<Action> unbind = [];
     private ISettingsForm? form;
@@ -42,7 +42,7 @@ public class SettingsDialog : MonoBehaviour
 
     public bool IsOpen => form != null;
 
-    internal void Initialize()
+    public void Initialize()
     {
         okButton.onClick.AddListener(Accept);
         cancelButton.onClick.AddListener(Close);

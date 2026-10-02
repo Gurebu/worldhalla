@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Worldhalla.Plugin.UI.Preview;
 
-internal sealed class PreviewTexture
+public sealed class PreviewTexture
 {
     private object? uploaded;
     private int uploadedRevision;

@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
 
-namespace Worldhalla.Plugin.Extensions;
+namespace Worldhalla.Plugin.Core.Extensions;
 
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 public static class CodeMatcherExtension
@@ -58,7 +58,10 @@ public static class CodeMatcherExtension
                        ((MethodInfo)instruction.operand).Name == nameof(ZPackage.Write) &&
                        ((MethodInfo)instruction.operand).GetParameters()[0].ParameterType == typeof(int);
             }));
-        
+
+        if (matcher.IsInvalid)
+            throw new InvalidOperationException("Error patching, unable to find world version write");
+
         return matcher.Advance(1);
     }
 
@@ -189,7 +192,10 @@ public static class CodeMatcherExtension
                 return info.GetParameters().Length == 0;
             }),
             new CodeMatch(instruction => instruction.IsStloc()));
-        
+
+        if (matcher.IsInvalid)
+            throw new InvalidOperationException("Error patching, unable to find default World instancing");
+
         ld_World = MatchStoreWithLoad(matcher.Instruction);
 
         return matcher.Advance(1);

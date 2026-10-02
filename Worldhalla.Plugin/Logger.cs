@@ -1,6 +1,6 @@
-namespace Worldhalla.Plugin.Internal;
+namespace Worldhalla.Plugin;
 
-internal static class Logger
+public static class Logger
 {
     public enum LogLevel
     {

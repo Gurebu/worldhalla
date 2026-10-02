@@ -10,7 +10,7 @@ namespace Worldhalla.Plugin.UI.Preview.Locations;
  * Only the lists are built. Picking from them goes through the game's own code on an otherwise empty
  * AltBiomeWorldData, which never constructs the full-size arrays nobody here reads.
  */
-internal static class BiomePointLists
+public static class BiomePointLists
 {
     private const int SIZE = AltBiomeWorldData.c_textureSize;
     private const float WORLD_RADIUS_SQUARED = 110250000f;

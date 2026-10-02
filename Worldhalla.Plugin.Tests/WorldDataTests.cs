@@ -2,9 +2,9 @@ using NUnit.Framework;
 using Worldhalla.API;
 using Worldhalla.API.Settings;
 using Worldhalla.Plugin.Compat;
-using Worldhalla.Plugin.Extensions;
-using Worldhalla.Plugin.Internal;
-using Worldhalla.Plugin.Patches;
+using Worldhalla.Plugin.Core;
+using Worldhalla.Plugin.Core.Extensions;
+using Worldhalla.Plugin.Core.Patches;
 
 namespace Worldhalla.Plugin.Tests;
 
@@ -13,6 +13,7 @@ public class WorldDataTests
     private const string WORLDGEN = "dev.test.worldgen";
     private const string SETTINGLESS_WORLDGEN = "dev.test.settingless";
     private const string LEGACY_WORLDGEN = "dev.gurebu.riverheim.stable";
+    private const string MIGRATED_WORLDGEN = "dev.gurebu.riverheim";
     private const string VANILLA_DATA = "the world name vanilla reads next";
 
     /*
@@ -32,7 +33,7 @@ public class WorldDataTests
     public void Setup()
     {
         Registry.RegisterGenerator(WORLDGEN, Generator);
-        Registry.RegisterGenerator(LEGACY_WORLDGEN, LegacyGenerator);
+        Registry.RegisterGenerator(MIGRATED_WORLDGEN, LegacyGenerator);
         Registry.RegisterGenerator(SETTINGLESS_WORLDGEN, SettinglessGenerator);
     }
 
@@ -260,6 +261,33 @@ public class WorldDataTests
         Assert.That(world.m_dataError, Is.EqualTo(World.SaveDataError.BadVersion));
         Assert.That(world.GetWorldgenGuid(), Is.EqualTo("dev.someone.else"));
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
+    }
+
+    [Test, RequiresValheim]
+    public void UnregisteredWorldgenIsWrittenBackUnchanged()
+    {
+        var settings = new TestSettings("kept").SaveToBinaryBlob();
+        var package = CurrentPackage(new TestSettings("kept"), worldgenId: "dev.someone.else");
+        var world = new World { m_name = "test" };
+
+        WorldPatch.ReadHeader("world_name", package, out var formatInfo);
+        package.ReadInt();
+        WorldPatch.ReadWorldData("world_name", package, world, formatInfo);
+
+        var written = new ZPackage();
+        WorldPatch.WriteHeader(written, world);
+        WorldPatch.WriteWorldData(written, world);
+        written.SetPos(0);
+
+        Assert.That(world.IsVanillaWorld(), Is.False);
+        Assert.That(WorldPatch.ReadHeader("world_name", written, out var writtenInfo), Is.True);
+        Assert.That(writtenInfo.isModded, Is.True);
+
+        var payload = new ZPackage(written.ReadByteArray());
+
+        Assert.That(payload.ReadString(), Is.EqualTo("dev.someone.else"));
+        Assert.That(payload.ReadByteArray(), Is.Empty);
+        Assert.That(payload.ReadByteArray(), Is.EqualTo(settings));
     }
 
     [Test, RequiresValheim]

@@ -10,7 +10,7 @@ namespace Worldhalla.Plugin.UI.Preview.Locations;
  * is closed again before returning, since the game opens the same bundles itself once a world loads. Nothing read may
  * keep a reference into those bundles: plain serialized data survives the closing, engine objects do not.
  */
-internal static class GameAssets
+public static class GameAssets
 {
     // Main thread only
     public static T Read<T>(string path, Func<GameObject, T> read)

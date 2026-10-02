@@ -3,11 +3,9 @@ using HarmonyLib;
 using UnityEngine;
 using Worldhalla.API;
 using Worldhalla.API.Settings;
-using Worldhalla.Plugin.Extensions;
-using Worldhalla.Plugin.Internal;
-using Logger = Worldhalla.Plugin.Internal.Logger;
+using Worldhalla.Plugin.Core.Extensions;
 
-namespace Worldhalla.Plugin.Patches;
+namespace Worldhalla.Plugin.Core.Patches;
 
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 [HarmonyPatch]

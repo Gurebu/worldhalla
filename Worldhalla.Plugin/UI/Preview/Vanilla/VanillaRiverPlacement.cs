@@ -3,7 +3,6 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
 using UnityEngine;
-using Logger = Worldhalla.Plugin.Internal.Logger;
 
 namespace Worldhalla.Plugin.UI.Preview.Vanilla;
 

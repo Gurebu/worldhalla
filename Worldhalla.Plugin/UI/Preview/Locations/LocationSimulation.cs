@@ -1,10 +1,9 @@
 using System.Collections;
 using System.Diagnostics;
 using SoftReferenceableAssets;
-using Worldhalla.Plugin.Extensions;
-using Worldhalla.Plugin.Internal;
 using UnityEngine;
-using Logger = Worldhalla.Plugin.Internal.Logger;
+using Worldhalla.Plugin.Core;
+using Worldhalla.Plugin.Core.Extensions;
 using Random = UnityEngine.Random;
 
 namespace Worldhalla.Plugin.UI.Preview.Locations;
@@ -16,7 +15,7 @@ namespace Worldhalla.Plugin.UI.Preview.Locations;
  * Placement runs on the main thread in slices, since it draws from the engine's global random state, terrain delta
  * included. Each slice swaps that state in and out, so the game's own draws are left as they were.
  */
-internal sealed class LocationSimulation
+public sealed class LocationSimulation
 {
     public readonly struct Placed(string name, Vector3 position, Texture2D icon, string? caption)
     {
@@ -37,7 +36,7 @@ internal sealed class LocationSimulation
         public float Fraction
         {
             get => fraction;
-            internal set => fraction = value;
+            set => fraction = value;
         }
     }
     private const float SEA_LEVEL = 30f;
@@ -141,7 +140,7 @@ internal sealed class LocationSimulation
     {
         if (BossLocations.Captions.TryGetValue(name, out var key))
         {
-            var caption = Localization.instance.Localize(key);
+            var caption = global::Localization.instance.Localize(key);
             if (caption.StartsWith("["))
                 Logger.LogWarning($"Location simulation: no translation for boss caption '{key}'");
 

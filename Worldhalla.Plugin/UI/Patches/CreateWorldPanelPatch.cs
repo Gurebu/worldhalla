@@ -1,10 +1,10 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Emit;
 using HarmonyLib;
-using Worldhalla.Plugin.Extensions;
+using Worldhalla.Plugin.Core.Extensions;
 using Worldhalla.Plugin.UI;
 
-namespace Worldhalla.Plugin.Patches;
+namespace Worldhalla.Plugin.UI.Patches;
 
 [SuppressMessage("ReSharper", "InconsistentNaming")]
 [HarmonyPatch(typeof(FejdStartup))]
@@ -35,6 +35,17 @@ public static class CreateWorldPanelPatch
     private static void OnWorldNew(FejdStartup __instance)
     {
         GetDialog(__instance)?.Open();
+    }
+
+    /**
+     * An empty seed makes a seed 0 world, a lot of PRNGs (including Unity's own)
+     * don't play well when initialized by zero, better forbid it.
+     */
+    [HarmonyPostfix, HarmonyPatch(nameof(FejdStartup.Update))]
+    private static void Update(FejdStartup __instance)
+    {
+        if (__instance.m_createWorldPanel.activeInHierarchy && GetDialog(__instance) is { CanCreate: false })
+            __instance.m_newWorldDone.interactable = false;
     }
 
     [HarmonyTranspiler, HarmonyPatch(nameof(FejdStartup.OnNewWorldDone))]

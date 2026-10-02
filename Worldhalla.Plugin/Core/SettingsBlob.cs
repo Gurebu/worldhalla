@@ -1,8 +1,8 @@
 using Worldhalla.API.Settings;
 
-namespace Worldhalla.Plugin.Internal;
+namespace Worldhalla.Plugin.Core;
 
-internal static class SettingsBlob
+public static class SettingsBlob
 {
     public const int MAX_SIZE = 64 * 1024;
 

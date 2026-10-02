@@ -3,7 +3,7 @@ using Worldhalla.API.World;
 
 namespace Worldhalla.Plugin.UI.Preview;
 
-internal sealed class PreviewGrid
+public sealed class PreviewGrid
 {
     public readonly int size;
     public readonly float radius;

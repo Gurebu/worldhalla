@@ -72,7 +72,9 @@ arrived at.
   Deliberately free of game, Unity and BepInEx dependencies so a consumer needs nothing else.
 - **Worldhalla.Plugin** (assembly name `Worldhalla.Plugin`, merged with the API into `Worldhalla.dll` for shipping) — the BepInEx plugin. `WorldhallaPlugin`
   wires logging and `PatchAll` in `Awake`, runs generator discovery in `Start`, and unpatches in
-  `OnDestroy`. Patches live under `Patches/`, Harmony helpers under `Extensions/`.
+  `OnDestroy`. `Core/` holds what the README's Key ideas describe — the registry, the `.fwl` format, the
+  query path, the handshake and dedicated-server world creation — with its patches under `Core/Patches/` and
+  Harmony and game-type helpers under `Core/Extensions/`. Patches for menus and dialogs live under `UI/Patches/`.
 - **Worldhalla.Plugin.Tests** — NUnit suite. Runs the transpilers over the game's real IL without
   launching it; skips rather than fails when no Valheim install is present.
 - **GeneratorSample** — a minimal generator mod (moniker `GS`): noise islands, distance-banded biomes and one
@@ -184,7 +186,7 @@ throwing constructor costs that one mod its registration and nothing else.
 The header sits where vanilla reads the world version, and always has its sign bit set, so an
 unmodded game reads a modded world as an invalid version and refuses it instead of corrupting it.
 A modded game reading an unmodded world sees a plain version without the flag and defers to
-vanilla. The layout is documented at the top of `Patches/WorldPatch.cs`; keep that comment true.
+vanilla. The layout is documented at the top of `Core/Patches/WorldPatch.cs`; keep that comment true.
 
 - `CUSTOM_WORLDGEN_FLAG = 0x80000000` — always set
 - low byte — format version, currently `0x00`
@@ -198,7 +200,7 @@ blob of their own, empty for now, so settings can be added to it without changin
 it in the current format, so starting a legacy world from the world list asks the player to confirm
 first (`FejdStartupPatch.Awake` gates the world list's Start button).
 
-The generator's settings blob is capped at 64 KiB (`Internal/SettingsBlob`). The cap is checked
+The generator's settings blob is capped at 64 KiB (`Core/SettingsBlob`). The cap is checked
 where settings come into being (default settings at discovery, the settings dialog, the command
 line) and wherever a blob is read, but never on save: a save that throws mid-game costs more than an
 oversized blob.
@@ -208,9 +210,9 @@ what an existing format version means breaks worlds that already exist on disk; 
 
 ### Patches
 
-`Patches/WorldPatch` covers save/load of the `.fwl`, `Patches/WorldGeneratorPatch` the per-point
-query path (`GetHeight`/`GetBiomeHeight`/`GetBiome`/`GetForestFactor`), and `Patches/ZNetPatch` the
-handshake. The transpilers find their insertion points through `Extensions/CodeMatcherExtension`
+`Core/Patches/WorldPatch` covers save/load of the `.fwl`, `Core/Patches/WorldGeneratorPatch` the per-point
+query path (`GetHeight`/`GetBiomeHeight`/`GetBiome`/`GetForestFactor`), and `Core/Patches/ZNetPatch` the
+handshake. The transpilers find their insertion points through `Core/Extensions/CodeMatcherExtension`
 rather than hardcoded offsets; each helper there is an assumption about vanilla's IL shape, and
 each has an anchor test.
 
@@ -218,13 +220,13 @@ each has an anchor test.
 up to four times per vertex on a biome-border chunk and a generator doing its own blending would
 otherwise repeat the work.
 
-`Patches/WorldListPatch` adds a worldgen moniker column to the start menu's world list by cloning
+`UI/Patches/WorldListPatch` adds a worldgen moniker column to the start menu's world list by cloning
 the `name` child of the row template and shrinking `name` to make room, and prepends the generator to
 each row's tooltip. It is cosmetic, so players can turn it off (`Compatibility.WorldListPatch` in the
 BepInEx config) and `WorldhallaPlugin.Awake` skips the class when they do. A new patch that Worldhalla
 works without belongs behind that kind of switch; one it can't work without does not.
 
-`Patches/CreateWorldPanelPatch` replaces the create-world dialog with `UI/WorldCreationDialog` (specified in
+`UI/Patches/CreateWorldPanelPatch` replaces the create-world dialog with `UI/WorldCreationDialog` (specified in
 `Specs/CREATE_WORLD_DIALOG.md`) and, through a transpiler on `OnNewWorldDone`, assigns the selected generator
 right after `new World(name, seed)` — before the same method saves the `.fwl`, so a postfix would be too late.
 The dialog is built in `FejdStartup.Awake` inside the vanilla `m_createWorldPanel`, whose own inner panel is hidden;
@@ -263,14 +265,14 @@ in linear space with the knobs in `HdrPreviewSettings`. `Tools/PaletteLab/palett
 a browser and mirrors their defaults, so a change to the style or its defaults goes into both. The lab's world data
 lives in its git-ignored `data/` folder (format in the page's header comment) and is never committed.
 
-`Patches/ServerStartupPatch` is the dedicated server's side of world creation, which never passes
+`Core/Patches/ServerStartupPatch` is the dedicated server's side of world creation, which never passes
 through that dialog: `World.GetCreateWorld` (called only from `FejdStartup.ParseServerArguments`)
 gets the generator named by `-wh guid <guid>` right after `new World(name, seed)`, for the same
 reason, with settings from `ISettingsHandler.BuildSettingsFromCommandLine` over the opaque
 `-wh settings <string>` (or `ISettingsHandler.DefaultSettings` without it). A generator that doesn't
 implement `ISettingsHandler` takes no settings, so passing `-wh settings` to it stops the server, and
 a `SettingsException` from the handler is reported along with its `CommandLineUsage`.
-`Internal/CommandLine` parses `-wh <command> <value>` pairs, and a new command is one entry in its
+`CommandLine` parses `-wh <command> <value>` pairs, and a new command is one entry in its
 table. Anything that should stop the server throws
 `ServerStartupException`, which a finalizer on `ParseServerArguments` turns into vanilla's own
 failure path (log, `Application.Quit`, return false) — the same one a bad password takes.
@@ -293,7 +295,7 @@ offset from a different baseline).
 
 ### Extending game types
 
-`Extensions/WorldExtension` attaches Worldhalla's per-world state (worldgen, settings) to `World`
+`Core/Extensions/WorldExtension` attaches Worldhalla's per-world state (worldgen, settings) to `World`
 through a `ConditionalWeakTable`. That is the intended way to add fields to a game type: treat them
 as first-class fields and set them where vanilla sets its own (e.g. next to the name and seed at
 construction), rather than carrying values across calls in temporary statics.
@@ -353,10 +355,16 @@ text set from code goes through `Translations.Get`. Log lines, console errors an
 text are not translated. `TranslationTests` checks every language against English with the game's
 parser.
 
+`Translations` and the `SetupLanguage` postfix live next to the CSVs, in namespace
+`Worldhalla.Plugin.Localization`. Inside `Worldhalla.Plugin` that namespace shadows the game's `Localization`
+class, so the game type is written `global::Localization`.
+
 ### Logging
 
-`Internal.Logger` is an indirection with a `LogLevel` enum and a settable sink, wired to BepInEx in
-`WorldhallaPlugin.Awake`. With no sink installed it discards, which is what keeps the patches
+`Worldhalla.Plugin.Logger` is an indirection with a `LogLevel` enum and a settable sink, wired to BepInEx in
+`WorldhallaPlugin.Awake`. Living in the root namespace, it wins over `UnityEngine.Logger` everywhere in the plugin
+without an alias; only inside `WorldhallaPlugin`, where `Logger` is BepInEx's inherited property, it is written out in
+full. With no sink installed it discards, which is what keeps the patches
 callable from tests that have no BepInEx host. Don't give it a BepInEx type in its signature — the
 test project doesn't reference `BepInEx.Core`.
 

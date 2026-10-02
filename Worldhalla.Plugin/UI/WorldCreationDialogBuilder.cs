@@ -7,7 +7,7 @@ using Object = UnityEngine.Object;
 
 namespace Worldhalla.Plugin.UI;
 
-internal static class WorldCreationDialogBuilder
+public static class WorldCreationDialogBuilder
 {
     private const string PANEL_NAME = "WorldhallaPanel";
     private const string DETAILS_NAME = "WorldhallaPreviewDetails";

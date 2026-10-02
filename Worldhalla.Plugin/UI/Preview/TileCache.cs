@@ -2,7 +2,7 @@ namespace Worldhalla.Plugin.UI.Preview;
 
 // Square tiles allocated on first use. A value is written before its flag, so a reader on another thread sees it
 // either whole or not at all
-internal sealed class TileCache<T> where T : struct
+public sealed class TileCache<T> where T : struct
 {
     private const int TILE_SIZE = 128;
 
