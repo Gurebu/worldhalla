@@ -3,7 +3,9 @@ namespace Worldhalla.Plugin.Compat;
 public static class RiverheimMigration
 {
     public const byte FORMAT_VERSION = 0xff;
-    public const string GUID = "dev.gurebu.riverheim.stable";
+    public const string GUID_RELEASE_STABLE = "dev.gurebu.riverheim.stable";
+    public const string GUID_BETA = "dev.gurebu.riverheim";
+    private const string GUID_RELEASE_STABLE_TO = "dev.gurebu.riverheim";
     
     private const int SETTING_COUNT = 2;
     private const string SETTING_PRESET = "preset";
@@ -33,6 +35,6 @@ public static class RiverheimMigration
         settings.Write(SETTING_PRESET_VERSION);
         settings.Write(presetVersion);
 
-        return (GUID, settings.GetArray());
+        return (GUID_RELEASE_STABLE_TO, settings.GetArray());
     }
 }

@@ -104,7 +104,7 @@ public static class WorldPatch
             Logger.LogInfo($"World '{name}' is a legacy riverheim world, preparing for migratory read");
             
             var worldgenGuid = package.ReadString();
-            if (worldgenGuid != RiverheimMigration.GUID)
+            if (worldgenGuid != RiverheimMigration.GUID_RELEASE_STABLE)
             {
                 Logger.LogInfo($"Found a legacy world '{name}', but it has incorrect worldgen GUID '{worldgenGuid}'");
                 return false;
