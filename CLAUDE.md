@@ -249,18 +249,23 @@ rather than discovered. Valheim's model, which ours follows:
 
 The vanilla bindings and groups can be read from the start-menu bundle (see Inspecting game UI).
 
-The dialog's world preview samples vanilla worlds through `UI/Preview/Vanilla/VanillaRiverPlacement`: Harmony
+Every world preview runs on a private `WorldGenerator` made by `UI/Preview/PreviewGeneration`, and samples it the way a
+chunk build does (`GetBiome`, then `GetBiomeHeight`), so the preview goes through the same `WorldGeneratorPatch` path as
+a played world. A Worldhalla world is attached to that instance with `SetWorld`; a vanilla one is left unbound. The
+constructor seeds through `UnityEngine.Random`, so it runs on the main thread, as a menu world so that it skips river
+placement. Vanilla previews then place rivers through `UI/Preview/Vanilla/VanillaRiverPlacement`: Harmony
 **reverse patches** that copy vanilla's river placement into stub methods, rewritten to draw from `PreviewRandom`
-(a bit-exact reimplementation of `UnityEngine.Random`, verified once in game) so they can run off the main thread. They must stay copies. Nothing there may patch `WorldGenerator` itself, which places the rivers of every
-real vanilla world. The class carries no Harmony attributes so `PatchAll` never picks it up, and `Prepare` checks the
-originals' patch lists before and after copying. HarmonyX 2.7 can't apply detours under .NET 8, so the test host
-crashes on any real patch or reverse patch; tests can only run transpilers as plain functions.
+(a bit-exact reimplementation of `UnityEngine.Random`, verified once in game) so they can run off the main thread. They
+must stay copies. Nothing there may patch `WorldGenerator` itself, which places the rivers of every real vanilla world.
+The class carries no Harmony attributes so `PatchAll` never picks it up, and `Prepare` checks the originals' patch
+lists before and after copying. HarmonyX 2.7 can't apply detours under .NET 8, so the test host crashes on any real
+patch or reverse patch; tests can only run transpilers as plain functions.
 
-The detailed preview's location simulation (`UI/Preview/Locations`) queries a generator that is not
+The detailed preview's location simulation (`UI/Preview/Locations`) runs on the preview's generator, which is not
 `WorldGenerator.instance`. `WorldGeneratorPatch`'s static hooks (`IsAshlands`, `GetForestFactor`, ...) only know the
-running world, so the simulation must reach a Worldhalla world through instance methods alone, which the patch routes
-through `__instance.GetWorld()`. A static it needs gets a shared helper both sides call, as `GeneratedWorld.ForestFactor`
-is; calling the static would silently answer with vanilla's layout.
+running world, so the preview and the simulation must reach a Worldhalla world through instance methods alone, which
+the patch routes through `__instance.GetWorld()`. A static they need gets a shared helper both sides call, as
+`GeneratedWorld.ForestFactor` is; calling the static would silently answer with vanilla's layout.
 
 Both previews take their colours from `UI/Preview/PreviewPalette`: one sRGB colour per biome and one for water, so a
 new biome needs one entry there. The small preview paints them flat; the detailed one (`HdrPreviewStyle`) lights them

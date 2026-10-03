@@ -85,8 +85,7 @@ public class WorldCreationDialog : MonoBehaviour
     private bool spoilerAccepted;
     private float? seedChangedAt;
     private Exception? reportedFailure;
-    private string? previewSeed;
-    private GeneratedWorld? simulatedWorld;
+    private WorldGenerator? simulatedGenerator;
     private CancellationTokenSource? simulation;
     private LocationSimulation.Progress? simulationProgress;
     private TMP_Text locationsLabel = null!;
@@ -171,7 +170,7 @@ public class WorldCreationDialog : MonoBehaviour
         CloseDetails();
         settingsDialog.Close();
         simulation?.Cancel();
-        simulatedWorld = null;
+        simulatedGenerator = null;
         simulationProgress = null;
         ClearLocationIcons();
     }
@@ -292,16 +291,7 @@ public class WorldCreationDialog : MonoBehaviour
 
         var worldgen = SelectedWorldgen;
         var worldSettings = settings;
-        previewSeed = seed;
-
-        if (worldgen == null)
-        {
-            preview.Request(() => WorldGenerationTask.Of(VanillaWorldState.Generate(seed)));
-            return;
-        }
-
-        var seedHash = seed.GetStableHashCode();
-        preview.Request(() => WorldGenerationTask.Start(worldgen, seedHash, worldSettings));
+        preview.Request(() => PreviewGeneration.Start(worldgen, seed, worldSettings));
     }
 
     private void OpenDetails()
@@ -321,18 +311,18 @@ public class WorldCreationDialog : MonoBehaviour
     // Experimental: logs where the priority locations of the previewed world would be placed
     private void SimulateLocations()
     {
-        if (!LocationsSimulable || preview.World is not { } world || world == simulatedWorld || previewSeed == null)
+        if (!LocationsSimulable || preview.Generator is not { } generator || generator == simulatedGenerator)
             return;
 
-        simulatedWorld = world;
+        simulatedGenerator = generator;
         simulation?.Cancel();
         simulation = new CancellationTokenSource();
         ClearLocationIcons();
-        StartCoroutine(RunSimulation(LocationSimulation.CreateGenerator(previewSeed, world), world, simulation.Token));
+        StartCoroutine(RunSimulation(generator, simulation.Token));
     }
 
     // A simulation that ends without showing anything leaves the button available to try again
-    private IEnumerator RunSimulation(WorldGenerator generator, GeneratedWorld world, CancellationToken token)
+    private IEnumerator RunSimulation(WorldGenerator generator, CancellationToken token)
     {
         var progress = new LocationSimulation.Progress();
         simulationProgress = progress;
@@ -343,13 +333,13 @@ public class WorldCreationDialog : MonoBehaviour
             yield break;
 
         simulationProgress = null;
-        if (locationIcons.Count == 0 && simulatedWorld == world)
-            simulatedWorld = null;
+        if (locationIcons.Count == 0 && simulatedGenerator == generator)
+            simulatedGenerator = null;
     }
 
     private void ShowLocations(List<LocationSimulation.Placed> placed)
     {
-        if (preview.World != simulatedWorld)
+        if (preview.Generator != simulatedGenerator)
             return;
 
         foreach (var location in placed)
@@ -413,7 +403,7 @@ public class WorldCreationDialog : MonoBehaviour
 
     private void PlaceLocationIcons()
     {
-        if (preview.World != simulatedWorld || preview.WorldRadius is not { } radius)
+        if (preview.Generator != simulatedGenerator || preview.WorldRadius is not { } radius)
         {
             ClearLocationIcons();
             return;
@@ -557,7 +547,7 @@ public class WorldCreationDialog : MonoBehaviour
 
         hideButton.interactable = revealed;
         detailsButton.interactable = revealed && preview.CanShowDetails;
-        locationsButton.interactable = LocationsSimulable && preview.World != null && preview.World != simulatedWorld;
+        locationsButton.interactable = LocationsSimulable && preview.Generator != null && preview.Generator != simulatedGenerator;
         locationsLabel.text = simulationProgress is { } progress
             ? Translations.Get(LOCATIONS_PROGRESS, Mathf.FloorToInt(progress.Fraction * 100f).ToString())
             : Translations.Get(LOCATIONS);

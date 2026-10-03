@@ -1,6 +1,5 @@
 using UnityEngine;
 using Worldhalla.API.World;
-using Worldhalla.Plugin.Core;
 
 namespace Worldhalla.Plugin.UI.Preview;
 
@@ -14,7 +13,7 @@ public sealed class DetailsRender
     public const int COARSEST_BLOCK = 16;
 
     private readonly CancellationTokenSource cancellation = new();
-    private readonly GeneratedWorld world;
+    private readonly WorldGenerator generator;
     private readonly PreviewCache cache;
     private readonly IPreviewStyle style;
     private readonly int coarsestBlock;
@@ -35,10 +34,10 @@ public sealed class DetailsRender
 
     public Exception? Error { get; private set; }
 
-    private DetailsRender(GeneratedWorld world, PreviewCache cache, PreviewView view, int coarsestBlock, IPreviewStyle style)
+    private DetailsRender(WorldGenerator generator, PreviewCache cache, PreviewView view, int coarsestBlock, IPreviewStyle style)
     {
         this.coarsestBlock = coarsestBlock;
-        this.world = world;
+        this.generator = generator;
         this.cache = cache;
         this.view = view;
         this.style = style;
@@ -48,9 +47,9 @@ public sealed class DetailsRender
             blocks[i] = UNPAINTED;
     }
 
-    public static DetailsRender Start(GeneratedWorld world, PreviewCache cache, PreviewView view, int coarsestBlock, IPreviewStyle style)
+    public static DetailsRender Start(WorldGenerator generator, PreviewCache cache, PreviewView view, int coarsestBlock, IPreviewStyle style)
     {
-        var render = new DetailsRender(world, cache, view, coarsestBlock, style);
+        var render = new DetailsRender(generator, cache, view, coarsestBlock, style);
         var token = render.cancellation.Token;
         Task.Run(() => render.Render(token), token);
         return render;
@@ -195,8 +194,7 @@ public sealed class DetailsRender
 
                 ready = true;
                 var position = cache.Position(cell);
-                var point = world.RenderPoint(position.x, position.y);
-                (height, biome, lava) = (point.height, point.biome, point.lava);
+                (height, biome, lava) = PreviewSampling.Sample(generator, position.x, position.y);
                 cache.SetSample(cell, height, biome, lava);
             }
 

@@ -21,11 +21,6 @@ public sealed class GeneratedWorld(IWorldState state, bool biomeBlending)
         return new GeneratedWorld(state, worldgen.BiomeBlending);
     }
 
-    public IWorldState.PointData RenderPoint(float x, float y)
-    {
-        return State.RenderPoint(x, y, BiomeBlending ? Biome.None : State.GetBiome(x, y));
-    }
-
     public float ForestFactor(Vector3 position)
     {
         return FOREST_FACTOR_MULTIPLIER * (1 - State.GetForestation(position.x, position.z));

@@ -8,27 +8,20 @@ public sealed class WorldGenerationTask : IProgress<float>
     private readonly CancellationTokenSource cancellation = new();
     private float progress = -1f;
 
-    private WorldGenerationTask(Func<WorldGenerationTask, Task<GeneratedWorld>> start)
+    private WorldGenerationTask()
     {
-        Completion = start(this);
     }
 
-    public Task<GeneratedWorld> Completion { get; }
+    public Task<GeneratedWorld> Completion { get; private set; } = null!;
 
     public float? Progress => Volatile.Read(ref progress) is var value and >= 0f ? value : null;
 
     public static WorldGenerationTask Start(RegisteredWorldgen worldgen, int seed, ISettings? settings)
     {
-        return new WorldGenerationTask(generation => Task.Run(() =>
-        {
-            var token = generation.cancellation.Token;
-            return GeneratedWorld.Of(worldgen, worldgen.Generate(seed, settings, generation, token));
-        }));
-    }
-
-    public static WorldGenerationTask Of(Task<GeneratedWorld> task)
-    {
-        return new WorldGenerationTask(_ => task);
+        var generation = new WorldGenerationTask();
+        var token = generation.cancellation.Token;
+        generation.Completion = Task.Run(() => GeneratedWorld.Of(worldgen, worldgen.Generate(seed, settings, generation, token)));
+        return generation;
     }
 
     public void Cancel()

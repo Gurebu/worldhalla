@@ -1,6 +1,3 @@
-using Worldhalla.API.World;
-using Worldhalla.Plugin.Core;
-
 namespace Worldhalla.Plugin.UI.Preview;
 
 public sealed class WorldPreview
@@ -15,16 +12,15 @@ public sealed class WorldPreview
     }
 
     private const int PREVIEW_SUPERSAMPLING = 3;
-    private const float DEFAULT_WORLD_RADIUS = 10500f;
 
     private readonly int previewSize;
     private int version;
-    private Func<WorldGenerationTask>? wanted;
+    private Func<PreviewGeneration>? wanted;
 
-    private WorldGenerationTask? running;
+    private PreviewGeneration? running;
     private int runningVersion;
 
-    private GeneratedWorld? state;
+    private WorldGenerator? generator;
     private Exception? failure;
 
     private PreviewCache? cache;
@@ -53,18 +49,18 @@ public sealed class WorldPreview
         }
     }
 
-    public bool CanShowDetails => state != null;
+    public bool CanShowDetails => generator != null;
 
-    public GeneratedWorld? World => state;
+    public WorldGenerator? Generator => generator;
 
-    public float? WorldRadius => state != null ? GetWorldRadius(state) : null;
+    public float? WorldRadius => generator != null ? PreviewSampling.WorldRadius(generator) : null;
 
     public DetailsRender? WholeDetails => wholeDetails;
 
     public float? GenerationProgress => runningVersion == version ? running?.Progress : null;
 
     // Generations run one at a time: a cancelled one is left to wind down before the latest request starts.
-    public void Request(Func<WorldGenerationTask> startGeneration)
+    public void Request(Func<PreviewGeneration> startGeneration)
     {
         DropOutputs();
         version++;
@@ -85,7 +81,7 @@ public sealed class WorldPreview
             if (runningVersion == version)
             {
                 if (completion.Status == TaskStatus.RanToCompletion)
-                    state = completion.Result;
+                    generator = completion.Result;
                 else
                     failure = completion.Exception?.InnerException ?? (Exception?)completion.Exception ?? new OperationCanceledException();
             }
@@ -93,14 +89,14 @@ public sealed class WorldPreview
             running = null;
         }
 
-        if (running == null && wanted != null && state == null && failure == null)
+        if (running == null && wanted != null && generator == null && failure == null)
         {
             runningVersion = version;
-            running = Start(wanted);
+            running = wanted();
         }
 
-        if (state != null && Main == null)
-            Main = PreviewRender.Start(state, GetWorldRadius(state), previewSize, PREVIEW_SUPERSAMPLING, new SimplePreviewStyle());
+        if (generator != null && Main == null)
+            Main = PreviewRender.Start(generator, PreviewSampling.WorldRadius(generator), previewSize, PREVIEW_SUPERSAMPLING, new SimplePreviewStyle());
     }
 
     // The whole world is rendered once and kept, to show wherever a zoomed render has nothing yet. The shown render stays
@@ -108,11 +104,11 @@ public sealed class WorldPreview
     // restarting on every frame of a drag
     public DetailsRender? EnsureDetails(PreviewView view)
     {
-        if (state == null)
+        if (generator == null)
             return null;
 
-        cache ??= new PreviewCache(GetWorldRadius(state), PreviewView.CELLS);
-        wholeDetails ??= DetailsRender.Start(state, cache, PreviewView.Whole, DetailsRender.COARSEST_BLOCK, new HdrPreviewStyle());
+        cache ??= new PreviewCache(PreviewSampling.WorldRadius(generator), PreviewView.CELLS);
+        wholeDetails ??= DetailsRender.Start(generator, cache, PreviewView.Whole, DetailsRender.COARSEST_BLOCK, new HdrPreviewStyle());
 
         if (pendingDetails is { IsReady: true })
         {
@@ -128,7 +124,7 @@ public sealed class WorldPreview
             if (view.IsWhole)
                 details = wholeDetails;
             else
-                pendingDetails = DetailsRender.Start(state, cache, view, CoarsestBlock(view), new HdrPreviewStyle());
+                pendingDetails = DetailsRender.Start(generator, cache, view, CoarsestBlock(view), new HdrPreviewStyle());
         }
 
         return details;
@@ -147,18 +143,6 @@ public sealed class WorldPreview
         return failure ?? Main?.Error ?? wholeDetails?.Error ?? details?.Error;
     }
 
-    private static WorldGenerationTask Start(Func<WorldGenerationTask> startGeneration)
-    {
-        try
-        {
-            return startGeneration();
-        }
-        catch (Exception e)
-        {
-            return WorldGenerationTask.Of(Task.FromException<GeneratedWorld>(e));
-        }
-    }
-
     private void DropOutputs()
     {
         running?.Cancel();
@@ -171,12 +155,7 @@ public sealed class WorldPreview
         details = null;
         pendingDetails = null;
         cache = null;
-        state = null;
+        generator = null;
         failure = null;
-    }
-
-    private static float GetWorldRadius(GeneratedWorld world)
-    {
-        return world.State is IWorldGeography geography ? geography.WorldSize / 2f : DEFAULT_WORLD_RADIUS;
     }
 }

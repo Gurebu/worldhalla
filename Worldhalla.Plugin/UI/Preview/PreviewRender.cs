@@ -1,6 +1,4 @@
 using UnityEngine;
-using Worldhalla.API.World;
-using Worldhalla.Plugin.Core;
 
 namespace Worldhalla.Plugin.UI.Preview;
 
@@ -22,11 +20,11 @@ public sealed class PreviewRender
         pixels = new Color32[size * size];
     }
 
-    public static PreviewRender Start(GeneratedWorld world, float radius, int size, int supersampling, IPreviewStyle style)
+    public static PreviewRender Start(WorldGenerator generator, float radius, int size, int supersampling, IPreviewStyle style)
     {
         var render = new PreviewRender(size);
         var token = render.cancellation.Token;
-        Task.Run(() => render.Render(world, radius, supersampling, style, token), token);
+        Task.Run(() => render.Render(generator, radius, supersampling, style, token), token);
         return render;
     }
 
@@ -37,7 +35,7 @@ public sealed class PreviewRender
 
     // The grid holds supersampling² samples per pixel. Rows are painted top (north) first; a pixel row is painted once
     // the sample row below its own samples is taken, since styles may look at both neighbours of a sample
-    private void Render(GeneratedWorld world, float radius, int supersampling, IPreviewStyle style, CancellationToken token)
+    private void Render(WorldGenerator generator, float radius, int supersampling, IPreviewStyle style, CancellationToken token)
     {
         try
         {
@@ -51,7 +49,7 @@ public sealed class PreviewRender
                     if (token.IsCancellationRequested)
                         return;
 
-                    SampleRow(world, row * supersampling + sample, radius, supersampling, grid);
+                    SampleRow(generator, row * supersampling + sample, radius, supersampling, grid);
                 }
 
                 if (row < size - 1)
@@ -66,7 +64,7 @@ public sealed class PreviewRender
         }
     }
 
-    private void SampleRow(GeneratedWorld world, int row, float radius, int supersampling, PreviewGrid grid)
+    private void SampleRow(WorldGenerator generator, int row, float radius, int supersampling, PreviewGrid grid)
     {
         var step = grid.step;
         var z = -radius + (row + 0.5f) * step;
@@ -78,11 +76,10 @@ public sealed class PreviewRender
             if (x * x + z * z > sampledRadius * sampledRadius)
                 return;
 
-            var point = world.RenderPoint(x, z);
-            grid.heights[row * grid.size + i] = point.height;
-            grid.biomes[row * grid.size + i] = point.biome;
-            grid.lava[row * grid.size + i] = point.lava;
-
+            var (height, biome, lava) = PreviewSampling.Sample(generator, x, z);
+            grid.heights[row * grid.size + i] = height;
+            grid.biomes[row * grid.size + i] = biome;
+            grid.lava[row * grid.size + i] = lava;
         });
     }
 

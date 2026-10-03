@@ -2,7 +2,6 @@ using System.Collections;
 using System.Diagnostics;
 using SoftReferenceableAssets;
 using UnityEngine;
-using Worldhalla.Plugin.Core;
 using Worldhalla.Plugin.Core.Extensions;
 using Random = UnityEngine.Random;
 
@@ -57,19 +56,6 @@ public sealed class LocationSimulation
     {
         this.generator = generator;
         this.points = points;
-    }
-
-    // Main thread only: the generator's constructor draws from the engine's random state
-    public static WorldGenerator CreateGenerator(string seed, GeneratedWorld world)
-    {
-        if (world.State is VanillaWorldState vanilla)
-            return vanilla.Generator;
-
-        var simulated = new World("", seed) { m_menu = true };
-        var generator = new WorldGenerator(simulated);
-        simulated.m_menu = false;
-        generator.SetWorld(world);
-        return generator;
     }
 
     // Hands over the placed locations the minimap has an icon for, as it would show them
