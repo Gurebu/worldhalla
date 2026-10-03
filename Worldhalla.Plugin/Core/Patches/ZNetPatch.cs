@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
-using Worldhalla.API;
 using Worldhalla.API.Settings;
 using Worldhalla.Plugin.Core.Extensions;
 using Worldhalla.Plugin.Localization;
@@ -88,7 +87,7 @@ public static class ZNetPatch
                && version.Minor == LocalVersion.Minor;
     }
 
-    private static Refusal? FindRefusal(WorldhallaClientInfo info, string guid, IWorldGenerator worldgen)
+    private static Refusal? FindRefusal(WorldhallaClientInfo info, string guid, RegisteredWorldgen worldgen)
     {
         if (!IsCompatible(info.pluginVersion))
             return Refusal.WorldhallaVersion;
@@ -136,7 +135,7 @@ public static class ZNetPatch
         return false;
     }
 
-    private static void SendRefusal(ZRpc rpc, Refusal refusal, string guid, IWorldGenerator worldgen)
+    private static void SendRefusal(ZRpc rpc, Refusal refusal, string guid, RegisteredWorldgen worldgen)
     {
         var package = new ZPackage();
 
@@ -195,9 +194,7 @@ public static class ZNetPatch
         var package = new ZPackage();
 
         package.Write(PluginInfo.PLUGIN_VERSION);
-        package.Write(worldgen.Guid);
-        package.Write(new ZPackage().GetArray());
-        package.Write(worldgen.SaveSettings());
+        WorldgenPayload.Write(package, worldgen);
 
         rpc.Invoke(WORLD_RPC, package);
     }
@@ -226,20 +223,18 @@ public static class ZNetPatch
             return RefuseWorld(rpc, $"Server world '{world.m_name}' has no seed",
                 Translations.Get("$wh_refused_no_seed"));
 
-        var worldgenType = package.ReadString();
+        var worldgenType = WorldgenPayload.ReadGuid(package);
         if (!Registry.FindByGuid(worldgenType, out var worldgen))
             return RefuseWorld(rpc, $"Unknown custom worldgen '{worldgenType}'",
                 Translations.Get("$wh_refused_generator_unknown", worldgenType));
 
         Logger.LogInfo($"Joining world '{world.m_name}' created with '{worldgenType}'");
 
-        package.ReadByteArray();
-
         ISettings? settings;
 
         try
         {
-            settings = worldgen.LoadSettings(SettingsBlob.Read(package));
+            settings = worldgen.LoadSettings(WorldgenPayload.ReadSettings(package));
         }
         catch (SettingsException e)
         {
@@ -252,7 +247,7 @@ public static class ZNetPatch
                 Translations.Get("$wh_refused_settings_failed", worldgen.Name));
         }
 
-        world.SetWorldgen(new InstalledWorldgen(worldgenType, worldgen, settings));
+        world.SetWorldgen(new InstalledWorldgen(worldgen, settings));
 
         return true;
     }

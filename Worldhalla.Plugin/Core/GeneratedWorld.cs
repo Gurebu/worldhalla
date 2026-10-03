@@ -16,9 +16,9 @@ public sealed class GeneratedWorld(IWorldState state, bool biomeBlending)
 
     public bool BiomeBlending { get; } = biomeBlending;
 
-    public static GeneratedWorld Of(IWorldGenerator worldgen, IWorldState state)
+    public static GeneratedWorld Of(RegisteredWorldgen worldgen, IWorldState state)
     {
-        return new GeneratedWorld(state, worldgen.Features.Contains(IWorldGenerator.Feature.BiomeBlending));
+        return new GeneratedWorld(state, worldgen.BiomeBlending);
     }
 
     public IWorldState.PointData RenderPoint(float x, float y)

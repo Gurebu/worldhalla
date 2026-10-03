@@ -56,6 +56,22 @@ internal sealed class ThrowingWorldgen : IWorldGenerator
     public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
 
+[WorldhallaPlugin(GUID)]
+internal sealed class ThrowingVersionWorldgen : IWorldGenerator
+{
+    public const string GUID = "dev.test.throwing.version";
+
+    public string Moniker => "TV";
+
+    public string Name => "Throwing version";
+
+    public string Version => throw new System.Exception("this mod is broken");
+
+    public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
+
+    public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
+}
+
 [WorldhallaPlugin(" ")]
 internal sealed class BlankGuidWorldgen : IWorldGenerator
 {
@@ -119,7 +135,7 @@ public class RegistryTests
     public void LabelledGeneratorIsDiscovered()
     {
         Assert.That(Registry.FindByGuid(LabelledWorldgen.GUID, out var generator), Is.True);
-        Assert.That(generator, Is.InstanceOf<LabelledWorldgen>());
+        Assert.That(generator.Instance, Is.InstanceOf<LabelledWorldgen>());
     }
 
     /*
@@ -142,7 +158,7 @@ public class RegistryTests
     public void DiscoveredGeneratorIsKnownByItsLabel()
     {
         Assert.That(Registry.Generators.Keys, Does.Contain(LabelledWorldgen.GUID));
-        Assert.That(Registry.Generators[LabelledWorldgen.GUID], Is.InstanceOf<LabelledWorldgen>());
+        Assert.That(Registry.Generators[LabelledWorldgen.GUID].Instance, Is.InstanceOf<LabelledWorldgen>());
     }
 
     [Test, RequiresValheim]
@@ -167,6 +183,7 @@ public class RegistryTests
         Assert.DoesNotThrow(() => Registry.DiscoverGenerators());
 
         Assert.That(Registry.FindByGuid(ThrowingWorldgen.GUID, out _), Is.False);
+        Assert.That(Registry.FindByGuid(ThrowingVersionWorldgen.GUID, out _), Is.False);
         Assert.That(Registry.FindByGuid(" ", out _), Is.False);
         Assert.That(Registry.FindByGuid(LabelledWorldgen.GUID, out _), Is.True);
     }

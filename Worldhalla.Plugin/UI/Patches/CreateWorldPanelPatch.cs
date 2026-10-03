@@ -18,10 +18,10 @@ public static class CreateWorldPanelPatch
 
     internal static void AssignSelectedWorldgen(FejdStartup startup)
     {
-        if (GetDialog(startup) is not { SelectedWorldgenGuid: { } guid, SelectedWorldgen: { } worldgen } dialog)
+        if (GetDialog(startup) is not { SelectedWorldgen: { } worldgen } dialog)
             return;
 
-        startup.m_world.SetWorldgen(new InstalledWorldgen(guid, worldgen, dialog.Settings));
+        startup.m_world.SetWorldgen(new InstalledWorldgen(worldgen, dialog.Settings));
     }
 
     // Built before the create-world panel is first shown, so the vanilla widgets moved into it wake up under their new parent

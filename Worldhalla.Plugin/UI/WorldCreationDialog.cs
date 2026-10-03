@@ -3,7 +3,6 @@ using GUIFramework;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using Worldhalla.API;
 using Worldhalla.API.Settings;
 using Worldhalla.API.World;
 using Worldhalla.Plugin.Compat;
@@ -80,7 +79,7 @@ public class WorldCreationDialog : MonoBehaviour
     private PreviewView detailsDragStart;
     private Vector2 gamepadPan;
 
-    private List<KeyValuePair<string, IWorldGenerator>> generators = [];
+    private List<RegisteredWorldgen> generators = [];
     private ISettings? settings;
     private bool revealed;
     private bool spoilerAccepted;
@@ -96,7 +95,7 @@ public class WorldCreationDialog : MonoBehaviour
 
     private static bool LocationsSimulable => LocationPlacementAccelerator.PlacesLikeVanilla;
 
-    private KeyValuePair<string, IWorldGenerator>? Selected
+    public RegisteredWorldgen? SelectedWorldgen
     {
         get
         {
@@ -104,10 +103,6 @@ public class WorldCreationDialog : MonoBehaviour
             return index >= 0 && index < generators.Count ? generators[index] : null;
         }
     }
-
-    public string? SelectedWorldgenGuid => Selected?.Key;
-
-    public IWorldGenerator? SelectedWorldgen => Selected?.Value;
 
     public ISettings? Settings => settings;
 
@@ -140,14 +135,14 @@ public class WorldCreationDialog : MonoBehaviour
 
     public void Open()
     {
-        generators = Registry.Generators
-            .OrderBy(generator => generator.Value.Name)
-            .ThenBy(generator => generator.Key)
+        generators = Registry.Generators.Values
+            .OrderBy(generator => generator.Name)
+            .ThenBy(generator => generator.Guid)
             .ToList();
 
         generatorDropdown.ClearOptions();
         generatorDropdown.AddOptions(new[] { VANILLA_OPTION }
-            .Concat(generators.Select(generator => $"<noparse>{generator.Value.Name}</noparse> <color={GUID_COLOR}>(<noparse>{generator.Key}</noparse>)</color>"))
+            .Concat(generators.Select(generator => $"<noparse>{generator.Name}</noparse> <color={GUID_COLOR}>(<noparse>{generator.Guid}</noparse>)</color>"))
             .ToList());
         generatorDropdown.SetValueWithoutNotify(0);
         generatorDropdown.RefreshShownValue();
@@ -209,7 +204,7 @@ public class WorldCreationDialog : MonoBehaviour
     private void OnGeneratorChanged()
     {
         var worldgen = SelectedWorldgen;
-        settings = worldgen?.GetDefaultSettings();
+        settings = worldgen?.DefaultSettings;
 
         worldSettingsSummary.text = "";
         generatorSettingsSummary.text = settings?.Summary() ?? "";
@@ -223,7 +218,7 @@ public class WorldCreationDialog : MonoBehaviour
 
     private void OpenGeneratorSettings()
     {
-        if (SelectedWorldgen is not ISettingsHandler handler || settings == null)
+        if (SelectedWorldgen is not { SettingsHandler: { } handler } || settings == null)
             return;
 
         ISettingsForm form;
@@ -233,7 +228,7 @@ public class WorldCreationDialog : MonoBehaviour
         }
         catch (Exception e)
         {
-            Logger.LogError($"{SelectedWorldgenGuid} failed to create its settings form: {e}");
+            Logger.LogError($"{SelectedWorldgen.Guid} failed to create its settings form: {e}");
             return;
         }
 
@@ -567,6 +562,6 @@ public class WorldCreationDialog : MonoBehaviour
             ? Translations.Get(LOCATIONS_PROGRESS, Mathf.FloorToInt(progress.Fraction * 100f).ToString())
             : Translations.Get(LOCATIONS);
         worldSettingsButton.interactable = worldgen != null;
-        generatorSettingsButton.interactable = worldgen is ISettingsHandler;
+        generatorSettingsButton.interactable = worldgen?.SettingsHandler != null;
     }
 }

@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using HarmonyLib;
 using UnityEngine;
-using Worldhalla.API;
 using Worldhalla.API.Settings;
 using Worldhalla.Plugin.Core.Extensions;
 
@@ -13,7 +12,7 @@ public static class ServerStartupPatch
 {
     private static CommandLineOptions ParseCommandLine() => CommandLine.Parse(Environment.GetCommandLineArgs());
 
-    private static (string guid, IWorldGenerator worldgen, ISettings? settings)? ResolveRequest(CommandLineOptions options)
+    private static (RegisteredWorldgen worldgen, ISettings? settings)? ResolveRequest(CommandLineOptions options)
     {
         if (options.worldgenGuid == null)
             return null;
@@ -24,12 +23,13 @@ public static class ServerStartupPatch
             throw new ServerStartupException($"Unknown worldgen '{options.worldgenGuid}', installed: [{installed}]");
         }
 
-        return (options.worldgenGuid, worldgen, ParseSettings(options.worldgenGuid, worldgen, options.settings));
+        return (worldgen, ParseSettings(worldgen, options.settings));
     }
 
-    private static ISettings? ParseSettings(string guid, IWorldGenerator worldgen, string? text)
+    private static ISettings? ParseSettings(RegisteredWorldgen worldgen, string? text)
     {
-        if (worldgen is not ISettingsHandler handler)
+        var guid = worldgen.Guid;
+        if (worldgen.SettingsHandler is not { } handler)
         {
             return text == null
                 ? null
@@ -61,12 +61,12 @@ public static class ServerStartupPatch
         if (SaveSystem.TryGetSaveByName(world.m_name, SaveDataType.World, out var save) && !save.IsDeleted)
             throw new ServerStartupException($"World '{world.m_name}' exists but could not be loaded, refusing to replace it with a new one");
 
-        if (ResolveRequest(ParseCommandLine()) is not var (guid, worldgen, settings))
+        if (ResolveRequest(ParseCommandLine()) is not var (worldgen, settings))
             return;
 
-        world.SetWorldgen(new InstalledWorldgen(guid, worldgen, settings));
+        world.SetWorldgen(new InstalledWorldgen(worldgen, settings));
 
-        Logger.LogInfo($"Creating world '{world.m_name}' with worldgen '{guid}'");
+        Logger.LogInfo($"Creating world '{world.m_name}' with worldgen '{worldgen.Guid}'");
     }
 
     [HarmonyPrefix, HarmonyPatch(typeof(FejdStartup), nameof(FejdStartup.ParseServerArguments))]

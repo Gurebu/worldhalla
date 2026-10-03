@@ -1,5 +1,4 @@
 using UnityEngine;
-using Worldhalla.API;
 using Worldhalla.API.Settings;
 
 namespace Worldhalla.Plugin.Core;
@@ -18,12 +17,12 @@ public sealed class WorldGenerationTask : IProgress<float>
 
     public float? Progress => Volatile.Read(ref progress) is var value and >= 0f ? value : null;
 
-    public static WorldGenerationTask Start(IWorldGenerator worldgen, int seed, ISettings? settings)
+    public static WorldGenerationTask Start(RegisteredWorldgen worldgen, int seed, ISettings? settings)
     {
         return new WorldGenerationTask(generation => Task.Run(() =>
         {
             var token = generation.cancellation.Token;
-            return GeneratedWorld.Of(worldgen, worldgen.Generate(seed, settings, generation, token));
+            return GeneratedWorld.Of(worldgen, worldgen.Instance.Generate(seed, settings, generation, token));
         }));
     }
 

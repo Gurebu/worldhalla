@@ -1,4 +1,3 @@
-using Worldhalla.API;
 using Worldhalla.API.Settings;
 
 namespace Worldhalla.Plugin.Core;
@@ -10,9 +9,9 @@ public abstract class WorldgenBinding(string guid)
     public abstract byte[] SaveSettings();
 }
 
-public sealed class InstalledWorldgen(string guid, IWorldGenerator generator, ISettings? settings) : WorldgenBinding(guid)
+public sealed class InstalledWorldgen(RegisteredWorldgen generator, ISettings? settings) : WorldgenBinding(generator.Guid)
 {
-    public IWorldGenerator Generator { get; } = generator;
+    public RegisteredWorldgen Generator { get; } = generator;
 
     public ISettings? Settings { get; } = settings;
 

@@ -7,12 +7,12 @@ namespace Worldhalla.Plugin.Core;
 
 public static class Registry
 {
-    private static readonly Dictionary<string, IWorldGenerator> WorldGenerators = new();
+    private static readonly Dictionary<string, RegisteredWorldgen> WorldGenerators = new();
     private static readonly HashSet<Assembly> ScannedAssemblies = [];
 
     private static readonly string ApiAssemblyName = typeof(WorldhallaPluginAttribute).Assembly.GetName().Name;
 
-    public static IReadOnlyDictionary<string, IWorldGenerator> Generators => WorldGenerators;
+    public static IReadOnlyDictionary<string, RegisteredWorldgen> Generators => WorldGenerators;
 
     public static void DiscoverGenerators()
     {
@@ -30,13 +30,13 @@ public static class Registry
     {
         if (WorldGenerators.TryGetValue(guid, out _))
             return false;
-        
-        WorldGenerators.Add(guid, generator);
+
+        WorldGenerators.Add(guid, new RegisteredWorldgen(guid, generator));
 
         return true;
     }
 
-    public static bool FindByGuid(string guid, out IWorldGenerator generator)
+    public static bool FindByGuid(string guid, out RegisteredWorldgen generator)
     {
         return WorldGenerators.TryGetValue(guid, out generator);
     }
@@ -104,10 +104,23 @@ public static class Registry
             return;
         }
 
+        RegisteredWorldgen registered;
+
         try
         {
-            if (generator is ISettingsHandler handler)
-                SettingsBlob.Check(handler.DefaultSettings);
+            registered = new RegisteredWorldgen(guid, generator);
+        }
+        catch (Exception e)
+        {
+            Logger.LogError($"Worldgen '{guid}' could not describe itself, skipping: {e.Message}");
+
+            return;
+        }
+
+        try
+        {
+            if (registered.DefaultSettings is { } defaults)
+                SettingsBlob.Check(defaults);
         }
         catch (Exception e)
         {
@@ -116,7 +129,7 @@ public static class Registry
             return;
         }
 
-        RegisterGenerator(guid, generator);
+        WorldGenerators.Add(guid, registered);
         Logger.LogInfo($"Discovered worldgen '{guid}' in '{type.Assembly.GetName().Name}'");
     }
     

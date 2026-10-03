@@ -47,7 +47,7 @@ public class WorldDataTests
     {
         var world = new World { m_name = "test" };
         if (custom)
-            world.SetWorldgen(new InstalledWorldgen(WORLDGEN, Generator, settings ?? Generator.DefaultSettings));
+            world.SetWorldgen(new InstalledWorldgen(Registry.Generators[WORLDGEN], settings ?? Generator.DefaultSettings));
 
         return world;
     }
@@ -197,7 +197,7 @@ public class WorldDataTests
     public void SettinglessWorldRoundTripsAndLeavesTheCursorOnVanillaData()
     {
         var written = new World { m_name = "test" };
-        written.SetWorldgen(new InstalledWorldgen(SETTINGLESS_WORLDGEN, SettinglessGenerator, null));
+        written.SetWorldgen(new InstalledWorldgen(Registry.Generators[SETTINGLESS_WORLDGEN], null));
 
         var package = new ZPackage();
 
@@ -213,7 +213,7 @@ public class WorldDataTests
         package.ReadInt();
 
         Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
-        Assert.That(Installed(world).Generator, Is.SameAs(SettinglessGenerator));
+        Assert.That(Installed(world).Generator.Instance, Is.SameAs(SettinglessGenerator));
         Assert.That(Installed(world).Settings, Is.Null);
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
@@ -263,6 +263,21 @@ public class WorldDataTests
         Assert.That(world.m_dataError, Is.EqualTo(World.SaveDataError.BadVersion));
         Assert.That(world.GetWorldgen(), Is.InstanceOf<MissingWorldgen>());
         Assert.That(world.GetWorldgen()!.Guid, Is.EqualTo("dev.someone.else"));
+        Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
+    }
+
+    [Test, RequiresValheim]
+    public void WorldgenPayloadRoundTrips()
+    {
+        var settings = new TestSettings("sent");
+        var package = new ZPackage();
+
+        WorldgenPayload.Write(package, new InstalledWorldgen(Registry.Generators[WORLDGEN], settings));
+        package.Write(VANILLA_DATA);
+        package.SetPos(0);
+
+        Assert.That(WorldgenPayload.ReadGuid(package), Is.EqualTo(WORLDGEN));
+        Assert.That(WorldgenPayload.ReadSettings(package), Is.EqualTo(settings.SaveToBinaryBlob()));
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 

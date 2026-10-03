@@ -37,11 +37,7 @@ public static class WorldPatch
             return;
 
         var payload = new ZPackage();
-
-        payload.Write(worldgen.Guid);
-        payload.Write(new ZPackage().GetArray());
-        payload.Write(worldgen.SaveSettings());
-
+        WorldgenPayload.Write(payload, worldgen);
         package.Write(payload.GetArray());
 
         if (worldgen is InstalledWorldgen installed)
@@ -120,7 +116,7 @@ public static class WorldPatch
 
         try
         {
-            world.SetWorldgen(new InstalledWorldgen(worldgenGuid, worldgen, worldgen.LoadSettings(settings))
+            world.SetWorldgen(new InstalledWorldgen(worldgen, worldgen.LoadSettings(settings))
             {
                 LegacyFormat = formatInfo.IsLegacyRiverheim(),
             });
@@ -142,12 +138,8 @@ public static class WorldPatch
     private static (string, byte[]) ReadPayload(ZPackage package)
     {
         var payload = new ZPackage(package.ReadByteArray());
-        
-        var worldgenGuid = payload.ReadString();
-        payload.ReadByteArray();
-        var settings = SettingsBlob.Read(payload);
 
-        return (worldgenGuid, settings);
+        return (WorldgenPayload.ReadGuid(payload), WorldgenPayload.ReadSettings(payload));
     }
 
     [HarmonyTranspiler]

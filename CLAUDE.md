@@ -179,7 +179,9 @@ after that `Start`; discovery is idempotent, so running it early there is safe.
 
 `Registry` scans only assemblies that reference the API assembly, which skips the game, Unity and
 the BCL without enumerating a type, and it isolates failures: a `ReflectionTypeLoadException` or a
-throwing constructor costs that one mod its registration and nothing else.
+throwing constructor costs that one mod its registration and nothing else. `RegisteredWorldgen` reads the
+generator's `Version`, `Moniker` and `Features` once at discovery, so a broken getter is caught there too and never
+runs inside vanilla's handshake; `Name` stays live because generators are encouraged to localize it.
 
 ### World format
 
