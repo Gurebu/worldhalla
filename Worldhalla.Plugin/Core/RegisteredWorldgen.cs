@@ -1,5 +1,6 @@
 using Worldhalla.API;
 using Worldhalla.API.Settings;
+using Worldhalla.API.World;
 
 namespace Worldhalla.Plugin.Core;
 
@@ -19,7 +20,7 @@ public sealed class RegisteredWorldgen
 
     public string Guid { get; }
 
-    public IWorldGenerator Instance { get; }
+    internal IWorldGenerator Instance { get; }
 
     public string Version { get; }
 
@@ -34,4 +35,9 @@ public sealed class RegisteredWorldgen
     public ISettings? DefaultSettings => SettingsHandler?.DefaultSettings;
 
     public ISettings? LoadSettings(byte[] blob) => SettingsHandler?.BuildSettingsFromBinaryBlob(blob);
+
+    public IWorldState Generate(int seed, ISettings? settings, IProgress<float> progress, CancellationToken cancellation)
+    {
+        return Instance.Generate(seed, settings, progress, cancellation);
+    }
 }

@@ -22,7 +22,7 @@ public sealed class WorldGenerationTask : IProgress<float>
         return new WorldGenerationTask(generation => Task.Run(() =>
         {
             var token = generation.cancellation.Token;
-            return GeneratedWorld.Of(worldgen, worldgen.Instance.Generate(seed, settings, generation, token));
+            return GeneratedWorld.Of(worldgen, worldgen.Generate(seed, settings, generation, token));
         }));
     }
 
