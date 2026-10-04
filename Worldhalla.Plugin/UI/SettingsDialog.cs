@@ -4,7 +4,6 @@ using UnityEngine;
 using UnityEngine.UI;
 using Worldhalla.API.Settings;
 using Worldhalla.API.Settings.Controls;
-using Worldhalla.Plugin.Core;
 using Worldhalla.Plugin.Localization;
 
 namespace Worldhalla.Plugin.UI;
@@ -36,11 +35,11 @@ public class SettingsDialog : MonoBehaviour
     public UIGroupHandler group = null!;
 
     private readonly List<Action> unbind = [];
-    private ISettingsForm? form;
-    private Action<ISettings>? accepted;
+
+    private Func<Action>? build;
     private GameObject? firstField;
 
-    public bool IsOpen => form != null;
+    public bool IsOpen => build != null;
 
     public void Initialize()
     {
@@ -49,18 +48,21 @@ public class SettingsDialog : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    public void Open(string heading, ISettingsForm settingsForm, Action<ISettings> onAccepted)
+    public void Open<T>(string heading, IReadOnlyList<Control> controls, Func<T> buildSettings, Action<T> onAccepted)
     {
         Close();
 
         try
         {
             var y = -(PADDING + TITLE_HEIGHT + ROW_GAP);
-            foreach (var control in settingsForm.Controls)
+            foreach (var control in controls)
                 y = AddRow(control, y);
 
-            form = settingsForm;
-            accepted = onAccepted;
+            build = () =>
+            {
+                var settings = buildSettings();
+                return () => onAccepted(settings);
+            };
         }
         catch (Exception e)
         {
@@ -70,7 +72,7 @@ public class SettingsDialog : MonoBehaviour
         }
 
         title.text = heading;
-        Layout(settingsForm.Controls.Count);
+        Layout(controls.Count);
         group.m_defaultElement = firstField != null ? firstField : cancelButton.gameObject;
         gameObject.SetActive(true);
         Validate();
@@ -91,8 +93,7 @@ public class SettingsDialog : MonoBehaviour
         foreach (Transform row in rows)
             Destroy(row.gameObject);
 
-        form = null;
-        accepted = null;
+        build = null;
         firstField = null;
     }
 
@@ -169,26 +170,22 @@ public class SettingsDialog : MonoBehaviour
 
     private void Accept()
     {
-        if (TryBuild(out var settings) != null || accepted == null)
+        if (TryBuild(out var handOver) != null)
             return;
 
-        var onAccepted = accepted;
         Close();
-        onAccepted(settings!);
+        handOver!();
     }
 
-    private string? TryBuild(out ISettings? settings)
+    private string? TryBuild(out Action? handOver)
     {
-        settings = null;
-        if (form == null)
+        handOver = null;
+        if (build == null)
             return Translations.Get(BUILD_FAILED);
 
         try
         {
-            var built = form.Build();
-            SettingsBlob.Check(built);
-
-            settings = built;
+            handOver = build();
             return null;
         }
         catch (SettingsException e)

@@ -4,9 +4,9 @@ using Worldhalla.API.World;
 
 namespace Worldhalla.Plugin.Core;
 
-public sealed class RegisteredWorldgen
+public sealed class RegisteredGenerator
 {
-    public RegisteredWorldgen(string guid, IWorldGenerator instance)
+    public RegisteredGenerator(string guid, IWorldGenerator instance)
     {
         Guid = guid;
         Instance = instance;

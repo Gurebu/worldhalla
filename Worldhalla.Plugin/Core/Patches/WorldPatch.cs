@@ -25,7 +25,7 @@ public static class WorldPatch
 
     internal static void WriteHeader(ZPackage package, World world)
     {
-        if (world.GetWorldgen() == null)
+        if (world.GetGenerator() == null)
             return;
 
         package.Write(CUSTOM_WORLDGEN_FLAG | FORMAT_VERSION);
@@ -33,14 +33,14 @@ public static class WorldPatch
 
     internal static void WriteWorldData(ZPackage package, World world)
     {
-        if (world.GetWorldgen() is not { } worldgen)
+        if (world.GetGenerator() is not { } generator)
             return;
 
         var payload = new ZPackage();
-        WorldgenPayload.Write(payload, worldgen);
+        WorldPayload.Of(generator).Write(payload);
         package.Write(payload.GetArray());
 
-        if (worldgen is InstalledWorldgen installed)
+        if (generator is CompatibleGeneratorBinding installed)
             installed.LegacyFormat = false;
     }
 
@@ -90,15 +90,13 @@ public static class WorldPatch
         if (!formatInfo.isModded)
             return true;
         
-        string worldgenGuid;
-        byte[] settings;
+        WorldPayload payload;
 
         try
         {
-            var migrate = formatInfo.IsLegacyRiverheim();
-            (worldgenGuid, settings) = migrate
+            payload = formatInfo.IsLegacyRiverheim()
                 ? RiverheimMigration.ReleaseMigratoryRead(package)
-                : ReadPayload(package);
+                : WorldPayload.Read(new ZPackage(package.ReadByteArray()));
         }
         catch (Exception e)
         {
@@ -106,40 +104,52 @@ public static class WorldPatch
             return false;
         }
         
+        var worldgenGuid = payload.Guid;
         if (!Registry.FindByGuid(worldgenGuid, out var worldgen))
         {
             Logger.LogInfo($"Missing generator for guid '{worldgenGuid}', marking world '{name}' unloadable");
-            world.SetWorldgen(new MissingWorldgen(worldgenGuid, settings));
-            world.m_dataError = World.SaveDataError.BadVersion;
+            MarkIncompatible(world, payload, Incompatibility.GeneratorMissing);
+            return true;
+        }
+
+        WorldhallaSettings worldhallaSettings;
+
+        try
+        {
+            worldhallaSettings = WorldhallaSettings.Load(payload.WorldhallaSettings);
+        }
+        catch (Exception e)
+        {
+            Logger.LogInfo($"World '{name}': unreadable Worldhalla settings: {e.Message}, marking it unloadable");
+            MarkIncompatible(world, payload, Incompatibility.WorldhallaSettingsUnreadable);
             return true;
         }
 
         try
         {
-            world.SetWorldgen(new InstalledWorldgen(worldgen, worldgen.LoadSettings(settings))
+            world.SetGenerator(new CompatibleGeneratorBinding(worldgen, worldhallaSettings, worldgen.LoadSettings(payload.GeneratorSettings))
             {
                 LegacyFormat = formatInfo.IsLegacyRiverheim(),
             });
         }
         catch (SettingsException e)
         {
-            Logger.LogInfo($"World '{name}': settings rejected by '{worldgenGuid}': {e.Message}, skipping");
-            return false;
+            Logger.LogInfo($"World '{name}': settings rejected by '{worldgenGuid}': {e.Message}, marking it unloadable");
+            MarkIncompatible(world, payload, Incompatibility.GeneratorSettingsUnreadable);
         }
         catch (Exception e)
         {
-            Logger.LogError($"World '{name}': '{worldgenGuid}' failed to load its settings, skipping: {e}");
-            return false;
+            Logger.LogError($"World '{name}': '{worldgenGuid}' failed to load its settings, marking it unloadable: {e}");
+            MarkIncompatible(world, payload, Incompatibility.GeneratorSettingsUnreadable);
         }
 
         return true;
     }
 
-    private static (string, byte[]) ReadPayload(ZPackage package)
+    private static void MarkIncompatible(World world, WorldPayload payload, Incompatibility reason)
     {
-        var payload = new ZPackage(package.ReadByteArray());
-
-        return (WorldgenPayload.ReadGuid(payload), WorldgenPayload.ReadSettings(payload));
+        world.SetGenerator(new IncompatibleGeneratorBinding(payload.Guid, reason, payload.WorldhallaSettings, payload.GeneratorSettings));
+        world.m_dataError = World.SaveDataError.BadVersion;
     }
 
     [HarmonyTranspiler]

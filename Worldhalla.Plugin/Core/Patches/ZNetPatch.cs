@@ -87,7 +87,7 @@ public static class ZNetPatch
                && version.Minor == LocalVersion.Minor;
     }
 
-    private static Refusal? FindRefusal(WorldhallaClientInfo info, string guid, RegisteredWorldgen worldgen)
+    private static Refusal? FindRefusal(WorldhallaClientInfo info, string guid, RegisteredGenerator generator)
     {
         if (!IsCompatible(info.pluginVersion))
             return Refusal.WorldhallaVersion;
@@ -95,14 +95,14 @@ public static class ZNetPatch
         if (!info.generatorVersions.TryGetValue(guid, out var version))
             return Refusal.GeneratorMissing;
 
-        return version == worldgen.Version ? null : Refusal.GeneratorVersion;
+        return version == generator.Version ? null : Refusal.GeneratorVersion;
     }
 
     [HarmonyPriority(Priority.VeryHigh), HarmonyPrefix, HarmonyPatch(nameof(ZNet.RPC_PeerInfo))]
     private static bool RPC_PeerInfo(ZNet __instance, ZRpc rpc)
     {
         var world = ZNet.World;
-        if (!__instance.IsServer() || world.GetWorldgen() is not InstalledWorldgen { Guid: var guid, Generator: var worldgen })
+        if (!__instance.IsServer() || world.GetGenerator() is not CompatibleGeneratorBinding { Guid: var guid, Generator: var worldgen })
             return true;
 
         var peer = rpc.GetSocket().GetEndPointString();
@@ -135,15 +135,15 @@ public static class ZNetPatch
         return false;
     }
 
-    private static void SendRefusal(ZRpc rpc, Refusal refusal, string guid, RegisteredWorldgen worldgen)
+    private static void SendRefusal(ZRpc rpc, Refusal refusal, string guid, RegisteredGenerator generator)
     {
         var package = new ZPackage();
 
         package.Write(PluginInfo.PLUGIN_VERSION);
         package.Write((int)refusal);
         package.Write(guid);
-        package.Write(worldgen.Name);
-        package.Write(worldgen.Version);
+        package.Write(generator.Name);
+        package.Write(generator.Version);
 
         rpc.Invoke(REFUSED_RPC, package);
     }
@@ -188,13 +188,13 @@ public static class ZNetPatch
     [HarmonyPriority(Priority.VeryHigh), HarmonyPrefix, HarmonyPatch(nameof(ZNet.SendPeerInfo))]
     private static void SendPeerInfo(ZNet __instance, ZRpc rpc)
     {
-        if (!__instance.IsServer() || ZNet.World.GetWorldgen() is not InstalledWorldgen worldgen)
+        if (!__instance.IsServer() || ZNet.World.GetGenerator() is not CompatibleGeneratorBinding worldgen)
             return;
 
         var package = new ZPackage();
 
         package.Write(PluginInfo.PLUGIN_VERSION);
-        WorldgenPayload.Write(package, worldgen);
+        WorldPayload.Of(worldgen).Write(package);
 
         rpc.Invoke(WORLD_RPC, package);
     }
@@ -223,18 +223,42 @@ public static class ZNetPatch
             return RefuseWorld(rpc, $"Server world '{world.m_name}' has no seed",
                 Translations.Get("$wh_refused_no_seed"));
 
-        var worldgenType = WorldgenPayload.ReadGuid(package);
+        WorldPayload payload;
+
+        try
+        {
+            payload = WorldPayload.Read(package);
+        }
+        catch (SettingsException e)
+        {
+            return RefuseWorld(rpc, $"Server world data unreadable: {e.Message}",
+                Translations.Get("$wh_refused_world_unreadable", e.Message));
+        }
+
+        var worldgenType = payload.Guid;
         if (!Registry.FindByGuid(worldgenType, out var worldgen))
             return RefuseWorld(rpc, $"Unknown custom worldgen '{worldgenType}'",
                 Translations.Get("$wh_refused_generator_unknown", worldgenType));
 
         Logger.LogInfo($"Joining world '{world.m_name}' created with '{worldgenType}'");
 
+        WorldhallaSettings worldhallaSettings;
+
+        try
+        {
+            worldhallaSettings = WorldhallaSettings.Load(payload.WorldhallaSettings);
+        }
+        catch (SettingsException e)
+        {
+            return RefuseWorld(rpc, $"World's Worldhalla settings rejected: {e.Message}",
+                Translations.Get("$wh_refused_world_settings_rejected", e.Message));
+        }
+
         ISettings? settings;
 
         try
         {
-            settings = worldgen.LoadSettings(WorldgenPayload.ReadSettings(package));
+            settings = worldgen.LoadSettings(payload.GeneratorSettings);
         }
         catch (SettingsException e)
         {
@@ -247,14 +271,14 @@ public static class ZNetPatch
                 Translations.Get("$wh_refused_settings_failed", worldgen.Name));
         }
 
-        world.SetWorldgen(new InstalledWorldgen(worldgen, settings));
+        world.SetGenerator(new CompatibleGeneratorBinding(worldgen, worldhallaSettings, settings));
 
         return true;
     }
 
     private static bool RefuseUngeneratedWorld(ZRpc rpc)
     {
-        if (ZNet.World.GetWorldgen() is not InstalledWorldgen worldgen || WorldGenerator.instance.GetWorld() != null)
+        if (ZNet.World.GetGenerator() is not CompatibleGeneratorBinding worldgen || WorldGenerator.instance.GetState() != null)
             return true;
 
         return RefuseWorld(rpc, $"'{worldgen.Guid}' failed to generate the world",

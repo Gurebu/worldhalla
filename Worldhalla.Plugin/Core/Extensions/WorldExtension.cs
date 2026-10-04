@@ -6,7 +6,7 @@ public static class WorldExtension
 {
     private class ExtensionData
     {
-        public WorldgenBinding? worldgen;
+        public GeneratorBinding? generatorBinding;
     }
 
     private static readonly ConditionalWeakTable<World, ExtensionData> DataStore = new();
@@ -16,13 +16,13 @@ public static class WorldExtension
         return DataStore.GetValue(world, _ => new ExtensionData());
     }
 
-    public static WorldgenBinding? GetWorldgen(this World world)
+    public static GeneratorBinding? GetGenerator(this World world)
     {
-        return world.GetData().worldgen;
+        return world.GetData().generatorBinding;
     }
 
-    public static void SetWorldgen(this World world, WorldgenBinding? worldgen)
+    public static void SetGenerator(this World world, GeneratorBinding? generator)
     {
-        world.GetData().worldgen = worldgen;
+        world.GetData().generatorBinding = generator;
     }
 }

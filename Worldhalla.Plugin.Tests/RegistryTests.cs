@@ -99,7 +99,7 @@ internal sealed class OversizedDefaultsWorldgen : IWorldGenerator, ISettingsHand
 
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
 
-    public ISettings DefaultSettings => new TestSettings(new string('x', SettingsBlob.MAX_SIZE + 1));
+    public ISettings DefaultSettings => new TestSettings(new string('x', WorldPayload.MAX_SETTINGS_SIZE + 1));
 
     public ISettings BuildSettingsFromBinaryBlob(byte[] data) => throw new System.NotImplementedException();
 

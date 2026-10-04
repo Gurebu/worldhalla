@@ -7,12 +7,12 @@ namespace Worldhalla.Plugin.Core;
 
 public static class Registry
 {
-    private static readonly Dictionary<string, RegisteredWorldgen> WorldGenerators = new();
+    private static readonly Dictionary<string, RegisteredGenerator> WorldGenerators = new();
     private static readonly HashSet<Assembly> ScannedAssemblies = [];
 
     private static readonly string ApiAssemblyName = typeof(WorldhallaPluginAttribute).Assembly.GetName().Name;
 
-    public static IReadOnlyDictionary<string, RegisteredWorldgen> Generators => WorldGenerators;
+    public static IReadOnlyDictionary<string, RegisteredGenerator> Generators => WorldGenerators;
 
     public static void DiscoverGenerators()
     {
@@ -31,12 +31,12 @@ public static class Registry
         if (WorldGenerators.TryGetValue(guid, out _))
             return false;
 
-        WorldGenerators.Add(guid, new RegisteredWorldgen(guid, generator));
+        WorldGenerators.Add(guid, new RegisteredGenerator(guid, generator));
 
         return true;
     }
 
-    public static bool FindByGuid(string guid, out RegisteredWorldgen generator)
+    public static bool FindByGuid(string guid, out RegisteredGenerator generator)
     {
         return WorldGenerators.TryGetValue(guid, out generator);
     }
@@ -104,11 +104,11 @@ public static class Registry
             return;
         }
 
-        RegisteredWorldgen registered;
+        RegisteredGenerator registered;
 
         try
         {
-            registered = new RegisteredWorldgen(guid, generator);
+            registered = new RegisteredGenerator(guid, generator);
         }
         catch (Exception e)
         {
@@ -120,7 +120,7 @@ public static class Registry
         try
         {
             if (registered.DefaultSettings is { } defaults)
-                SettingsBlob.Check(defaults);
+                WorldPayload.CheckSettings(defaults);
         }
         catch (Exception e)
         {

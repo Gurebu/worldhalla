@@ -24,6 +24,8 @@ wh_tooltip_topic,Custom world generator
 wh_tooltip_name,Name: $1
 wh_tooltip_unknown,Generator: Unknown
 wh_tooltip_guid,Guid: $1
+wh_tooltip_worldhalla_settings_unreadable,Saved by a newer version of Worldhalla
+wh_tooltip_generator_settings_unreadable,The generator can't read this world's settings
 wh_refused_worldhalla_version,The server runs Worldhalla $1. You have $2.
 wh_refused_generator_missing,This world was created with $1 $2. Install it to join.
 wh_refused_generator_version,This world needs $1 $2.
@@ -32,4 +34,6 @@ wh_refused_no_seed,The server's world has no seed.
 wh_refused_generator_unknown,"This world was created with '$1', which you don't have installed."
 wh_refused_settings_rejected,$1 can't load this world's settings: $2
 wh_refused_settings_failed,$1 failed to load this world's settings. See the log for details.
+wh_refused_world_settings_rejected,This world uses Worldhalla settings your version can't read: $1
+wh_refused_world_unreadable,The server's world data can't be read: $1
 wh_generation_failed,$1 failed to generate this world. See the log for details.

@@ -12,7 +12,7 @@ public static class ServerStartupPatch
 {
     private static CommandLineOptions ParseCommandLine() => CommandLine.Parse(Environment.GetCommandLineArgs());
 
-    private static (RegisteredWorldgen worldgen, ISettings? settings)? ResolveRequest(CommandLineOptions options)
+    private static (RegisteredGenerator worldgen, ISettings? settings)? ResolveRequest(CommandLineOptions options)
     {
         if (options.worldgenGuid == null)
             return null;
@@ -26,10 +26,10 @@ public static class ServerStartupPatch
         return (worldgen, ParseSettings(worldgen, options.settings));
     }
 
-    private static ISettings? ParseSettings(RegisteredWorldgen worldgen, string? text)
+    private static ISettings? ParseSettings(RegisteredGenerator generator, string? text)
     {
-        var guid = worldgen.Guid;
-        if (worldgen.SettingsHandler is not { } handler)
+        var guid = generator.Guid;
+        if (generator.SettingsHandler is not { } handler)
         {
             return text == null
                 ? null
@@ -42,7 +42,7 @@ public static class ServerStartupPatch
         try
         {
             var settings = handler.BuildSettingsFromCommandLine(text);
-            SettingsBlob.Check(settings);
+            WorldPayload.CheckSettings(settings);
 
             return settings;
         }
@@ -64,7 +64,7 @@ public static class ServerStartupPatch
         if (ResolveRequest(ParseCommandLine()) is not var (worldgen, settings))
             return;
 
-        world.SetWorldgen(new InstalledWorldgen(worldgen, settings));
+        world.SetGenerator(new CompatibleGeneratorBinding(worldgen, WorldhallaSettings.Default, settings));
 
         Logger.LogInfo($"Creating world '{world.m_name}' with worldgen '{worldgen.Guid}'");
     }

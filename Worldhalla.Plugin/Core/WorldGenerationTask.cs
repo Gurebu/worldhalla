@@ -12,15 +12,15 @@ public sealed class WorldGenerationTask : IProgress<float>
     {
     }
 
-    public Task<GeneratedWorld> Completion { get; private set; } = null!;
+    public Task<WorldStateWrapper> Completion { get; private set; } = null!;
 
     public float? Progress => Volatile.Read(ref progress) is var value and >= 0f ? value : null;
 
-    public static WorldGenerationTask Start(RegisteredWorldgen worldgen, int seed, ISettings? settings)
+    public static WorldGenerationTask Start(RegisteredGenerator generator, int seed, ISettings? settings)
     {
         var generation = new WorldGenerationTask();
         var token = generation.cancellation.Token;
-        generation.Completion = Task.Run(() => GeneratedWorld.Of(worldgen, worldgen.Generate(seed, settings, generation, token)));
+        generation.Completion = Task.Run(() => WorldStateWrapper.Of(generator, generator.Generate(seed, settings, generation, token)));
         return generation;
     }
 
@@ -34,7 +34,7 @@ public sealed class WorldGenerationTask : IProgress<float>
         return ((IAsyncResult)Completion).AsyncWaitHandle.WaitOne(millisecondsTimeout);
     }
 
-    public GeneratedWorld Wait()
+    public WorldStateWrapper Wait()
     {
         return Completion.GetAwaiter().GetResult();
     }

@@ -24,6 +24,8 @@ wh_tooltip_topic,Eigener Weltgenerator
 wh_tooltip_name,Name: $1
 wh_tooltip_unknown,Generator: Unbekannt
 wh_tooltip_guid,Guid: $1
+wh_tooltip_worldhalla_settings_unreadable,Mit einer neueren Version von Worldhalla gespeichert
+wh_tooltip_generator_settings_unreadable,Der Generator kann die Einstellungen dieser Welt nicht lesen
 wh_refused_worldhalla_version,Der Server verwendet Worldhalla $1. Du hast $2.
 wh_refused_generator_missing,"Diese Welt wurde mit $1 $2 erstellt. Installiere es, um beizutreten."
 wh_refused_generator_version,Diese Welt benötigt $1 $2.
@@ -32,4 +34,6 @@ wh_refused_no_seed,Die Welt des Servers hat keinen Seed.
 wh_refused_generator_unknown,"Diese Welt wurde mit „$1“ erstellt, das du nicht installiert hast."
 wh_refused_settings_rejected,$1 kann die Einstellungen dieser Welt nicht laden: $2
 wh_refused_settings_failed,$1 konnte die Einstellungen dieser Welt nicht laden. Details stehen im Log.
+wh_refused_world_settings_rejected,"Diese Welt nutzt Worldhalla-Einstellungen, die deine Version nicht lesen kann: $1"
+wh_refused_world_unreadable,Die Weltdaten des Servers können nicht gelesen werden: $1
 wh_generation_failed,$1 konnte diese Welt nicht erzeugen. Details stehen im Log.

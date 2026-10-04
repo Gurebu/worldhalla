@@ -20,12 +20,12 @@ public static class WorldGeneratorPatch
     private static bool Pregenerate(WorldGenerator __instance)
     {
         var world = __instance.m_world;
-        if (world.m_menu || world.GetWorldgen() is not InstalledWorldgen worldgen)
+        if (world.m_menu || world.GetGenerator() is not CompatibleGeneratorBinding worldgen)
             return true;
 
         try
         {
-            __instance.SetWorld(Generate(world, worldgen));
+            __instance.SetState(Generate(world, worldgen));
         }
         catch (Exception e)
         {
@@ -38,12 +38,12 @@ public static class WorldGeneratorPatch
         return false;
     }
 
-    private static GeneratedWorld Generate(World world, InstalledWorldgen worldgen)
+    private static WorldStateWrapper Generate(World world, CompatibleGeneratorBinding generator)
     {
         if (world.m_seed == 0)
             throw new InvalidOperationException($"Seed is 0 for world '{world.m_name}', but it is not a menu world");
 
-        var generation = WorldGenerationTask.Start(worldgen.Generator, world.m_seed, worldgen.Settings);
+        var generation = WorldGenerationTask.Start(generator.Generator, world.m_seed, generator.GeneratorSettings);
 
         var keepingAlive = true;
         while (!generation.Wait(KEEPALIVE_INTERVAL_MS))
@@ -56,9 +56,9 @@ public static class WorldGeneratorPatch
     }
 
     // Vanilla's own exit for a world that failed to load: the game logs out without saving and the menu reports it
-    private static void FailWorldLoad(InstalledWorldgen worldgen)
+    private static void FailWorldLoad(CompatibleGeneratorBinding generator)
     {
-        failureMessage = Translations.Get("$wh_generation_failed", worldgen.Generator.Name);
+        failureMessage = Translations.Get("$wh_generation_failed", generator.Generator.Name);
         ZNet.m_loadError = true;
 
         if (ZNet.instance.IsDedicated())
@@ -111,7 +111,7 @@ public static class WorldGeneratorPatch
     {
         mask = Color.black;
 
-        if (__instance.GetWorld() is not {} world)
+        if (__instance.GetState() is not {} world)
             return true;
 
         __result = GetHeight(world, (Biome)biome, wx, wy, out mask);
@@ -127,7 +127,7 @@ public static class WorldGeneratorPatch
         float wy,
         ref float __result)
     {
-        if (__instance.GetWorld() is not { BiomeBlending: true })
+        if (__instance.GetState() is not { BiomeBlending: true })
             return true;
 
         __result = __instance.GetBiomeHeight(Heightmap.Biome.None, wx, wy, out _);
@@ -146,7 +146,7 @@ public static class WorldGeneratorPatch
     {
         mask = Color.black;
 
-        if (__instance.GetWorld() is not { BiomeBlending: true })
+        if (__instance.GetState() is not { BiomeBlending: true })
             return true;
 
         __result = __instance.GetBiomeHeight(Heightmap.Biome.None, wx, wy, out mask);
@@ -161,7 +161,7 @@ public static class WorldGeneratorPatch
         float wy,
         ref Heightmap.Biome __result)
     {
-        if (__instance.GetWorld() is not {} world)
+        if (__instance.GetState() is not {} world)
             return true;
 
         __result = (Heightmap.Biome)world.State.GetBiome(wx, wy);
@@ -174,7 +174,7 @@ public static class WorldGeneratorPatch
         ref Vector3 pos,
         ref float __result)
     {
-        if (WorldGenerator.instance.GetWorld() is not {} world)
+        if (WorldGenerator.instance.GetState() is not {} world)
             return true;
         
         __result = world.ForestFactor(pos);
@@ -185,7 +185,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.IsAshlands))]
     private static bool IsAshlands(float x, float y, ref bool __result)
     {
-        if (WorldGenerator.instance.GetWorld()?.Geography is not { } geography)
+        if (WorldGenerator.instance.GetState()?.Geography is not { } geography)
             return true;
 
         __result = geography.IsAshlands(x, y);
@@ -196,7 +196,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.IsDeepnorth))]
     private static bool IsDeepnorth(float x, float y, ref bool __result)
     {
-        if (WorldGenerator.instance.GetWorld()?.Geography is not { } geography)
+        if (WorldGenerator.instance.GetState()?.Geography is not { } geography)
             return true;
 
         __result = geography.IsDeepNorth(x, y);
@@ -207,7 +207,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.GetAshlandsOceanGradient), typeof(float), typeof(float))]
     private static bool GetAshlandsOceanGradient(float x, float y, ref float __result)
     {
-        if (WorldGenerator.instance.GetWorld()?.Geography is not { } geography)
+        if (WorldGenerator.instance.GetState()?.Geography is not { } geography)
             return true;
 
         __result = geography.GetAshlandsOceanGradient(x, y);
@@ -218,7 +218,7 @@ public static class WorldGeneratorPatch
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.DeepNorthWaveFade))]
     private static bool DeepNorthWaveFade(float wx, float wy, ref double __result)
     {
-        if (WorldGenerator.instance.GetWorld()?.Geography is not { } geography)
+        if (WorldGenerator.instance.GetState()?.Geography is not { } geography)
             return true;
 
         __result = geography.GetDeepNorthWaveFade(wx, wy);
@@ -237,7 +237,7 @@ public static class WorldGeneratorPatch
     {
         mask = Color.black;
 
-        if (__instance.GetWorld() is not {} world)
+        if (__instance.GetState() is not {} world)
             return true;
 
         __result = GetHeight(world, Biome.AshLands, wx, wy, out mask);
@@ -247,11 +247,11 @@ public static class WorldGeneratorPatch
 
     private const float heightOffset = 30.0f;
     
-    private static float GetHeight(GeneratedWorld world, Biome biome, float wx, float wy, out Color mask)
+    private static float GetHeight(WorldStateWrapper worldStateWrapper, Biome biome, float wx, float wy, out Color mask)
     {
-        var pointData = world.BiomeBlending
-            ? RenderCached(world.State, wx, wy)
-            : world.State.RenderPoint(wx, wy, biome);
+        var pointData = worldStateWrapper.BiomeBlending
+            ? RenderCached(worldStateWrapper.State, wx, wy)
+            : worldStateWrapper.State.RenderPoint(wx, wy, biome);
             
         /*
          * Original game mask channel format:

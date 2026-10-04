@@ -4,20 +4,20 @@ namespace Worldhalla.Plugin.Core.Extensions;
 
 public static class WorldGeneratorExtension
 {
-    private static readonly ConditionalWeakTable<WorldGenerator, GeneratedWorld> WorldStore = new();
+    private static readonly ConditionalWeakTable<WorldGenerator, WorldStateWrapper> StateStore = new();
 
-    public static void SetWorld(this WorldGenerator worldGenerator, GeneratedWorld world)
+    public static void SetState(this WorldGenerator worldGenerator, WorldStateWrapper state)
     {
-        WorldStore.AddOrUpdate(worldGenerator, world);
+        StateStore.AddOrUpdate(worldGenerator, state);
     }
 
-    public static GeneratedWorld? GetWorld(this WorldGenerator? worldGenerator)
+    public static WorldStateWrapper? GetState(this WorldGenerator? worldGenerator)
     {
         if (worldGenerator == null)
             return null;
 
-        WorldStore.TryGetValue(worldGenerator, out var world);
+        StateStore.TryGetValue(worldGenerator, out var state);
 
-        return world;
+        return state;
     }
 }

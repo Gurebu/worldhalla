@@ -271,7 +271,7 @@ public sealed class LocationSimulation
 
         if (location.m_inForest)
         {
-            var forestFactor = generator.GetWorld()?.ForestFactor(point) ?? WorldGenerator.GetForestFactor(point);
+            var forestFactor = generator.GetState()?.ForestFactor(point) ?? WorldGenerator.GetForestFactor(point);
             if (forestFactor < location.m_forestTresholdMin || forestFactor > location.m_forestTresholdMax)
                 return null;
         }

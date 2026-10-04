@@ -22,7 +22,7 @@ public sealed class PreviewGeneration
     public float? Progress => generation?.Progress;
 
     // Must be called on the main thread: WorldGenerator's constructor seeds through UnityEngine.Random
-    public static PreviewGeneration Start(RegisteredWorldgen? worldgen, string seed, ISettings? settings)
+    public static PreviewGeneration Start(RegisteredGenerator? worldgen, string seed, ISettings? settings)
     {
         WorldGenerator generator;
         try
@@ -71,7 +71,7 @@ public sealed class PreviewGeneration
 
     private static async Task<WorldGenerator> Attach(WorldGenerationTask generation, WorldGenerator generator)
     {
-        generator.SetWorld(await generation.Completion.ConfigureAwait(false));
+        generator.SetState(await generation.Completion.ConfigureAwait(false));
         return generator;
     }
 }

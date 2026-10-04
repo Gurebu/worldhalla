@@ -166,7 +166,7 @@ public class MyGenerator : IWorldGenerator { }
 The GUID in the attribute is the generator's identity: it is what worlds store and what peers
 compare. It lives only there, not on `IWorldGenerator`, so there is a single source for it. Inside
 the plugin it travels next to the generator: `Registry.Generators` is keyed by it, and a `World`
-carries it in its `WorldgenBinding` (`GetWorldgen().Guid`), even when the generator isn't installed.
+carries it in its `GeneratorBinding` (`GetGenerator().Guid`), even when the generator isn't installed.
 The type needs a parameterless constructor.
 
 **Discovery runs in `WorldhallaPlugin.Start`, and must not move to `Awake`.** BepInEx loads a
@@ -197,13 +197,15 @@ readers go by; keep it true.
 
 Everything Worldhalla adds beyond the header goes into a single length-prefixed blob — itself a
 `ZPackage` holding the worldgen id, Worldhalla's own settings and the generator's settings — so a
-third-party `.fwl` reader can step over it without parsing its contents. Worldhalla's settings are a
-blob of their own, empty for now, so settings can be added to it without changing the layout. Legacy
+third-party `.fwl` reader can step over it without parsing its contents. Worldhalla's settings
+(`Core/WorldhallaSettings`) are a blob of their own, keyed entries with defaults left out, so settings can be added to
+it without changing the layout and a world using none of them saves an empty blob. A key the reader doesn't know
+makes the world incompatible. Every `GeneratorBinding` carries them; the generator never sees them. Legacy
 `0xff` worlds predate all of that and store the id and generator settings inline. Saving one rewrites
 it in the current format, so starting a legacy world from the world list asks the player to confirm
 first (`FejdStartupPatch.Awake` gates the world list's Start button).
 
-The generator's settings blob is capped at 64 KiB (`Core/SettingsBlob`). The cap is checked
+The generator's settings blob is capped at 64 KiB (`Core/WorldPayload`). The cap is checked
 where settings come into being (default settings at discovery, the settings dialog, the command
 line) and wherever a blob is read, but never on save: a save that throws mid-game costs more than an
 oversized blob.
@@ -304,9 +306,10 @@ offset from a different baseline).
 ### Extending game types
 
 `Core/Extensions/WorldExtension` attaches Worldhalla's per-world state to `World` through a
-`ConditionalWeakTable`: a single `WorldgenBinding`, absent for a vanilla world. An `InstalledWorldgen` holds the
-generator and its settings; a `MissingWorldgen` holds only the GUID and the settings blob as read, so the world can
-be saved without its generator. Anything deciding whether a world is a Worldhalla world checks for a binding, not a
+`ConditionalWeakTable`: a single `GeneratorBinding`, absent for a vanilla world. A `CompatibleGeneratorBinding` holds
+the generator and both settings, parsed; an `IncompatibleGeneratorBinding` holds the GUID, the reason and both settings
+blobs as read, so the world can be saved without being understood. A world is incompatible when its generator isn't
+installed or either of its settings can't be read, and is shown in the world list but can't be started. Anything deciding whether a world is a Worldhalla world checks for a binding, not a
 generator. That is the intended way to add fields to a game type: treat them
 as first-class fields and set them where vanilla sets its own (e.g. next to the name and seed at
 construction), rather than carrying values across calls in temporary statics.

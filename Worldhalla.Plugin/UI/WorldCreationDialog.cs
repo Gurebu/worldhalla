@@ -79,8 +79,9 @@ public class WorldCreationDialog : MonoBehaviour
     private PreviewView detailsDragStart;
     private Vector2 gamepadPan;
 
-    private List<RegisteredWorldgen> generators = [];
+    private List<RegisteredGenerator> generators = [];
     private ISettings? settings;
+    private WorldhallaSettings worldhallaSettings = WorldhallaSettings.Default;
     private bool revealed;
     private bool spoilerAccepted;
     private float? seedChangedAt;
@@ -94,7 +95,7 @@ public class WorldCreationDialog : MonoBehaviour
 
     private static bool LocationsSimulable => LocationPlacementAccelerator.PlacesLikeVanilla;
 
-    public RegisteredWorldgen? SelectedWorldgen
+    public RegisteredGenerator? SelectedWorldgen
     {
         get
         {
@@ -104,6 +105,8 @@ public class WorldCreationDialog : MonoBehaviour
     }
 
     public ISettings? Settings => settings;
+
+    public WorldhallaSettings WorldhallaSettings => worldhallaSettings;
 
     public bool CanCreate => SelectedWorldgen == null || !string.IsNullOrEmpty(seedField.text);
 
@@ -147,6 +150,7 @@ public class WorldCreationDialog : MonoBehaviour
         generatorDropdown.RefreshShownValue();
 
         ResetSession();
+        worldhallaSettings = WorldhallaSettings.Default;
         OnGeneratorChanged();
     }
 
@@ -231,7 +235,12 @@ public class WorldCreationDialog : MonoBehaviour
             return;
         }
 
-        settingsDialog.Open(Translations.Get("$wh_settings_title", SelectedWorldgen.Name), form, OnGeneratorSettingsAccepted);
+        settingsDialog.Open(Translations.Get("$wh_settings_title", SelectedWorldgen.Name), form.Controls, () =>
+        {
+            var built = form.Build();
+            WorldPayload.CheckSettings(built);
+            return built;
+        }, OnGeneratorSettingsAccepted);
     }
 
     private void OnGeneratorSettingsAccepted(ISettings accepted)

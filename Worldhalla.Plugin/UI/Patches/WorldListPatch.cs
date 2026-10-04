@@ -42,10 +42,10 @@ public static class WorldListPatch
 
     private static string GetMoniker(World world)
     {
-        var moniker = world.GetWorldgen() switch
+        var moniker = world.GetGenerator() switch
         {
             null => "",
-            InstalledWorldgen installed => installed.Generator.Moniker,
+            { Guid: var guid } when Registry.FindByGuid(guid, out var generator) => generator.Moniker,
             _ => UNKNOWN_MONIKER,
         };
 
@@ -78,15 +78,18 @@ public static class WorldListPatch
         if (tooltip == null)
             return;
 
-        if (world.GetWorldgen() is not { } worldgen)
+        if (world.GetGenerator() is not { } worldgen)
             return;
 
-        var installed = worldgen as InstalledWorldgen;
-        var text = installed != null
-            ? Translations.Get("$wh_tooltip_name", installed.Generator.Name)
+        var text = Registry.FindByGuid(worldgen.Guid, out var generator)
+            ? Translations.Get("$wh_tooltip_name", generator.Name)
             : Translations.Get("$wh_tooltip_unknown");
         text += $"\n{Translations.Get("$wh_tooltip_guid", worldgen.Guid)}";
-        if (installed?.Settings is { } settings)
+        if (worldgen is IncompatibleGeneratorBinding { Reason: Incompatibility.WorldhallaSettingsUnreadable })
+            text += $"\n{Translations.Get("$wh_tooltip_worldhalla_settings_unreadable")}";
+        if (worldgen is IncompatibleGeneratorBinding { Reason: Incompatibility.GeneratorSettingsUnreadable })
+            text += $"\n{Translations.Get("$wh_tooltip_generator_settings_unreadable")}";
+        if (worldgen is CompatibleGeneratorBinding { GeneratorSettings: { } settings })
             text += $"\n{settings.Summary().TrimEnd()}";
 
         if (tooltip.m_text != "")

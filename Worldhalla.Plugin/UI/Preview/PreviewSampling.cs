@@ -19,6 +19,6 @@ public static class PreviewSampling
 
     public static float WorldRadius(WorldGenerator generator)
     {
-        return generator.GetWorld()?.Geography is { } geography ? geography.WorldSize / 2f : DEFAULT_WORLD_RADIUS;
+        return generator.GetState()?.Geography is { } geography ? geography.WorldSize / 2f : DEFAULT_WORLD_RADIUS;
     }
 }

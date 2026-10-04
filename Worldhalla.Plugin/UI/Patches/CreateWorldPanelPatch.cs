@@ -21,7 +21,7 @@ public static class CreateWorldPanelPatch
         if (GetDialog(startup) is not { SelectedWorldgen: { } worldgen } dialog)
             return;
 
-        startup.m_world.SetWorldgen(new InstalledWorldgen(worldgen, dialog.Settings));
+        startup.m_world.SetGenerator(new CompatibleGeneratorBinding(worldgen, dialog.WorldhallaSettings, dialog.Settings));
     }
 
     // Built before the create-world panel is first shown, so the vanilla widgets moved into it wake up under their new parent

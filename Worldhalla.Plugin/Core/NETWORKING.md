@@ -291,6 +291,7 @@ The resulting compatibility matrix (WH = Worldhalla installed):
 | Worldhalla | WH | vanilla | refused by the server |
 | Worldhalla | WH | WH, other major.minor | refused by the server |
 | Worldhalla | WH | WH, generator missing or at another version | refused by the server |
+| Worldhalla | WH | WH, Worldhalla settings it can't read | refused by the client |
 | Worldhalla | WH | WH, settings rejected by the generator | refused by the client |
 | Worldhalla | WH | WH, generator fails to generate the world | refused by the client |
 | Worldhalla | WH | WH, same major.minor, same generator version | joins |

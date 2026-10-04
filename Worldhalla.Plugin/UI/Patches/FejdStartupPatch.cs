@@ -19,12 +19,12 @@ public static class FejdStartupPatch
         var world = startup.m_world;
 
         return world != null && !startup.m_startingWorld && world.m_dataError == World.SaveDataError.None &&
-               world.GetWorldgen() is InstalledWorldgen { LegacyFormat: true };
+               world.GetGenerator() is CompatibleGeneratorBinding { LegacyFormat: true };
     }
 
     private static void ConfirmMigration(World world, Action start)
     {
-        var worldgen = (InstalledWorldgen)world.GetWorldgen()!;
+        var worldgen = (CompatibleGeneratorBinding)world.GetGenerator()!;
         var text = Translations.Get("$wh_migration_text", world.m_name, worldgen.Generator.Name);
 
         UnifiedPopup.Push(new YesNoPopup(Translations.Get(MIGRATION_HEADER), text, () =>

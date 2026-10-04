@@ -13,7 +13,6 @@ public class WorldDataTests
     private const string WORLDGEN = "dev.test.worldgen";
     private const string SETTINGLESS_WORLDGEN = "dev.test.settingless";
     private const string LEGACY_WORLDGEN = "dev.gurebu.riverheim.stable";
-    private const string MIGRATED_WORLDGEN = "dev.gurebu.riverheim";
     private const string VANILLA_DATA = "the world name vanilla reads next";
 
     /*
@@ -33,7 +32,7 @@ public class WorldDataTests
     public void Setup()
     {
         Registry.RegisterGenerator(WORLDGEN, Generator);
-        Registry.RegisterGenerator(MIGRATED_WORLDGEN, LegacyGenerator);
+        Registry.RegisterGenerator(LEGACY_WORLDGEN, LegacyGenerator);
         Registry.RegisterGenerator(SETTINGLESS_WORLDGEN, SettinglessGenerator);
     }
 
@@ -47,12 +46,13 @@ public class WorldDataTests
     {
         var world = new World { m_name = "test" };
         if (custom)
-            world.SetWorldgen(new InstalledWorldgen(Registry.Generators[WORLDGEN], settings ?? Generator.DefaultSettings));
+            world.SetGenerator(new CompatibleGeneratorBinding(Registry.Generators[WORLDGEN],
+                WorldhallaSettings.Default, settings ?? Generator.DefaultSettings));
 
         return world;
     }
 
-    private static InstalledWorldgen Installed(World world) => (InstalledWorldgen)world.GetWorldgen();
+    private static CompatibleGeneratorBinding Compatible(World world) => (CompatibleGeneratorBinding)world.GetGenerator();
 
     /*
      * A .fwl as worlds carried it before the format version byte existed: an all ones header, the
@@ -81,7 +81,7 @@ public class WorldDataTests
         return package;
     }
 
-    private static ZPackage CurrentPackage(ISettings settings = null, string worldgenId = null)
+    private static ZPackage CurrentPackage(ISettings settings = null, string worldgenId = null, byte[] worldhallaBlob = null)
     {
         settings ??= new TestSettings("written");
         var world = NewWorld(settings: settings);
@@ -91,7 +91,7 @@ public class WorldDataTests
         WorldPatch.WriteHeader(package, world);
         package.Write((int)Version.World.DeepNorth);
 
-        if (worldgenId == null)
+        if (worldgenId == null && worldhallaBlob == null)
         {
             WorldPatch.WriteWorldData(package, world);
         }
@@ -99,8 +99,8 @@ public class WorldDataTests
         {
             var payload = new ZPackage();
 
-            payload.Write(worldgenId);
-            payload.Write(new ZPackage().GetArray());
+            payload.Write(worldgenId ?? WORLDGEN);
+            payload.Write(worldhallaBlob ?? WorldhallaSettings.Default.Save());
             payload.Write(settings.SaveToBinaryBlob());
 
             package.Write(payload.GetArray());
@@ -158,7 +158,7 @@ public class WorldDataTests
         Assert.That(package.ReadInt(), Is.EqualTo((int)Version.World.DeepNorth));
 
         Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
-        Assert.That(world.GetWorldgen(), Is.Null);
+        Assert.That(world.GetGenerator(), Is.Null);
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 
@@ -188,8 +188,8 @@ public class WorldDataTests
         package.ReadInt();
 
         Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
-        Assert.That(Installed(world).Settings, Is.EqualTo(new TestSettings("round tripped")));
-        Assert.That(Installed(world).LegacyFormat, Is.False);
+        Assert.That(Compatible(world).GeneratorSettings, Is.EqualTo(new TestSettings("round tripped")));
+        Assert.That(Compatible(world).LegacyFormat, Is.False);
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 
@@ -197,7 +197,7 @@ public class WorldDataTests
     public void SettinglessWorldRoundTripsAndLeavesTheCursorOnVanillaData()
     {
         var written = new World { m_name = "test" };
-        written.SetWorldgen(new InstalledWorldgen(Registry.Generators[SETTINGLESS_WORLDGEN], null));
+        written.SetGenerator(new CompatibleGeneratorBinding(Registry.Generators[SETTINGLESS_WORLDGEN], WorldhallaSettings.Default, null));
 
         var package = new ZPackage();
 
@@ -213,8 +213,8 @@ public class WorldDataTests
         package.ReadInt();
 
         Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
-        Assert.That(Installed(world).Generator.Instance, Is.SameAs(SettinglessGenerator));
-        Assert.That(Installed(world).Settings, Is.Null);
+        Assert.That(Compatible(world).Generator.Instance, Is.SameAs(SettinglessGenerator));
+        Assert.That(Compatible(world).GeneratorSettings, Is.Null);
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 
@@ -250,6 +250,39 @@ public class WorldDataTests
         Assert.That(payload.ReadByteArray(), Is.EqualTo(new TestSettings("laid out").SaveToBinaryBlob()));
     }
 
+    /*
+     * A setting this version doesn't know may change the world, so the world is unloadable rather than loaded
+     * without it, and its settings are kept as read
+     */
+    [Test, RequiresValheim]
+    public void UnknownWorldhallaSettingMakesTheWorldIncompatibleAndIsWrittenBackUnchanged()
+    {
+        var blob = new ZPackage();
+        blob.Write(1);
+        blob.Write("fromTheFuture");
+        blob.Write(1f);
+
+        var package = CurrentPackage(new TestSettings("kept"), worldhallaBlob: blob.GetArray());
+        var world = new World { m_name = "test" };
+
+        WorldPatch.ReadHeader("world_name", package, out var formatInfo);
+        package.ReadInt();
+
+        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
+        Assert.That(world.m_dataError, Is.EqualTo(World.SaveDataError.BadVersion));
+        Assert.That(world.GetGenerator(), Is.InstanceOf<IncompatibleGeneratorBinding>());
+        Assert.That(((IncompatibleGeneratorBinding)world.GetGenerator()!).Reason, Is.EqualTo(Incompatibility.WorldhallaSettingsUnreadable));
+        Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
+
+        var written = new ZPackage();
+        WorldPatch.WriteWorldData(written, world);
+        written.SetPos(0);
+        var payload = WorldPayload.Read(new ZPackage(written.ReadByteArray()));
+
+        Assert.That(payload.WorldhallaSettings, Is.EqualTo(blob.GetArray()));
+        Assert.That(payload.GeneratorSettings, Is.EqualTo(new TestSettings("kept").SaveToBinaryBlob()));
+    }
+
     [Test, RequiresValheim]
     public void UnregisteredWorldgenIsReadAsUnloadableAndLeavesTheCursorOnVanillaData()
     {
@@ -261,23 +294,26 @@ public class WorldDataTests
 
         Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
         Assert.That(world.m_dataError, Is.EqualTo(World.SaveDataError.BadVersion));
-        Assert.That(world.GetWorldgen(), Is.InstanceOf<MissingWorldgen>());
-        Assert.That(world.GetWorldgen()!.Guid, Is.EqualTo("dev.someone.else"));
+        Assert.That(world.GetGenerator(), Is.InstanceOf<IncompatibleGeneratorBinding>());
+        Assert.That(world.GetGenerator()!.Guid, Is.EqualTo("dev.someone.else"));
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 
     [Test, RequiresValheim]
-    public void WorldgenPayloadRoundTrips()
+    public void WorldhallaPayloadRoundTrips()
     {
         var settings = new TestSettings("sent");
         var package = new ZPackage();
 
-        WorldgenPayload.Write(package, new InstalledWorldgen(Registry.Generators[WORLDGEN], settings));
+        WorldPayload.Of(new CompatibleGeneratorBinding(Registry.Generators[WORLDGEN], WorldhallaSettings.Default, settings)).Write(package);
         package.Write(VANILLA_DATA);
         package.SetPos(0);
 
-        Assert.That(WorldgenPayload.ReadGuid(package), Is.EqualTo(WORLDGEN));
-        Assert.That(WorldgenPayload.ReadSettings(package), Is.EqualTo(settings.SaveToBinaryBlob()));
+        var payload = WorldPayload.Read(package);
+
+        Assert.That(payload.Guid, Is.EqualTo(WORLDGEN));
+        Assert.That(payload.WorldhallaSettings, Is.Empty);
+        Assert.That(payload.GeneratorSettings, Is.EqualTo(settings.SaveToBinaryBlob()));
         Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 
@@ -297,7 +333,7 @@ public class WorldDataTests
         WorldPatch.WriteWorldData(written, world);
         written.SetPos(0);
 
-        Assert.That(world.GetWorldgen(), Is.InstanceOf<MissingWorldgen>());
+        Assert.That(world.GetGenerator(), Is.InstanceOf<IncompatibleGeneratorBinding>());
         Assert.That(WorldPatch.ReadHeader("world_name", written, out var writtenInfo), Is.True);
         Assert.That(writtenInfo.isModded, Is.True);
 
@@ -311,7 +347,7 @@ public class WorldDataTests
     [Test, RequiresValheim]
     public void SettingsAtTheSizeLimitAreRead()
     {
-        var limit = new TestSettings(new string('x', SettingsBlob.MAX_SIZE));
+        var limit = new TestSettings(new string('x', WorldPayload.MAX_SETTINGS_SIZE));
         var package = CurrentPackage(limit);
         var world = NewWorld();
 
@@ -319,13 +355,13 @@ public class WorldDataTests
         package.ReadInt();
 
         Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
-        Assert.That(Installed(world).Settings, Is.EqualTo(limit));
+        Assert.That(Compatible(world).GeneratorSettings, Is.EqualTo(limit));
     }
 
     [Test, RequiresValheim]
     public void SettingsOverTheSizeLimitAreSkipped()
     {
-        var package = CurrentPackage(new TestSettings(new string('x', SettingsBlob.MAX_SIZE + 1)));
+        var package = CurrentPackage(new TestSettings(new string('x', WorldPayload.MAX_SETTINGS_SIZE + 1)));
         var world = NewWorld();
 
         WorldPatch.ReadHeader("world_name", package, out var formatInfo);
@@ -335,15 +371,18 @@ public class WorldDataTests
     }
 
     [Test, RequiresValheim]
-    public void MalformedSettingsAreSkipped()
+    public void MalformedSettingsMakeTheWorldIncompatible()
     {
         var package = CurrentPackage(new TestSettings(TestWorldgen.MALFORMED));
-        var world = NewWorld();
+        var world = new World { m_name = "test" };
 
         WorldPatch.ReadHeader("world_name", package, out var formatInfo);
         package.ReadInt();
 
-        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.False);
+        Assert.That(WorldPatch.ReadWorldData("world_name", package, world, formatInfo), Is.True);
+        Assert.That(world.m_dataError, Is.EqualTo(World.SaveDataError.BadVersion));
+        Assert.That(((IncompatibleGeneratorBinding)world.GetGenerator()!).Reason, Is.EqualTo(Incompatibility.GeneratorSettingsUnreadable));
+        Assert.That(package.ReadString(), Is.EqualTo(VANILLA_DATA));
     }
 
     [Test, RequiresValheim]
@@ -374,11 +413,11 @@ public class WorldDataTests
         package.ReadInt();
         WorldPatch.ReadWorldData("world_name", package, world, formatInfo);
 
-        Assert.That(Installed(world).LegacyFormat, Is.True);
+        Assert.That(Compatible(world).LegacyFormat, Is.True);
 
         WorldPatch.WriteWorldData(new ZPackage(), world);
 
-        Assert.That(Installed(world).LegacyFormat, Is.False);
+        Assert.That(Compatible(world).LegacyFormat, Is.False);
     }
 
     [Test, RequiresValheim]
@@ -389,9 +428,9 @@ public class WorldDataTests
         WorldPatch.ReadHeader("world_name", package, out _);
         package.ReadInt();
 
-        var (_, settings) = RiverheimMigration.ReleaseMigratoryRead(package);
+        var payload = RiverheimMigration.ReleaseMigratoryRead(package);
 
-        Assert.That(Hex(settings), Is.EqualTo(LEGACY_SETTINGS_BYTES));
+        Assert.That(Hex(payload.GeneratorSettings), Is.EqualTo(LEGACY_SETTINGS_BYTES));
     }
 
     [Test, RequiresValheim]

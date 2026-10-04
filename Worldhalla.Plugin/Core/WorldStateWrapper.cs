@@ -5,7 +5,7 @@ using Worldhalla.API.World;
 
 namespace Worldhalla.Plugin.Core;
 
-public sealed class GeneratedWorld(IWorldState state, bool biomeBlending)
+public sealed class WorldStateWrapper(IWorldState state, bool biomeBlending)
 {
     private const float FOREST_FACTOR_MULTIPLIER = 2.15f;
 
@@ -16,9 +16,9 @@ public sealed class GeneratedWorld(IWorldState state, bool biomeBlending)
 
     public bool BiomeBlending { get; } = biomeBlending;
 
-    public static GeneratedWorld Of(RegisteredWorldgen worldgen, IWorldState state)
+    public static WorldStateWrapper Of(RegisteredGenerator generator, IWorldState state)
     {
-        return new GeneratedWorld(state, worldgen.BiomeBlending);
+        return new WorldStateWrapper(state, generator.BiomeBlending);
     }
 
     public float ForestFactor(Vector3 position)
