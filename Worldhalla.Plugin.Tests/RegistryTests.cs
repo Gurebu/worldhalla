@@ -7,7 +7,7 @@ using Worldhalla.Plugin.Core;
 
 namespace Worldhalla.Plugin.Tests;
 
-[WorldhallaPlugin(GUID)]
+[WorldhallaWorldGenerator(GUID)]
 internal sealed class LabelledWorldgen : IWorldGenerator
 {
     public const string GUID = "dev.test.labelled";
@@ -38,7 +38,7 @@ internal sealed class UnlabelledWorldgen : IWorldGenerator
     public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
 
-[WorldhallaPlugin(GUID)]
+[WorldhallaWorldGenerator(GUID)]
 internal sealed class ThrowingWorldgen : IWorldGenerator
 {
     public const string GUID = "dev.test.throwing";
@@ -56,7 +56,7 @@ internal sealed class ThrowingWorldgen : IWorldGenerator
     public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
 
-[WorldhallaPlugin(GUID)]
+[WorldhallaWorldGenerator(GUID)]
 internal sealed class ThrowingVersionWorldgen : IWorldGenerator
 {
     public const string GUID = "dev.test.throwing.version";
@@ -72,7 +72,7 @@ internal sealed class ThrowingVersionWorldgen : IWorldGenerator
     public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
 
-[WorldhallaPlugin(" ")]
+[WorldhallaWorldGenerator(" ")]
 internal sealed class BlankGuidWorldgen : IWorldGenerator
 {
     public string Moniker => "BLANK";
@@ -86,7 +86,7 @@ internal sealed class BlankGuidWorldgen : IWorldGenerator
     public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
 
-[WorldhallaPlugin(GUID)]
+[WorldhallaWorldGenerator(GUID)]
 internal sealed class OversizedDefaultsWorldgen : IWorldGenerator, ISettingsHandler
 {
     public const string GUID = "dev.test.oversized";
@@ -112,7 +112,7 @@ internal sealed class OversizedDefaultsWorldgen : IWorldGenerator, ISettingsHand
     public IWorldState Generate(int seed, ISettings settings, System.IProgress<float> progress, System.Threading.CancellationToken cancellation) => throw new System.NotImplementedException();
 }
 
-[WorldhallaPlugin("dev.test.nongenerator")]
+[WorldhallaWorldGenerator("dev.test.nongenerator")]
 internal sealed class LabelledNonGenerator
 {
 }

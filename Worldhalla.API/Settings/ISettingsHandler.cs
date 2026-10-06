@@ -1,7 +1,7 @@
 namespace Worldhalla.API.Settings;
 
 /**
- * A companion interface for a class that is annotated as a WorldhallaPlugin
+ * A companion interface for a class that is annotated as a WorldhallaWorldGenerator
  *
  * Unlike the IWorldGenerator interface, this interface is optional, if your
  * generator doesn't take any settings, you don't have to implement this at all.

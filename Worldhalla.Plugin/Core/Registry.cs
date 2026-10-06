@@ -10,7 +10,7 @@ public static class Registry
     private static readonly Dictionary<string, RegisteredGenerator> WorldGenerators = new();
     private static readonly HashSet<Assembly> ScannedAssemblies = [];
 
-    private static readonly string ApiAssemblyName = typeof(WorldhallaPluginAttribute).Assembly.GetName().Name;
+    private static readonly string ApiAssemblyName = typeof(WorldhallaWorldGeneratorAttribute).Assembly.GetName().Name;
 
     public static IReadOnlyDictionary<string, RegisteredGenerator> Generators => WorldGenerators;
 
@@ -69,19 +69,19 @@ public static class Registry
 
     private static void RegisterIfLabelled(Type type)
     {
-        if (type.GetCustomAttribute<WorldhallaPluginAttribute>() is not { } label)
+        if (type.GetCustomAttribute<WorldhallaWorldGeneratorAttribute>() is not { } label)
             return;
 
         if (type.IsAbstract || type.ContainsGenericParameters || !typeof(IWorldGenerator).IsAssignableFrom(type))
         {
-            Logger.LogError($"'{type.FullName}' is labelled [WorldhallaPlugin] but is not a concrete IWorldGenerator, skipping");
+            Logger.LogError($"'{type.FullName}' is labelled [WorldhallaWorldGenerator] but is not a concrete IWorldGenerator, skipping");
             return;
         }
 
         var guid = label.Guid;
         if (string.IsNullOrWhiteSpace(guid))
         {
-            Logger.LogError($"'{type.FullName}' is labelled [WorldhallaPlugin] without a GUID, skipping");
+            Logger.LogError($"'{type.FullName}' is labelled [WorldhallaWorldGenerator] without a GUID, skipping");
             return;
         }
 

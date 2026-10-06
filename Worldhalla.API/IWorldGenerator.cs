@@ -7,7 +7,7 @@ namespace Worldhalla.API;
 /**
  * Primary interface for your generator.
  *
- * Annotate it with [WorldhallaPlugin(GUID)] to make it visible to Worldhalla
+ * Annotate it with [WorldhallaWorldGenerator(GUID)] to make it visible to Worldhalla
  */
 [PublicAPI]
 public interface IWorldGenerator

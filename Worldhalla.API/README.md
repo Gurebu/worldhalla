@@ -1,7 +1,7 @@
 # Worldhalla API
 
 To create a world generator for Worldhalla, you have to roll a BepInEx plugin and have a class somewhere inside
-your .dll that implements `Worldhalla.API.IWorldGenerator` and registers with Worldhalla using `[WorldhallaPlugin(GUID)]`.
+your .dll that implements `Worldhalla.API.IWorldGenerator` and registers with Worldhalla using `[WorldhallaWorldGenerator(GUID)]`.
 
 There's a [Sample project](https://github.com/Gurebu/worldhalla/tree/master/GeneratorSample) that shows a minimal
 viable integration you can take a look at. It's a functioning world generator so if you build it and throw into your
@@ -68,7 +68,7 @@ The BepInDependency on Worldhalla is necessary to guarantee proper mod load orde
 The only two necessary things to implement are `IWorldGenerator`:
 
 ```csharp
-[WorldhallaPlugin("dev.you.mygen")]
+[WorldhallaWorldGenerator("dev.you.mygen")]
 public class MyGenerator : IWorldGenerator
 {
     public string Name => "My Generator";
@@ -94,7 +94,7 @@ public class MyWorldState : IWorldState
 }
 ```
 
-The `[WorldhallaPlugin]` attribute is similar in spirit to `[BepInPlugin]` and has to specify your generator's **Globally
+The `[WorldhallaWorldGenerator]` attribute is similar in spirit to `[BepInPlugin]` and has to specify your generator's **Globally
 Unique Identifier** or **GUID**. This is what gets written in the save file and distinguishes your generator from every
 other one. You can't change your **GUID** once you've shipped your mod. It doesn't have to match your BepInPlugin GUID,
 but it's not a bad idea to do so and to avoid clashes it's best to use the inverse domain notation for it,

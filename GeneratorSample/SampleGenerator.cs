@@ -6,7 +6,7 @@ using Worldhalla.API.World;
 
 namespace GeneratorSample;
 
-[WorldhallaPlugin(GeneratorSamplePlugin.GUID)]
+[WorldhallaWorldGenerator(GeneratorSamplePlugin.GUID)]
 public class SampleGenerator : IWorldGenerator, ISettingsHandler
 {
     public string Name => GeneratorSamplePlugin.NAME;
