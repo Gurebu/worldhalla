@@ -219,10 +219,6 @@ public static class ZNetPatch
             return RefuseWorld(rpc, $"Server runs Worldhalla {serverVersion}, local is {LocalVersion}",
                 WorldhallaVersionMessage(serverVersion));
 
-        if (world.m_seed == 0)
-            return RefuseWorld(rpc, $"Server world '{world.m_name}' has no seed",
-                Translations.Get("$wh_refused_no_seed"));
-
         WorldPayload payload;
 
         try

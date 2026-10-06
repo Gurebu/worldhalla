@@ -32,7 +32,7 @@ public static class WorldCreationDialogBuilder
     private const float ICON_BUTTON_SIZE = FIELD_HEIGHT;
     private const string REFRESH_ICON_CHILD = "Image";
     private const int OVERLAY_GROUP_PRIORITY = 2;
-    private const float PREVIEW_HIGHLIGHT = 1.6f;
+    private const float SELECTION_RING_WIDTH = 3f * RING_WIDTH;
     private const string GAMEPAD_BACK = "ButtonB";
     private const string GAMEPAD_CONFIRM = "ButtonX";
     private const string GAMEPAD_ACTION = "ButtonY";
@@ -52,6 +52,7 @@ public static class WorldCreationDialogBuilder
 
     private static readonly Color DiscColor = new(0.05f, 0.07f, 0.08f, 0.92f);
     private static readonly Color RingColor = new(0.64f, 0.48f, 0.21f, 1f);
+    private static readonly Color SelectionColor = new(0.94f, 0.70f, 0.29f, 1f);
     private static readonly Color SpinnerColor = new(0.94f, 0.70f, 0.29f, 1f);
     private static readonly Color ProgressTrackColor = new(0.94f, 0.70f, 0.29f, 0.2f);
     private static readonly Color OverlayColor = new(0f, 0f, 0f, 0.6f);
@@ -81,6 +82,8 @@ public static class WorldCreationDialogBuilder
         dialog.startup = startup;
         dialog.nameField = nameField;
         dialog.seedField = seedField;
+        dialog.doneButton = done;
+        dialog.cancelButton = cancel;
 
         var y = CONTENT_TOP;
 
@@ -161,8 +164,11 @@ public static class WorldCreationDialogBuilder
 
         var ring = NewRawImage(preview.transform, "Ring", Shapes.Ring(size, RING_WIDTH, RingColor), false);
         Stretch(ring.rectTransform);
-        dialog.previewButton.targetGraphic = ring;
-        dialog.previewButton.colors = RingHighlight(dialog.previewButton.colors);
+
+        var selection = NewRawImage(preview.transform, "Selection", Shapes.Ring(size, SELECTION_RING_WIDTH, SelectionColor), false);
+        Stretch(selection.rectTransform);
+        dialog.previewButton.targetGraphic = selection;
+        dialog.previewButton.colors = ShownWhenSelected(dialog.previewButton.colors);
 
         var spinner = NewRawImage(preview.transform, "Spinner", Shapes.Arc(SPINNER_SIZE, 4f, 270f, SpinnerColor), false);
         spinner.rectTransform.sizeDelta = new Vector2(SPINNER_DISPLAY_SIZE, SPINNER_DISPLAY_SIZE);
@@ -438,14 +444,11 @@ public static class WorldCreationDialogBuilder
         return button;
     }
 
-    // Only the colours' ratios matter: the ring's own colour is its normal look, brightened while selected
-    private static ColorBlock RingHighlight(ColorBlock colors)
+    private static ColorBlock ShownWhenSelected(ColorBlock colors)
     {
-        var normal = Color.white / PREVIEW_HIGHLIGHT;
-        normal.a = 1f;
-        colors.normalColor = normal;
+        colors.normalColor = colors.disabledColor = Color.clear;
         colors.highlightedColor = colors.selectedColor = colors.pressedColor = Color.white;
-        colors.colorMultiplier = PREVIEW_HIGHLIGHT;
+        colors.colorMultiplier = 1f;
         return colors;
     }
 

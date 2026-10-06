@@ -13,7 +13,6 @@ wh_preview_locations_progress,Placing locations $1%
 wh_preview_locations_lpa,"With Location Placement Accelerator, locations can only be previewed in its Vanilla placement mode"
 wh_preview_close,Close
 wh_preview_click_to_reveal,Click to reveal
-wh_preview_enter_seed,Enter a seed
 wh_preview_generating,Generating world
 wh_preview_failed,Preview failed
 wh_spoiler_header,Reveal the world?
@@ -30,7 +29,6 @@ wh_refused_worldhalla_version,The server runs Worldhalla $1. You have $2.
 wh_refused_generator_missing,This world was created with $1 $2. Install it to join.
 wh_refused_generator_version,This world needs $1 $2.
 wh_refused_generator_version_local,This world needs $1 $2. You have $3.
-wh_refused_no_seed,The server's world has no seed.
 wh_refused_generator_unknown,"This world was created with '$1', which you don't have installed."
 wh_refused_settings_rejected,$1 can't load this world's settings: $2
 wh_refused_settings_failed,$1 failed to load this world's settings. See the log for details.

@@ -55,7 +55,8 @@ button must be grayed out.
 ### World preview and its buttons
 
 World preview is a medium-sized circle window that shows a very basic preview of
-how the selected world is going to look. When entering the creation dialog this circle should be blank
+how the selected world is going to look. A thin gold ring outlines it; while it is hovered or selected with a controller, a wider,
+brighter ring shows over it. When entering the creation dialog this circle should be blank
 with a label of "click to reveal". If it's clicked, a YES/NO dialog should show warning the user about
 spoilers, if the user clicks the yes button, world preview will start loading. The procedure will be explained below.
 
@@ -84,7 +85,7 @@ immediately and throw away whatever's been generated yet.
 
 Seed edits are debounced: regeneration starts 0.5 s after the last keystroke. At most one generation runs at a time;
 requests arriving meanwhile don't queue up, only the latest one is kept and started once the running one finishes.
-An empty seed shows "Enter a seed" instead of a preview.
+An empty seed is a valid seed (vanilla stores it as seed 0) and is previewed like any other.
 
 While IWorldState is being created the circle shows a spinner. Sampling then fills the bitmap top to bottom,
 so progress is visible as it goes.

@@ -37,17 +37,6 @@ public static class CreateWorldPanelPatch
         GetDialog(__instance)?.Open();
     }
 
-    /**
-     * An empty seed makes a seed 0 world, a lot of PRNGs (including Unity's own)
-     * don't play well when initialized by zero, better forbid it.
-     */
-    [HarmonyPostfix, HarmonyPatch(nameof(FejdStartup.Update))]
-    private static void Update(FejdStartup __instance)
-    {
-        if (__instance.m_createWorldPanel.activeInHierarchy && GetDialog(__instance) is { CanCreate: false })
-            __instance.m_newWorldDone.interactable = false;
-    }
-
     [HarmonyTranspiler, HarmonyPatch(nameof(FejdStartup.OnNewWorldDone))]
     internal static IEnumerable<CodeInstruction> TranspileNewWorldDone(IEnumerable<CodeInstruction> instructions)
     {

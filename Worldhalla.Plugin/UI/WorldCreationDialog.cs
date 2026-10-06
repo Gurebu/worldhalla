@@ -31,7 +31,6 @@ public class WorldCreationDialog : MonoBehaviour
     private const string SPOILER_HEADER = "$wh_spoiler_header";
     private const string SPOILER_TEXT = "$wh_spoiler_text";
     private const string CLICK_TO_REVEAL = "$wh_preview_click_to_reveal";
-    private const string ENTER_SEED = "$wh_preview_enter_seed";
     private const string GENERATING = "$wh_preview_generating";
     private const string FAILED = "$wh_preview_failed";
     private const string LOCATIONS = "$wh_preview_locations";
@@ -57,6 +56,8 @@ public class WorldCreationDialog : MonoBehaviour
     public Button worldSettingsButton = null!;
     public Button generatorSettingsButton = null!;
     public Button newSeedButton = null!;
+    public Button doneButton = null!;
+    public Button cancelButton = null!;
     public GameObject detailsOverlay = null!;
     public RectTransform detailsFrame = null!;
     public RawImage detailsImage = null!;
@@ -69,6 +70,8 @@ public class WorldCreationDialog : MonoBehaviour
     public GameObject locationsNote = null!;
     public TMP_Text captionTemplate = null!;
     public SettingsDialog settingsDialog = null!;
+
+    private NavigationGrid navigation = null!;
 
     private WorldPreview preview = null!;
     private PreviewTexture? previewTexture;
@@ -108,10 +111,12 @@ public class WorldCreationDialog : MonoBehaviour
 
     public WorldhallaSettings WorldhallaSettings => worldhallaSettings;
 
-    public bool CanCreate => SelectedWorldgen == null || !string.IsNullOrEmpty(seedField.text);
-
     public void Initialize()
     {
+        navigation = new NavigationGrid(
+            [[nameField], [seedField, newSeedButton], [generatorDropdown], [worldSettingsButton], [generatorSettingsButton]],
+            [[previewButton], [hideButton, detailsButton], [doneButton, cancelButton]]);
+
         preview = new WorldPreview(previewSize);
         previewTexture = new PreviewTexture(previewSize);
         detailsTexture = new PreviewTexture(PreviewView.SIZE);
@@ -193,6 +198,7 @@ public class WorldCreationDialog : MonoBehaviour
         RefreshPreview();
         RefreshDetails();
         RefreshButtons();
+        navigation.Apply();
     }
 
     private void OnSeedChanged()
@@ -292,12 +298,6 @@ public class WorldCreationDialog : MonoBehaviour
     private void RequestPreview()
     {
         var seed = seedField.text;
-        if (string.IsNullOrEmpty(seed))
-        {
-            preview.Clear();
-            return;
-        }
-
         var worldgen = SelectedWorldgen;
         var worldSettings = settings;
         preview.Request(() => PreviewGeneration.Start(worldgen, seed, worldSettings));
@@ -494,7 +494,6 @@ public class WorldCreationDialog : MonoBehaviour
         previewLabel.text = Translations.Get(!revealed ? CLICK_TO_REVEAL
             : waiting ? GENERATING
             : phase == WorldPreview.Phase.Failed ? FAILED
-            : phase == WorldPreview.Phase.Idle ? ENTER_SEED
             : "");
 
         var generationProgress = waiting ? preview.GenerationProgress : null;

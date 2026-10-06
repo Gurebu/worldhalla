@@ -41,7 +41,7 @@ public static class WorldGeneratorPatch
     private static WorldStateWrapper Generate(World world, CompatibleGeneratorBinding generator)
     {
         if (world.m_seed == 0)
-            throw new InvalidOperationException($"Seed is 0 for world '{world.m_name}', but it is not a menu world");
+            Logger.LogWarning($"World '{world.m_name}' has seed 0, this is probably an error");
 
         var generation = WorldGenerationTask.Start(generator.Generator, world.m_seed, generator.GeneratorSettings);
 
@@ -55,7 +55,6 @@ public static class WorldGeneratorPatch
         return generation.Wait();
     }
 
-    // Vanilla's own exit for a world that failed to load: the game logs out without saving and the menu reports it
     private static void FailWorldLoad(CompatibleGeneratorBinding generator)
     {
         failureMessage = Translations.Get("$wh_generation_failed", generator.Generator.Name);

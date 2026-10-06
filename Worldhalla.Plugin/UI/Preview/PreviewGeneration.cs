@@ -37,7 +37,7 @@ public sealed class PreviewGeneration
         if (worldgen == null)
             return new PreviewGeneration(null, PlaceRivers(generator));
 
-        var generation = WorldGenerationTask.Start(worldgen, seed.GetStableHashCode(), settings);
+        var generation = WorldGenerationTask.Start(worldgen, generator.m_world.m_seed, settings);
         return new PreviewGeneration(generation, Attach(generation, generator));
     }
 
