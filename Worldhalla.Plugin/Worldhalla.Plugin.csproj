@@ -5,7 +5,7 @@
         <TargetFramework>netstandard2.1</TargetFramework>
         <AssemblyName>Worldhalla.Plugin</AssemblyName>
         <Description>Custom world generation framework for Valheim</Description>
-        <Version>0.1.0</Version>
+        <Version>1.0.0</Version>
         <LangVersion>12.0</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>

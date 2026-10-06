@@ -12,7 +12,7 @@
             when it merges the plugin in, so the mark has to be here, not just on the plugin.
         -->
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <Version>0.1.0</Version>
+        <Version>1.0.0</Version>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <NoWarn>$(NoWarn);CS1591</NoWarn>
 
@@ -24,7 +24,6 @@
         <RepositoryUrl>https://github.com/Gurebu/worldhalla</RepositoryUrl>
         <PackageTags>valheim;bepinex;worldgen;modding</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <!-- Reference-only package: consumers compile against it, the Worldhalla plugin provides it at runtime -->
         <IncludeBuildOutput>false</IncludeBuildOutput>
     </PropertyGroup>
 

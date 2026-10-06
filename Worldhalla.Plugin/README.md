@@ -63,8 +63,8 @@ the settings, or if a world with that name exists but can't be loaded.
 - **Location Placement Accelerator** is compatible, but location preview is disabled in all modes but Vanilla.
 - Incompatible with mods that change the world creation window i.e. UI overhaul mods. Worldhalla requires this window to work.
 - Partially compatible with mods that change the world list window. You can use the config to disable Worldhalla's changes to this window.
-- Limited compatibility with **Expand World Size** (stretch only). Worldhalla will probably gain its own world size mechanic in the future with per-world settings.
-- Incompatible (for now) with **Better Continents**. **BC** is invaluable as a tool to create worlds with asset-based heightmaps which could become a separate worldgen type after some work.
+- Limited compatibility with **Expand World Size** (stretch only).
+- Incompatible (for now) with **Better Continents**.
 
 ## For mod authors
 
