@@ -3,14 +3,6 @@ using Worldhalla.API.World;
 
 namespace GeneratorSample;
 
-/*
- * Heights are in metres above sea level and don't depend on the biome, so the game's own biome blending has nothing
- * to blend but the textures. The world centre is always a meadows island, since the game places the spawn there.
- *
- * Without IWorldGeography the game keeps vanilla's polar geometry: the Ashlands lie past a wavy circle around
- * (0, 4000) and the Deep North past one around (0, -4000). Biomes follow those lines exactly, each pole rises as a
- * landmass behind them, and a channel of water runs along both so no land crosses into a pole.
- */
 public class SampleWorld : IWorldState
 {
     private const float EDGE_START = 9400f;

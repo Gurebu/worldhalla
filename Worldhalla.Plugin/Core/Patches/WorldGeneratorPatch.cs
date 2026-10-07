@@ -254,12 +254,13 @@ public static class WorldGeneratorPatch
             
         /*
          * Original game mask channel format:
-         * R - dirt
-         * G - cultivated land everywhere, snow in the deep north
-         * B - stone pavement
-         * A - varies, in most biomes it controls vegetation spawning & the ability to cultivate land
-         *   - in mistlands, this channel additionally determines ground texture, low values are rocky
-         *   - in ashlands, this channel is instead lava
+         * R - dirt (game logic needs R > 0.5 for clear ground)
+         * G - Deep North: snow (G > 0.15 blocks building placement)
+         *   - Everywhere else: cultivated ground (G > 0.5 is plantable)
+         * B - stone pavement (game logic needs B > 0.5 for clear ground)
+         * A - Ashlands: lava (effects start at A > 0.2, full lava for all logic: A > 0.6)
+         *   - Everywhere else: vegetation mask (values of A < 0.5 disable cultivation)
+         *   - Mistlands: in addition to vegetation mask, low values change grass type and ground texture
          */
         
         mask = new Color(
