@@ -32,7 +32,7 @@ Worldhalla".
 To add to the registry a mod has to use an attribute and implement an interface, very much like a BepInEx plugin would:
 
 ```csharp
-[WorldhallaPlugin("com.example.generatorsample")]
+[WorldhallaWorldGenerator("com.example.generatorsample")]
 public class Generator : IWorldGenerator { ... }
 ```
 
