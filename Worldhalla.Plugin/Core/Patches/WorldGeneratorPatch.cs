@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using HarmonyLib;
 using UnityEngine;
-using Worldhalla.API.World;
 using Worldhalla.Plugin.Core.Extensions;
 using Worldhalla.Plugin.Localization;
 
@@ -12,8 +11,6 @@ namespace Worldhalla.Plugin.Core.Patches;
 public static class WorldGeneratorPatch
 {
     private const int KEEPALIVE_INTERVAL_MS = 1000;
-    private static readonly ThreadLocal<(IWorldState, Vector2, IWorldState.PointData)> cache = new();
-
     private static string? failureMessage;
 
     [HarmonyPrefix, HarmonyPatch(nameof(WorldGenerator.Pregenerate))]
@@ -113,7 +110,7 @@ public static class WorldGeneratorPatch
         if (__instance.GetState() is not {} world)
             return true;
 
-        __result = GetHeight(world, (Biome)biome, wx, wy, out mask);
+        __result = world.GetHeight(biome, wx, wy, out mask);
 
         return false;
     }
@@ -163,7 +160,7 @@ public static class WorldGeneratorPatch
         if (__instance.GetState() is not {} world)
             return true;
 
-        __result = (Heightmap.Biome)world.State.GetBiome(wx, wy);
+        __result = world.GetBiome(wx, wy);
 
         return false;
     }
@@ -176,7 +173,7 @@ public static class WorldGeneratorPatch
         if (WorldGenerator.instance.GetState() is not {} world)
             return true;
         
-        __result = world.ForestFactor(pos);
+        __result = world.GetForestFactor(pos);
 
         return false;
     }
@@ -239,50 +236,8 @@ public static class WorldGeneratorPatch
         if (__instance.GetState() is not {} world)
             return true;
 
-        __result = GetHeight(world, Biome.AshLands, wx, wy, out mask);
+        __result = world.GetHeight(Heightmap.Biome.AshLands, wx, wy, out mask);
 
         return false;
-    }
-
-    private const float heightOffset = 30.0f;
-    
-    private static float GetHeight(WorldStateWrapper worldStateWrapper, Biome biome, float wx, float wy, out Color mask)
-    {
-        var pointData = worldStateWrapper.BiomeBlending
-            ? RenderCached(worldStateWrapper.State, wx, wy)
-            : worldStateWrapper.State.RenderPoint(wx, wy, biome);
-            
-        /*
-         * Original game mask channel format:
-         * R - dirt (game logic needs R > 0.5 for clear ground)
-         * G - Deep North: snow (G > 0.15 blocks building placement)
-         *   - Everywhere else: cultivated ground (G > 0.5 is plantable)
-         * B - stone pavement (game logic needs B > 0.5 for clear ground)
-         * A - Ashlands: lava (effects start at A > 0.2, full lava for all logic: A > 0.6)
-         *   - Everywhere else: vegetation mask (values of A < 0.5 disable cultivation)
-         *   - Mistlands: in addition to vegetation mask, low values change grass type and ground texture
-         */
-        
-        mask = new Color(
-            pointData.dirt,
-            pointData.snow,
-            pointData.pave,
-            Mathf.Max(pointData.lava, pointData.fertility));
-            
-        return heightOffset + pointData.height;
-    }
-
-    /*
-     * At chunks whose corners lie in different biomes the game renders every point once per corner biome and
-     * interpolates between the results. A generator that blends biomes itself returns the same point four times,
-     * so the last point is cached. Chunks are built on worker threads, hence thread-local.
-     */
-    private static IWorldState.PointData RenderCached(IWorldState state, float wx, float wy)
-    {
-        var pos = new Vector2(wx, wy);
-        if (!cache.IsValueCreated || cache.Value.Item1 != state || cache.Value.Item2 != pos)
-            cache.Value = (state, pos, state.RenderPoint(wx, wy, Biome.None));
-
-        return cache.Value.Item3;
     }
 }
