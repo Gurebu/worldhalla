@@ -59,12 +59,9 @@ public sealed class PreviewGeneration
 
     private static Task<WorldGenerator> PlaceRivers(WorldGenerator generator)
     {
-        if (!VanillaRiverPlacement.Prepare())
-            return Task.FromResult(generator);
-
         return Task.Run(() =>
         {
-            VanillaRiverPlacement.Pregenerate(generator);
+            VanillaRiverPlacement.Apply(generator);
             return generator;
         });
     }

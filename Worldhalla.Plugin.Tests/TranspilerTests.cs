@@ -7,6 +7,7 @@ using HarmonyLib;
 using NUnit.Framework;
 using Worldhalla.Plugin.Core.Patches;
 using Worldhalla.Plugin.UI.Patches;
+using Worldhalla.Plugin.UI.Preview.Vanilla;
 
 namespace Worldhalla.Plugin.Tests;
 
@@ -219,5 +220,35 @@ public class TranspilerTests
         Assert.That(IndexOfCall(patched, ZNetPatchType, "ApplyServerWorld"), Is.LessThan(initialize));
         Assert.That(IndexOfCall(patched, ZNetPatchType, "RefuseUngeneratedWorld"), Is.EqualTo(initialize + 2),
             "the check does not directly follow WorldGenerator.Initialize");
+    }
+
+    [Test, RequiresValheim]
+    public void RiverPlacementCopiesTakeTheOriginalsArguments()
+    {
+        foreach (var (original, copy) in VanillaRiverPlacement.Copies)
+        {
+            var expected = original.GetParameters().Select(parameter => parameter.ParameterType).Prepend(typeof(WorldGenerator)).ToList();
+            var actual = copy.GetParameters().Select(parameter => parameter.ParameterType).ToList();
+            if (actual.LastOrDefault() == typeof(Xorshift128))
+                actual.RemoveAt(actual.Count - 1);
+
+            Assert.That(actual, Is.EqualTo(expected), $"{copy.Name} doesn't match WorldGenerator.{original.Name}");
+            Assert.That(copy.ReturnType, Is.EqualTo(original.ReturnType), $"{copy.Name} doesn't match WorldGenerator.{original.Name}");
+        }
+    }
+
+    [Test, RequiresValheim]
+    public void RiverPlacementCopiesDrawOnlyFromTheirOwnGenerator()
+    {
+        foreach (var (original, copy) in VanillaRiverPlacement.Copies)
+        {
+            var generator = Generator();
+            var rewritten = VanillaRiverPlacement.Rewrite(PatchProcessor.GetOriginalInstructions(original, generator), generator, copy).ToList();
+
+            Assert.That(rewritten.Where(instruction => instruction.operand is MethodInfo { DeclaringType: var type } && type == typeof(UnityEngine.Random)),
+                Is.Empty, $"{copy.Name} still uses UnityEngine.Random");
+            Assert.That(rewritten.Where(instruction => instruction.operand is MethodInfo method && VanillaRiverPlacement.Copies.ContainsKey(method)),
+                Is.Empty, $"{copy.Name} still calls into WorldGenerator's river placement");
+        }
     }
 }

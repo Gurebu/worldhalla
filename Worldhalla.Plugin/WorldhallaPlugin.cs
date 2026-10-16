@@ -4,6 +4,7 @@ using Worldhalla.Plugin.Compat;
 using Worldhalla.Plugin.Core;
 using Worldhalla.Plugin.Localization;
 using Worldhalla.Plugin.UI.Patches;
+using Worldhalla.Plugin.UI.Preview.Vanilla;
 
 namespace Worldhalla.Plugin;
 
@@ -52,6 +53,8 @@ public class WorldhallaPlugin : BaseUnityPlugin
 
         if (Traverse.Create<global::Localization>().Field<global::Localization>("m_instance").Value is { } localization)
             Translations.Load(localization, localization.GetSelectedLanguage());
+
+        VanillaRiverPlacement.Initialize();
     }
     
     public void Start()

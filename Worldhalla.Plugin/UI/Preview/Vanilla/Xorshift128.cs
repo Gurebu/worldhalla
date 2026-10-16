@@ -1,7 +1,7 @@
 namespace Worldhalla.Plugin.UI.Preview.Vanilla;
 
 // Xorshift128 as UnityEngine.Random implements it, reproducing the engine bit for bit
-public sealed class UnityRandom
+public sealed class Xorshift128
 {
     private const uint SEED_MULTIPLIER = 1812433253u;
     private const uint UNIT_MASK = 0x7FFFFF;
@@ -9,13 +9,7 @@ public sealed class UnityRandom
 
     private uint s0, s1, s2, s3;
 
-    public (uint, uint, uint, uint) State
-    {
-        get => (s0, s1, s2, s3);
-        set => (s0, s1, s2, s3) = value;
-    }
-
-    public void InitState(int seed)
+    public Xorshift128(int seed)
     {
         s0 = (uint)seed;
         s1 = unchecked(s0 * SEED_MULTIPLIER + 1u);

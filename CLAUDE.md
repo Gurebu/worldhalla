@@ -48,6 +48,10 @@ message, not next to the code. A comment earns its place by telling the next rea
 they need in order to change this code safely — not by recording how the current shape was
 arrived at.
 
+Assumptions about the game's IL are checked by tests (`AnchorTests`, `TranspilerTests`), not by runtime
+fallbacks that degrade quietly: code may throw where an assumption fails, but doesn't branch around it.
+Don't guard against behaviour changes in Harmony or BepInEx.
+
 ## Solution layout
 
 `Worldhalla.sln` contains:
@@ -218,11 +222,14 @@ Every world preview runs on a private `WorldGenerator` made by `UI/Preview/Previ
 chunk build does (`GetBiome`, then `GetBiomeHeight`), so the preview goes through the same `WorldGeneratorPatch` path as
 a played world. A Worldhalla world is attached to that instance with `SetWorld`; a vanilla one is left unbound. It is
 constructed on the main thread, as a menu world so that it skips river placement. Vanilla previews then place rivers
-through `UI/Preview/Vanilla/VanillaRiverPlacement`: Harmony **reverse patches** that copy vanilla's river placement into stub methods, rewritten to draw from `PreviewRandom`
-(a bit-exact reimplementation of `UnityEngine.Random`, verified once in game) so they can run off the main thread. They
+through `UI/Preview/Vanilla/VanillaRiverPlacement`: Harmony **reverse patches** that copy vanilla's river placement into stub methods, rewritten to draw from a `Xorshift128` of
+their own (a bit-exact reimplementation of `UnityEngine.Random`, verified once in game) so they can run off the main
+thread. Where vanilla seeds the engine, a copy creates the generator as a local and passes it to the copies it calls
+as an extra trailing argument, so the stubs taking one don't match their originals' signatures. They
 must stay copies. Nothing there may patch `WorldGenerator` itself, which places the rivers of every real vanilla world.
-The class carries no Harmony attributes so `PatchAll` never picks it up, and `Prepare` checks the originals' patch
-lists before and after copying.
+The class carries no Harmony attributes so `PatchAll` never picks it up. There is no fallback for a copy that
+can't be made: `TranspilerTests` runs the rewrite over the game's IL, so a game update that changes river placement
+fails there.
 
 The detailed preview's location simulation (`UI/Preview/Locations`) runs on the preview's generator, which is not
 `WorldGenerator.instance`. `WorldGeneratorPatch`'s static hooks (`IsAshlands`, `GetForestFactor`, ...) only know the

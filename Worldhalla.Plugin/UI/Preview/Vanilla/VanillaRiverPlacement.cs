@@ -2,156 +2,195 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
+using JetBrains.Annotations;
 using UnityEngine;
 
 namespace Worldhalla.Plugin.UI.Preview.Vanilla;
 
 /*
  * Private copies of vanilla's river placement for the preview. Vanilla draws rivers from the engine's global
- * UnityEngine.Random, which only the main thread may use; these copies draw from PreviewRandom instead, so they can
- * run on a preview thread.
+ * UnityEngine.Random, which only the main thread may use; these copies draw from a generator of their own instead,
+ * so they can run on a preview thread. Where vanilla seeds the engine a copy makes a Xorshift128, and it hands that
+ * to the copies it calls as their last argument.
  *
  * The copies are Harmony reverse patches: the original IL is copied into the stubs below and rewritten there.
- * Nothing here patches WorldGenerator itself, and Prepare checks that afterwards, since the real methods place the
- * rivers of every vanilla world that gets played.
+ * Nothing here may patch WorldGenerator itself, since the real methods place the rivers of every vanilla world that
+ * gets played.
  */
 public static class VanillaRiverPlacement
 {
-    private static readonly string[] CopiedMethods =
-    [
-        nameof(WorldGenerator.Pregenerate),
-        nameof(WorldGenerator.PlaceRivers),
-        nameof(WorldGenerator.PlaceStreams),
-        nameof(WorldGenerator.FindStreamStartPoint),
-        nameof(WorldGenerator.FindStreamEndPoint),
-        nameof(WorldGenerator.FindRandomRiverEnd),
-        nameof(WorldGenerator.RenderRivers),
-    ];
+    internal static readonly Dictionary<MethodInfo, MethodInfo> Copies = typeof(Patches)
+        .GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+        .ToDictionary(copy => AccessTools.Method(typeof(WorldGenerator), copy.Name));
 
-    private static bool prepared;
-    private static bool available;
-
-    private static IEnumerable<MethodInfo> Originals => CopiedMethods.Select(name => AccessTools.Method(typeof(WorldGenerator), name));
-
-    private const string COPY_SUFFIX = "Copy";
-
-    private static MethodInfo CopyOf(MethodInfo original) => AccessTools.Method(typeof(VanillaRiverPlacement), original.Name + COPY_SUFFIX);
-
-    public static bool Prepare()
+    public static void Initialize()
     {
-        if (prepared)
-            return available;
-
-        prepared = true;
-
-        var before = Originals.Select(PatchState).ToList();
-        try
-        {
-            var transpiler = AccessTools.Method(typeof(VanillaRiverPlacement), nameof(Rewrite));
-            foreach (var original in Originals)
-                Harmony.ReversePatch(original,
-                    new HarmonyMethod(CopyOf(original)) { reversePatchType = HarmonyReversePatchType.Original },
-                    transpiler, null);
-        }
-        catch (Exception e)
-        {
-            Logger.LogWarning($"Vanilla world previews will have no rivers, copying river placement failed: {e}");
-            return false;
-        }
-
-        if (!Originals.Select(PatchState).SequenceEqual(before))
-        {
-            Logger.LogError("Copying vanilla river placement changed the patches on WorldGenerator; vanilla world previews will have no rivers");
-            return false;
-        }
-
-        available = true;
-        return true;
+        var transpiler = AccessTools.Method(typeof(VanillaRiverPlacement), nameof(Rewrite));
+        foreach (var (original, copy) in Copies)
+            Harmony.ReversePatch(
+                original,
+                new HarmonyMethod(copy) { reversePatchType = HarmonyReversePatchType.Original },
+                transpiler,
+                null);
     }
 
-    public static void Pregenerate(WorldGenerator generator)
+    public static void Apply(WorldGenerator worldGenerator)
     {
-        if (!available)
-            throw new InvalidOperationException("River placement copies are not prepared");
-
-        using (PreviewRandom.Use(new UnityRandom()))
-            PregenerateCopy(generator);
+        Patches.Pregenerate(worldGenerator);
     }
 
-    private static string PatchState(MethodInfo original)
+    internal static IEnumerable<CodeInstruction> Rewrite(IEnumerable<CodeInstruction> instructions, ILGenerator generator, MethodBase copy)
     {
-        var info = Harmony.GetPatchInfo(original);
-        if (info == null)
-            return "";
-
-        return string.Join(";", info.Prefixes.Concat(info.Postfixes).Concat(info.Transpilers).Concat(info.Finalizers).Concat(info.ILManipulators)
-            .Select(patch => $"{patch.owner}:{patch.PatchMethod.DeclaringType?.FullName}.{patch.PatchMethod.Name}"));
-    }
-
-    private static IEnumerable<CodeInstruction> Rewrite(IEnumerable<CodeInstruction> instructions)
-    {
-        var copies = Originals.ToDictionary(original => (MethodBase)original, CopyOf);
+        (OpCode opcode, object operand)? random = RandomArgument(copy) is { } argument ? (OpCodes.Ldarg_S, (byte)argument) : null;
+        var savedStateStoreFollows = false;
 
         foreach (var instruction in instructions)
         {
-            if (instruction.operand is MethodInfo method)
+            if (savedStateStoreFollows)
             {
-                if (method.DeclaringType == typeof(UnityEngine.Random))
+                if (!instruction.IsStloc())
+                    throw Unsupported(copy, "doesn't keep the saved random state in a local");
+
+                savedStateStoreFollows = false;
+                yield return Become(instruction, OpCodes.Nop);
+            }
+            else if (instruction.operand is MethodInfo { DeclaringType: var type } method && type == typeof(UnityEngine.Random))
+            {
+                switch (method.Name)
                 {
-                    instruction.opcode = OpCodes.Call;
-                    instruction.operand = RandomReplacement(method);
-                }
-                else if (copies.TryGetValue(method, out var copy))
-                {
-                    instruction.opcode = OpCodes.Call;
-                    instruction.operand = copy;
+                    case "get_state": // getter for UnityEngine.Random.State
+                        savedStateStoreFollows = true;
+                        yield return Become(instruction, OpCodes.Nop);
+                        break;
+                    case "set_state": // setter for UnityEngine.Random.State
+                        yield return Become(instruction, OpCodes.Pop);
+                        break;
+                    case nameof(UnityEngine.Random.InitState):
+                        if (random != null)
+                            throw Unsupported(copy, "seeds a random generator while another is in use");
+
+                        var local = generator.DeclareLocal(typeof(Xorshift128));
+                        random = (OpCodes.Ldloc, local);
+                        yield return Become(instruction, OpCodes.Newobj, AccessTools.Constructor(typeof(Xorshift128), [typeof(int)]));
+                        yield return new CodeInstruction(OpCodes.Stloc, local);
+                        break;
+                    case nameof(UnityEngine.Random.Range):
+                        yield return LoadRandom(instruction);
+                        yield return Become(instruction, OpCodes.Call, method.ReturnType == typeof(int) ? IntRange : FloatRange);
+                        break;
+                    default:
+                        throw Unsupported(copy, $"uses UnityEngine.Random.{method.Name}");
                 }
             }
+            else if (instruction.operand is MethodInfo called && Copies.TryGetValue(called, out var calledCopy))
+            {
+                if (RandomArgument(calledCopy) != null)
+                    yield return LoadRandom(instruction);
+                yield return Become(instruction, OpCodes.Call, calledCopy);
+            }
+            else
+            {
+                yield return instruction;
+            }
+        }
 
-            yield return instruction;
+        // A branch may land on the call itself, with its arguments already pushed
+        CodeInstruction LoadRandom(CodeInstruction call)
+        {
+            if (random is not var (opcode, operand))
+                throw Unsupported(copy, "draws a random number without seeding first");
+
+            return new CodeInstruction(opcode, operand).MoveLabelsFrom(call);
         }
     }
 
-    private static MethodInfo RandomReplacement(MethodInfo method)
+    private static CodeInstruction Become(CodeInstruction instruction, OpCode opcode, object? operand = null)
     {
-        var name = method.Name switch
-        {
-            "get_state" => nameof(PreviewRandom.GetState),
-            "set_state" => nameof(PreviewRandom.SetState),
-            _ => method.Name,
-        };
-        var parameters = method.GetParameters().Select(parameter => parameter.ParameterType).ToArray();
-
-        return AccessTools.Method(typeof(PreviewRandom), name, parameters) is { } replacement && replacement.ReturnType == method.ReturnType
-            ? replacement
-            : throw new InvalidOperationException($"River placement uses UnityEngine.Random.{method.Name}, which the preview can't reproduce");
+        instruction.opcode = opcode;
+        instruction.operand = operand;
+        return instruction;
     }
 
-    // Stubs: Harmony replaces each body with a rewritten copy of the WorldGenerator method named without the suffix
+    private static int? RandomArgument(MethodBase method)
+    {
+        var index = Array.FindIndex(method.GetParameters(), parameter => parameter.ParameterType == typeof(Xorshift128));
+        return index < 0 ? null : index;
+    }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void PregenerateCopy(WorldGenerator instance) => throw Stub();
+    private static Exception Unsupported(MethodBase copy, string what)
+    {
+        return new InvalidOperationException($"{copy.Name} {what}, which the preview can't reproduce");
+    }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static List<WorldGenerator.River> PlaceRiversCopy(WorldGenerator instance) => throw Stub();
+    private static readonly MethodInfo FloatRange = ((Func<float, float, Xorshift128, float>)Range).Method;
+    private static readonly MethodInfo IntRange = ((Func<int, int, Xorshift128, int>)Range).Method;
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static List<WorldGenerator.River> PlaceStreamsCopy(WorldGenerator instance, bool isDN) => throw Stub();
+    private static float Range(float min, float max, Xorshift128 random) => random.Range(min, max);
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static bool FindStreamStartPointCopy(WorldGenerator instance, int iterations, float minHeight, float maxHeight,
-        out Vector2 p, out float starth, bool riverPreGen) => throw Stub();
+    private static int Range(int min, int max, Xorshift128 random) => random.Range(min, max);
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static bool FindStreamEndPointCopy(WorldGenerator instance, int iterations, float minHeight, float maxHeight,
-        Vector2 start, float minLength, float maxLength, out Vector2 end, bool riverPreGen) => throw Stub();
+    private static class Patches
+    {
+        [UsedImplicitly]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void Pregenerate(
+            WorldGenerator instance) => throw new InvalidOperationException();
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static int FindRandomRiverEndCopy(WorldGenerator instance, List<WorldGenerator.River> rivers, List<Vector2> points,
-        Vector2 p, float maxDistance, float heightLimit, float checkStep) => throw Stub();
+        [UsedImplicitly]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static List<WorldGenerator.River> PlaceRivers(
+            WorldGenerator instance) => throw new InvalidOperationException();
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void RenderRiversCopy(WorldGenerator instance, List<WorldGenerator.River> rivers, WorldGenerator.RiverAdd addRule) => throw Stub();
+        [UsedImplicitly]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static List<WorldGenerator.River> PlaceStreams(
+            WorldGenerator instance,
+            bool isDN) => throw new InvalidOperationException();
 
-    private static Exception Stub() => new InvalidOperationException("River placement copy was called before it was made");
+        [UsedImplicitly]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static bool FindStreamStartPoint(
+            WorldGenerator instance,
+            int iterations,
+            float minHeight,
+            float maxHeight,
+            out Vector2 p,
+            out float starth,
+            bool riverPreGen,
+            Xorshift128 random) => throw new InvalidOperationException();
+
+        [UsedImplicitly]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static bool FindStreamEndPoint(
+            WorldGenerator instance,
+            int iterations,
+            float minHeight,
+            float maxHeight,
+            Vector2 start,
+            float minLength,
+            float maxLength,
+            out Vector2 end,
+            bool riverPreGen,
+            Xorshift128 random) => throw new InvalidOperationException();
+
+        [UsedImplicitly]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static int FindRandomRiverEnd(
+            WorldGenerator instance,
+            List<WorldGenerator.River> rivers,
+            List<Vector2> points,
+            Vector2 p,
+            float maxDistance,
+            float heightLimit,
+            float checkStep,
+            Xorshift128 random) => throw new InvalidOperationException();
+
+        [UsedImplicitly]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static void RenderRivers(
+            WorldGenerator instance,
+            List<WorldGenerator.River> rivers,
+            WorldGenerator.RiverAdd addRule,
+            Xorshift128 random) => throw new InvalidOperationException();
+    }
 }

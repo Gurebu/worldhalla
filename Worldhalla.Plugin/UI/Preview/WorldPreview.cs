@@ -1,6 +1,6 @@
 namespace Worldhalla.Plugin.UI.Preview;
 
-public sealed class WorldPreview
+public sealed class WorldPreview(int previewSize)
 {
     public enum Phase
     {
@@ -13,7 +13,6 @@ public sealed class WorldPreview
 
     private const int PREVIEW_SUPERSAMPLING = 3;
 
-    private readonly int previewSize;
     private int version;
     private Func<PreviewGeneration>? wanted;
 
@@ -29,11 +28,6 @@ public sealed class WorldPreview
     private DetailsRender? pendingDetails;
 
     public PreviewRender? Main { get; private set; }
-
-    public WorldPreview(int previewSize)
-    {
-        this.previewSize = previewSize;
-    }
 
     public Phase CurrentPhase
     {
