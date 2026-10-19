@@ -21,6 +21,7 @@ internal sealed class SettinglessTestWorldgen : IWorldGenerator
 
     public string Name => "Settingless test";
 
+    public string Description => "Settingless test generator.";
 
     public string Version => "1.0.0";
 
@@ -37,6 +38,7 @@ internal sealed class TestWorldgen : IWorldGenerator, ISettingsHandler
 
     public string Name => "Test";
 
+    public string Description => "Test generator.";
 
     public string Version => "1.0.0";
 

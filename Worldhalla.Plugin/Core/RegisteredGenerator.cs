@@ -16,6 +16,8 @@ public sealed class RegisteredGenerator
 
         if (instance.Name == null)
             throw new InvalidOperationException("Name is null");
+        if (instance.Description == null)
+            throw new InvalidOperationException("Description is null");
     }
 
     public string Guid { get; }
@@ -29,6 +31,8 @@ public sealed class RegisteredGenerator
     public bool BiomeBlending { get; }
 
     public string Name => Instance.Name;
+
+    public string Description => Instance.Description;
 
     public ISettingsHandler? SettingsHandler => Instance as ISettingsHandler;
 

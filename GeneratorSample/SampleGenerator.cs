@@ -11,6 +11,8 @@ public class SampleGenerator : IWorldGenerator, ISettingsHandler
 {
     public string Name => GeneratorSamplePlugin.NAME;
 
+    public string Description => "Noise-shaped islands of adjustable scale around a meadows spawn island.";
+
     public string Moniker => "GSP";
 
     public string Version => GeneratorSamplePlugin.VERSION;

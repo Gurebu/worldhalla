@@ -27,6 +27,7 @@ public class WorldCreationDialog : MonoBehaviour
     private const float CAPTION_OUTLINE_WIDTH = 0.35f;
     private const float GAMEPAD_PAN_PIXELS_PER_SECOND = 600f;
     private const float GAMEPAD_DEAD_ZONE = 0.2f;
+    private const float GAMEPAD_SCROLL_PIXELS_PER_SECOND = 150f;
 
     private const string SPOILER_HEADER = "$wh_spoiler_header";
     private const string SPOILER_TEXT = "$wh_spoiler_text";
@@ -35,11 +36,13 @@ public class WorldCreationDialog : MonoBehaviour
     private const string FAILED = "$wh_preview_failed";
     private const string LOCATIONS = "$wh_preview_locations";
     private const string LOCATIONS_PROGRESS = "$wh_preview_locations_progress";
+    private const string VANILLA_DESCRIPTION = "$wh_vanilla_description";
 
     public FejdStartup startup = null!;
     public GuiInputField nameField = null!;
     public GuiInputField seedField = null!;
     public TMP_Dropdown generatorDropdown = null!;
+    public ScrollRect generatorDescription = null!;
     public TMP_Text worldSettingsSummary = null!;
     public TMP_Text generatorSettingsSummary = null!;
     public RawImage previewImage = null!;
@@ -72,6 +75,7 @@ public class WorldCreationDialog : MonoBehaviour
     public SettingsDialog settingsDialog = null!;
 
     private NavigationGrid navigation = null!;
+    private UIGroupHandler? group;
 
     private WorldPreview preview = null!;
     private PreviewTexture? previewTexture;
@@ -116,6 +120,7 @@ public class WorldCreationDialog : MonoBehaviour
         navigation = new NavigationGrid(
             [[nameField], [seedField, newSeedButton], [generatorDropdown], [worldSettingsButton], [generatorSettingsButton]],
             [[previewButton], [hideButton, detailsButton], [doneButton, cancelButton]]);
+        group = GetComponent<UIGroupHandler>();
 
         preview = new WorldPreview(previewSize);
         previewTexture = new PreviewTexture(previewSize);
@@ -195,6 +200,7 @@ public class WorldCreationDialog : MonoBehaviour
         preview.Tick();
         ReportFailure();
         NavigateDetails();
+        ScrollDescription();
         RefreshPreview();
         RefreshDetails();
         RefreshButtons();
@@ -215,6 +221,8 @@ public class WorldCreationDialog : MonoBehaviour
         var worldgen = SelectedWorldgen;
         settings = worldgen?.DefaultSettings;
 
+        generatorDescription.content.GetComponent<TMP_Text>().text = worldgen != null ? worldgen.Description : Translations.Get(VANILLA_DESCRIPTION);
+        generatorDescription.content.anchoredPosition = Vector2.zero;
         worldSettingsSummary.text = "";
         generatorSettingsSummary.text = settings?.Summary() ?? "";
 
@@ -454,6 +462,21 @@ public class WorldCreationDialog : MonoBehaviour
         var zoomIn = ZInput.GetButtonDown("JoyMapZoomIn");
         if (zoomIn || ZInput.GetButtonDown("JoyMapZoomOut"))
             detailsView = detailsView.Zoomed(0.5f * PreviewView.SIZE * Vector2.one, zoomIn);
+    }
+
+    // The right stick, as vanilla scrolls its changelog
+    private void ScrollDescription()
+    {
+        if (group is { IsActive: false })
+            return;
+
+        var stick = ZInput.GetJoyRightStickY();
+        var overflow = generatorDescription.content.rect.height - generatorDescription.viewport.rect.height;
+        if (Mathf.Abs(stick) <= GAMEPAD_DEAD_ZONE || overflow <= 0f)
+            return;
+
+        var step = stick * GAMEPAD_SCROLL_PIXELS_PER_SECOND * Time.unscaledDeltaTime / overflow;
+        generatorDescription.verticalNormalizedPosition = Mathf.Clamp01(generatorDescription.verticalNormalizedPosition - step);
     }
 
     private Vector2 ToDetailsPixels(Vector2 local)

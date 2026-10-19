@@ -36,6 +36,12 @@ public interface IWorldGenerator
     string Moniker { get; }
     
     /**
+     * A description of what kind of worlds your generator produces.
+     * Aim for not much more than 120 characters.
+     */
+    string Description { get; }
+    
+    /**
      * Used for networking. If peers with your generator have different values of
      * this field, they can not play with each other.
      */

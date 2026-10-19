@@ -15,6 +15,8 @@ internal sealed class LabelledWorldgen : IWorldGenerator
     public string Moniker => "LABELLED";
 
     public string Name => "Labelled";
+
+    public string Description => "Labelled test generator.";
     
     public string Version => "1.0.0";
 
@@ -30,6 +32,8 @@ internal sealed class UnlabelledWorldgen : IWorldGenerator
     public string Moniker => "UNLABELLED";
 
     public string Name => "Unlabelled";
+
+    public string Description => "Unlabelled test generator.";
     
     public string Version => "1.0.0";
 
@@ -48,6 +52,8 @@ internal sealed class ThrowingWorldgen : IWorldGenerator
     public string Moniker => "THROWING";
 
     public string Name => "Throwing";
+
+    public string Description => "Throwing test generator.";
     
     public string Version => "1.0.0";
 
@@ -65,6 +71,8 @@ internal sealed class ThrowingVersionWorldgen : IWorldGenerator
 
     public string Name => "Throwing version";
 
+    public string Description => "Throwing version test generator.";
+
     public string Version => throw new System.Exception("this mod is broken");
 
     public IWorldGenerator.Feature[] Features => System.Array.Empty<IWorldGenerator.Feature>();
@@ -78,6 +86,8 @@ internal sealed class BlankGuidWorldgen : IWorldGenerator
     public string Moniker => "BLANK";
 
     public string Name => "Blank GUID";
+
+    public string Description => "Blank GUID test generator.";
 
     public string Version => "1.0.0";
 
@@ -94,6 +104,8 @@ internal sealed class OversizedDefaultsWorldgen : IWorldGenerator, ISettingsHand
     public string Moniker => "OVERSIZED";
 
     public string Name => "Oversized defaults";
+
+    public string Description => "Oversized defaults test generator.";
 
     public string Version => "1.0.0";
 

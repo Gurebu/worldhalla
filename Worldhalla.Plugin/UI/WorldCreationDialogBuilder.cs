@@ -13,12 +13,16 @@ public static class WorldCreationDialogBuilder
     private const string DETAILS_NAME = "WorldhallaPreviewDetails";
     private const string SETTINGS_NAME = "WorldhallaSettings";
 
-    private const float PANEL_WIDTH = 860f;
-    private const float PANEL_HEIGHT = 540f;
-    private const float CONTENT_TOP = 215f;
-    private const float COLUMN1_X = -220f;
+    private const float DESCRIPTION_HEIGHT = 56f;
+    private const float DESCRIPTION_ROW = DESCRIPTION_HEIGHT + ROW_GAP;
+
+    // The preview is square and as tall as column 1, so the panel grows as wide as column 1 grows tall
+    private const float PANEL_WIDTH = 860f + DESCRIPTION_ROW;
+    private const float PANEL_HEIGHT = 540f + DESCRIPTION_ROW;
+    private const float CONTENT_TOP = 215f + DESCRIPTION_ROW / 2f;
+    private const float COLUMN1_X = -220f - DESCRIPTION_ROW / 2f;
     private const float COLUMN1_WIDTH = 360f;
-    private const float COLUMN2_RIGHT = 395f;
+    private const float COLUMN2_RIGHT = 395f + DESCRIPTION_ROW / 2f;
     private const float LABEL_HEIGHT = 26f;
     private const float FIELD_HEIGHT = 35f;
     private const float SUMMARY_HEIGHT = 85f;
@@ -107,6 +111,7 @@ public static class WorldCreationDialogBuilder
         dialog.generatorDropdown = NewDropdown(startup, panel);
         var dropdownRect = (RectTransform)dialog.generatorDropdown.transform;
         PlaceField(dropdownRect, panel, dropdownRect.sizeDelta.y, ref y);
+        dialog.generatorDescription = NewDescription(startup, nameField, panel, ref y);
 
         dialog.worldSettingsButton = NewEditableLabel(labelTemplate, cancel, panel, "worldSettings", "$wh_world_settings", ref y);
         dialog.worldSettingsSummary = NewSummary(nameField, panel, "WorldSettingsSummary", ref y);
@@ -515,6 +520,60 @@ public static class WorldCreationDialogBuilder
 
     private static TMP_Text NewSummary(TMP_InputField fieldTemplate, RectTransform panel, string name, ref float y)
     {
+        var text = NewTextBox(fieldTemplate, panel, name, SUMMARY_HEIGHT, ref y);
+        text.overflowMode = TextOverflowModes.Ellipsis;
+        return text;
+    }
+
+    private static ScrollRect NewDescription(FejdStartup startup, TMP_InputField fieldTemplate, RectTransform panel, ref float y)
+    {
+        var text = NewTextBox(fieldTemplate, panel, "GeneratorDescription", DESCRIPTION_HEIGHT, ref y);
+        text.overflowMode = TextOverflowModes.Overflow;
+        text.richText = false;
+
+        var content = text.rectTransform;
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = Vector2.one;
+        content.pivot = new Vector2(0.5f, 1f);
+        content.offsetMin = content.offsetMax = Vector2.zero;
+        text.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        var viewport = (RectTransform)content.parent;
+        if (viewport.GetComponent<RectMask2D>() == null)
+            viewport.gameObject.AddComponent<RectMask2D>();
+
+        var box = viewport.parent;
+        var scrollbar = Object.Instantiate(startup.m_patchLogScroll.gameObject, box).GetComponent<Scrollbar>();
+        scrollbar.name = "Scrollbar";
+        StripLocalization(scrollbar.gameObject);
+        scrollbar.onValueChanged = new Scrollbar.ScrollEvent();
+        scrollbar.navigation = new Navigation { mode = Navigation.Mode.None };
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+
+        var scrollbarRect = (RectTransform)scrollbar.transform;
+        var scrollbarWidth = scrollbarRect.rect.width;
+        scrollbarRect.anchorMin = new Vector2(1f, 0f);
+        scrollbarRect.anchorMax = Vector2.one;
+        scrollbarRect.pivot = new Vector2(1f, 0.5f);
+        scrollbarRect.sizeDelta = new Vector2(scrollbarWidth, 0f);
+        scrollbarRect.anchoredPosition = Vector2.zero;
+        text.margin += new Vector4(0f, 0f, scrollbarWidth, 0f);
+
+        var scroll = box.gameObject.AddComponent<ScrollRect>();
+        scroll.viewport = viewport;
+        scroll.content = content;
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.inertia = false;
+        scroll.scrollSensitivity = text.fontSize;
+        scroll.verticalScrollbar = scrollbar;
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        return scroll;
+    }
+
+    private static TMP_Text NewTextBox(TMP_InputField fieldTemplate, RectTransform panel, string name, float height, ref float y)
+    {
         var gameObject = Object.Instantiate(fieldTemplate.gameObject, panel);
         gameObject.name = name;
         StripLocalization(gameObject);
@@ -527,14 +586,13 @@ public static class WorldCreationDialogBuilder
 
         text.text = "";
         text.textWrappingMode = TextWrappingModes.Normal;
-        text.overflowMode = TextOverflowModes.Ellipsis;
         text.horizontalAlignment = HorizontalAlignmentOptions.Left;
         text.verticalAlignment = VerticalAlignmentOptions.Top;
         text.enableAutoSizing = false;
         text.fontSize *= SUMMARY_FONT_SCALE;
 
-        Place(gameObject.transform, COLUMN1_X, y, COLUMN1_WIDTH, SUMMARY_HEIGHT);
-        y -= SUMMARY_HEIGHT + ROW_GAP;
+        Place(gameObject.transform, COLUMN1_X, y, COLUMN1_WIDTH, height);
+        y -= height + ROW_GAP;
         return text;
     }
 
