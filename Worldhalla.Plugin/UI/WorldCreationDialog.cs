@@ -39,6 +39,7 @@ public class WorldCreationDialog : MonoBehaviour
     private const string VANILLA_DESCRIPTION = "$wh_vanilla_description";
 
     public FejdStartup startup = null!;
+    public GuiElementPalette palette = null!;
     public GuiInputField nameField = null!;
     public GuiInputField seedField = null!;
     public TMP_Dropdown generatorDropdown = null!;
@@ -71,7 +72,6 @@ public class WorldCreationDialog : MonoBehaviour
     public Button detailsCloseButton = null!;
     public Button locationsButton = null!;
     public GameObject locationsNote = null!;
-    public TMP_Text captionTemplate = null!;
     public SettingsDialog settingsDialog = null!;
 
     private NavigationGrid navigation = null!;
@@ -378,12 +378,8 @@ public class WorldCreationDialog : MonoBehaviour
 
     private void AddCaption(RectTransform icon, string text)
     {
-        var caption = Instantiate(captionTemplate, icon, false);
-        caption.name = "Caption";
-        if (caption.GetComponent<Localize>() is { } localize)
-            DestroyImmediate(localize);
-
-        caption.fontSharedMaterial = CaptionMaterial();
+        var caption = palette.Label(icon, "Caption", "");
+        caption.fontSharedMaterial = CaptionMaterial(caption);
         caption.text = text;
         caption.fontSize = CAPTION_FONT_SIZE;
         caption.horizontalAlignment = HorizontalAlignmentOptions.Center;
@@ -398,12 +394,12 @@ public class WorldCreationDialog : MonoBehaviour
         rect.anchoredPosition = Vector2.zero;
     }
 
-    private Material CaptionMaterial()
+    private Material CaptionMaterial(TMP_Text caption)
     {
         if (captionMaterial != null)
             return captionMaterial;
 
-        captionMaterial = new Material(captionTemplate.fontSharedMaterial);
+        captionMaterial = new Material(caption.fontSharedMaterial);
         // Dilating the face by the outline's width keeps the outline outside the glyph, as the game's own outlined fonts do
         captionMaterial.SetFloat(ShaderUtilities.ID_FaceDilate, CAPTION_OUTLINE_WIDTH);
         captionMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, CAPTION_OUTLINE_WIDTH);

@@ -3,7 +3,6 @@ using System.Reflection.Emit;
 using HarmonyLib;
 using Worldhalla.Plugin.Core;
 using Worldhalla.Plugin.Core.Extensions;
-using Worldhalla.Plugin.UI;
 
 namespace Worldhalla.Plugin.UI.Patches;
 
@@ -24,11 +23,16 @@ public static class CreateWorldPanelPatch
         startup.m_world.SetGenerator(new CompatibleGeneratorBinding(worldgen, dialog.WorldhallaSettings, dialog.Settings));
     }
 
-    // Built before the create-world panel is first shown, so the vanilla widgets moved into it wake up under their new parent
-    [HarmonyPostfix, HarmonyPatch(nameof(FejdStartup.Awake))]
-    private static void Awake(FejdStartup __instance)
+    [HarmonyPrefix, HarmonyPriority(Priority.First), HarmonyPatch(nameof(FejdStartup.Awake))]
+    private static void BeforeAwake(FejdStartup __instance, out (VanillaCreateWorldPanel vanilla, GuiElementPalette palette) __state)
     {
-        WorldCreationDialogBuilder.Build(__instance);
+        __state = (new VanillaCreateWorldPanel(__instance), new GuiElementPalette(__instance));
+    }
+
+    [HarmonyPostfix, HarmonyPatch(nameof(FejdStartup.Awake))]
+    private static void Awake(FejdStartup __instance, (VanillaCreateWorldPanel vanilla, GuiElementPalette palette) __state)
+    {
+        WorldCreationDialogBuilder.Build(__instance, __state.vanilla, __state.palette);
     }
 
     [HarmonyPostfix, HarmonyPatch(nameof(FejdStartup.OnWorldNew))]

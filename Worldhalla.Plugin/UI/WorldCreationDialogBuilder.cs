@@ -1,9 +1,7 @@
-using GUIFramework;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Worldhalla.Plugin.UI.Preview;
-using Object = UnityEngine.Object;
 
 namespace Worldhalla.Plugin.UI;
 
@@ -29,12 +27,10 @@ public static class WorldCreationDialogBuilder
     private const float MAIN_BUTTON_HEIGHT = 45f;
     private const float ROW_GAP = 10f;
     private const float BUTTON_GAP = 8f;
-    private const float SUMMARY_FONT_SCALE = 0.75f;
     private const float CLOSE_BUTTON_WIDTH = 136f;
     private const float LOCATIONS_BUTTON_WIDTH = 200f;
     private const float EDIT_BUTTON_WIDTH = 80f;
     private const float ICON_BUTTON_SIZE = FIELD_HEIGHT;
-    private const string REFRESH_ICON_CHILD = "Image";
     private const int OVERLAY_GROUP_PRIORITY = 2;
     private const float SELECTION_RING_WIDTH = 3f * RING_WIDTH;
     private const string GAMEPAD_BACK = "ButtonB";
@@ -63,27 +59,21 @@ public static class WorldCreationDialogBuilder
     private static readonly Color ErrorColor = new(0.93f, 0.45f, 0.35f, 1f);
     private const float ERROR_FONT_SCALE = 0.8f;
 
-    public static WorldCreationDialog Build(FejdStartup startup)
+    public static WorldCreationDialog Build(FejdStartup startup, VanillaCreateWorldPanel vanilla, GuiElementPalette palette)
     {
         var root = startup.m_createWorldPanel.transform;
-        var vanillaPanel = (RectTransform)startup.m_newWorldName.transform.parent;
         var nameField = startup.m_newWorldName;
         var seedField = startup.m_newWorldSeed;
         var done = startup.m_newWorldDone;
-        var cancel = vanillaPanel.Find("Cancel").GetComponent<Button>();
+        var cancel = vanilla.Cancel;
 
-        var panel = (RectTransform)Object.Instantiate(vanillaPanel.gameObject, root).transform;
-        panel.name = PANEL_NAME;
+        var panel = vanilla.Frame(root, PANEL_NAME);
         panel.sizeDelta = new Vector2(PANEL_WIDTH, PANEL_HEIGHT);
-        vanillaPanel.gameObject.SetActive(false);
-
-        foreach (var cloned in new[] { nameField.name, seedField.name, done.name, cancel.name, "GenerateSeed" })
-            DestroyChild(panel, cloned);
-
-        var labelTemplate = panel.Find("seed").GetComponent<TMP_Text>();
+        vanilla.HideOriginal();
 
         var dialog = panel.gameObject.AddComponent<WorldCreationDialog>();
         dialog.startup = startup;
+        dialog.palette = palette;
         dialog.nameField = nameField;
         dialog.seedField = seedField;
         dialog.doneButton = done;
@@ -91,33 +81,33 @@ public static class WorldCreationDialogBuilder
 
         var y = CONTENT_TOP;
 
-        PlaceLabel(panel.Find("name"), ref y);
-        if (panel.Find("name_tip") is RectTransform nameTip)
+        PlaceLabel(palette.Label(panel, "name", vanilla.NameLabelKey).transform, ref y);
+        if (vanilla.NameTip(panel) is { } nameTip)
         {
-            Place(nameTip, COLUMN1_X, y + LABEL_HEIGHT, COLUMN1_WIDTH, LABEL_HEIGHT);
-            nameTip.GetComponent<TMP_Text>().horizontalAlignment = HorizontalAlignmentOptions.Right;
+            Place(nameTip.transform, COLUMN1_X, y + LABEL_HEIGHT, COLUMN1_WIDTH, LABEL_HEIGHT);
+            nameTip.horizontalAlignment = HorizontalAlignmentOptions.Right;
         }
         PlaceField(nameField.transform, panel, FIELD_HEIGHT, ref y);
 
-        PlaceLabel(panel.Find("seed"), ref y);
+        PlaceLabel(palette.Label(panel, "seed", vanilla.SeedLabelKey).transform, ref y);
         seedField.transform.SetParent(panel, false);
         var seedWidth = COLUMN1_WIDTH - ICON_BUTTON_SIZE - BUTTON_GAP;
         Place(seedField.transform, COLUMN1_X - (COLUMN1_WIDTH - seedWidth) / 2f, y, seedWidth, FIELD_HEIGHT);
-        dialog.newSeedButton = NewButton(GetRefreshButton(startup), panel, "NewSeed", null, 1f);
+        dialog.newSeedButton = palette.IconButton(panel, "NewSeed");
         Place(dialog.newSeedButton.transform, COLUMN1_X + (COLUMN1_WIDTH - ICON_BUTTON_SIZE) / 2f, y, ICON_BUTTON_SIZE, ICON_BUTTON_SIZE);
         y -= FIELD_HEIGHT + ROW_GAP;
 
-        PlaceLabel(NewLabel(labelTemplate, panel, "generator", "$wh_generator").transform, ref y);
-        dialog.generatorDropdown = NewDropdown(startup, panel);
+        PlaceLabel(palette.Label(panel, "generator", "$wh_generator").transform, ref y);
+        dialog.generatorDropdown = palette.Dropdown(panel, "GeneratorDropdown");
         var dropdownRect = (RectTransform)dialog.generatorDropdown.transform;
         PlaceField(dropdownRect, panel, dropdownRect.sizeDelta.y, ref y);
-        dialog.generatorDescription = NewDescription(startup, nameField, panel, ref y);
+        dialog.generatorDescription = NewDescription(palette, panel, ref y);
 
-        dialog.worldSettingsButton = NewEditableLabel(labelTemplate, cancel, panel, "worldSettings", "$wh_world_settings", ref y);
-        dialog.worldSettingsSummary = NewSummary(nameField, panel, "WorldSettingsSummary", ref y);
+        dialog.worldSettingsButton = NewEditableLabel(palette, panel, "worldSettings", "$wh_world_settings", ref y);
+        dialog.worldSettingsSummary = NewSummary(palette, panel, "WorldSettingsSummary", ref y);
 
-        dialog.generatorSettingsButton = NewEditableLabel(labelTemplate, cancel, panel, "generatorSettings", "$wh_generator_settings", ref y);
-        dialog.generatorSettingsSummary = NewSummary(nameField, panel, "GeneratorSettingsSummary", ref y);
+        dialog.generatorSettingsButton = NewEditableLabel(palette, panel, "generatorSettings", "$wh_generator_settings", ref y);
+        dialog.generatorSettingsSummary = NewSummary(palette, panel, "GeneratorSettingsSummary", ref y);
         var contentBottom = y + ROW_GAP;
 
         // Column 2 ends level with column 1, and the preview takes whatever height its buttons leave over
@@ -127,13 +117,13 @@ public static class WorldCreationDialogBuilder
         var column2X = COLUMN2_RIGHT - column2Width / 2f;
 
         y = CONTENT_TOP;
-        BuildPreview(dialog, panel, labelTemplate, column2X, previewSize, ref y);
+        BuildPreview(dialog, panel, palette, column2X, previewSize, ref y);
 
         var previewBottom = y + ROW_GAP;
-        dialog.hideButton = NewIconButton(startup, panel, "HidePreview", Icons.CrossedEye);
+        dialog.hideButton = palette.IconButton(panel, "HidePreview", Icons.CrossedEye);
         Place(dialog.hideButton.transform, column2X - (column2Width - ICON_BUTTON_SIZE) / 2f, previewBottom + ICON_BUTTON_SIZE,
             ICON_BUTTON_SIZE, ICON_BUTTON_SIZE);
-        dialog.detailsButton = NewIconButton(startup, panel, "PreviewDetails", Icons.Magnifier);
+        dialog.detailsButton = palette.IconButton(panel, "PreviewDetails", Icons.Magnifier);
         Place(dialog.detailsButton.transform, column2X + (column2Width - ICON_BUTTON_SIZE) / 2f, previewBottom + ICON_BUTTON_SIZE,
             ICON_BUTTON_SIZE, ICON_BUTTON_SIZE);
 
@@ -148,14 +138,14 @@ public static class WorldCreationDialogBuilder
         if (panel.GetComponent<UIGroupHandler>() is { } group)
             group.m_defaultElement = nameField.gameObject;
 
-        BuildDetails(dialog, root, panel, labelTemplate, cancel);
-        dialog.settingsDialog = BuildSettingsDialog(startup, root, panel, labelTemplate, cancel);
+        BuildDetails(dialog, root, palette);
+        dialog.settingsDialog = BuildSettingsDialog(root, palette);
 
         dialog.Initialize();
         return dialog;
     }
 
-    private static void BuildPreview(WorldCreationDialog dialog, RectTransform panel, TMP_Text labelTemplate, float x, int size, ref float y)
+    private static void BuildPreview(WorldCreationDialog dialog, RectTransform panel, GuiElementPalette palette, float x, int size, ref float y)
     {
         dialog.previewSize = size;
         dialog.discTexture = Shapes.Disc(size, DiscColor);
@@ -180,9 +170,9 @@ public static class WorldCreationDialogBuilder
         spinner.rectTransform.anchoredPosition = new Vector2(0f, SPINNER_DISPLAY_SIZE);
         dialog.spinner = spinner.rectTransform;
 
-        BuildProgress(dialog, preview.transform, labelTemplate);
+        BuildProgress(dialog, preview.transform, palette);
 
-        var label = NewLabel(labelTemplate, preview.transform, "Label", "");
+        var label = palette.Label(preview.transform, "Label", "");
         label.horizontalAlignment = HorizontalAlignmentOptions.Center;
         label.verticalAlignment = VerticalAlignmentOptions.Middle;
         label.raycastTarget = false;
@@ -190,7 +180,7 @@ public static class WorldCreationDialogBuilder
         dialog.previewLabel = label;
     }
 
-    private static void BuildProgress(WorldCreationDialog dialog, Transform parent, TMP_Text labelTemplate)
+    private static void BuildProgress(WorldCreationDialog dialog, Transform parent, GuiElementPalette palette)
     {
         var progress = new GameObject("Progress", typeof(RectTransform));
         progress.transform.SetParent(parent, false);
@@ -216,7 +206,7 @@ public static class WorldCreationDialogBuilder
         Stretch(fill.rectTransform);
         dialog.progressFill = fill;
 
-        var percent = NewLabel(labelTemplate, rect, "Percent", "");
+        var percent = palette.Label(rect, "Percent", "");
         percent.enableAutoSizing = false;
         percent.fontSize *= PROGRESS_FONT_SCALE;
         percent.horizontalAlignment = HorizontalAlignmentOptions.Center;
@@ -226,7 +216,7 @@ public static class WorldCreationDialogBuilder
         dialog.progressPercent = percent;
     }
 
-    private static void BuildDetails(WorldCreationDialog dialog, Transform root, RectTransform panel, TMP_Text labelTemplate, Button cancel)
+    private static void BuildDetails(WorldCreationDialog dialog, Transform root, GuiElementPalette palette)
     {
         var overlay = new GameObject(DETAILS_NAME, typeof(RectTransform), typeof(Image));
         overlay.transform.SetParent(root, false);
@@ -238,12 +228,11 @@ public static class WorldCreationDialogBuilder
         frameRect.SetParent(overlay.transform, false);
         frameRect.sizeDelta = new Vector2(DETAILS_WIDTH, DETAILS_HEIGHT);
 
-        if (panel.Find("bkg") is { } background)
-            Object.Instantiate(background.gameObject, frameRect).name = "bkg";
+        palette.Background(frameRect);
 
         var y = DETAILS_HEIGHT / 2f - DETAILS_PADDING;
 
-        var title = NewLabel(labelTemplate, frameRect, "topic", "$wh_preview_title");
+        var title = palette.Label(frameRect, "topic", "$wh_preview_title");
         title.horizontalAlignment = HorizontalAlignmentOptions.Center;
         Place(title.transform, 0f, y, DETAILS_MAP_SIZE, DETAILS_TITLE_HEIGHT);
         y -= DETAILS_TITLE_HEIGHT + BUTTON_GAP;
@@ -260,19 +249,19 @@ public static class WorldCreationDialogBuilder
         Stretch(ring.rectTransform);
         y -= DETAILS_MAP_SIZE + BUTTON_GAP;
 
-        var close = NewButton(cancel, frameRect, "Close", "$wh_preview_close", 1f, GAMEPAD_BACK);
-        var locations = NewButton(cancel, frameRect, "Locations", "$wh_preview_locations", 1f, GAMEPAD_ACTION);
+        var close = palette.Button(frameRect, "Close", "$wh_preview_close", GAMEPAD_BACK);
+        var locations = palette.Button(frameRect, "Locations", "$wh_preview_locations", GAMEPAD_ACTION);
         close.navigation = locations.navigation = new Navigation { mode = Navigation.Mode.None };
         dialog.detailsGroup = NewOverlayGroup(overlay);
         Place(locations.transform, -(LOCATIONS_BUTTON_WIDTH + BUTTON_GAP) / 2f, y, LOCATIONS_BUTTON_WIDTH, MAIN_BUTTON_HEIGHT);
         Place(close.transform, (CLOSE_BUTTON_WIDTH + BUTTON_GAP) / 2f, y, CLOSE_BUTTON_WIDTH, MAIN_BUTTON_HEIGHT);
 
-        var note = NewLabel(labelTemplate, frameRect, "LocationsNote", "$wh_preview_locations_lpa");
+        var note = palette.Label(frameRect, "LocationsNote", "$wh_preview_locations_lpa");
         note.horizontalAlignment = HorizontalAlignmentOptions.Right;
         note.verticalAlignment = VerticalAlignmentOptions.Middle;
         note.textWrappingMode = TextWrappingModes.Normal;
         note.enableAutoSizing = false;
-        note.fontSize *= SUMMARY_FONT_SCALE;
+        note.fontSize *= GuiElementPalette.SMALL_FONT_SCALE;
         note.raycastTarget = false;
         var noteRight = -(LOCATIONS_BUTTON_WIDTH + BUTTON_GAP) / 2f - LOCATIONS_BUTTON_WIDTH / 2f - BUTTON_GAP;
         var noteWidth = DETAILS_MAP_SIZE / 2f + noteRight;
@@ -287,12 +276,11 @@ public static class WorldCreationDialogBuilder
         dialog.detailsCloseButton = close;
         dialog.locationsButton = locations;
         dialog.locationsNote = note.gameObject;
-        dialog.captionTemplate = labelTemplate;
 
         overlay.SetActive(false);
     }
 
-    private static SettingsDialog BuildSettingsDialog(FejdStartup startup, Transform root, RectTransform panel, TMP_Text labelTemplate, Button cancel)
+    private static SettingsDialog BuildSettingsDialog(Transform root, GuiElementPalette palette)
     {
         var overlay = new GameObject(SETTINGS_NAME, typeof(RectTransform), typeof(Image));
         overlay.transform.SetParent(root, false);
@@ -302,31 +290,30 @@ public static class WorldCreationDialogBuilder
         var frame = (RectTransform)new GameObject("Frame", typeof(RectTransform)).transform;
         frame.SetParent(overlay.transform, false);
 
-        if (panel.Find("bkg") is { } background)
-            Object.Instantiate(background.gameObject, frame).name = "bkg";
+        palette.Background(frame);
 
         var rows = (RectTransform)new GameObject("Rows", typeof(RectTransform)).transform;
         rows.SetParent(frame, false);
         Stretch(rows);
 
-        var title = NewLabel(labelTemplate, frame, "topic", "");
+        var title = palette.Label(frame, "topic", "");
         title.horizontalAlignment = HorizontalAlignmentOptions.Center;
 
-        var error = NewLabel(labelTemplate, frame, "error", "");
+        var error = palette.Label(frame, "error", "");
         error.horizontalAlignment = HorizontalAlignmentOptions.Center;
         error.verticalAlignment = VerticalAlignmentOptions.Middle;
         error.textWrappingMode = TextWrappingModes.Normal;
         error.color = ErrorColor;
         error.fontSize *= ERROR_FONT_SCALE;
 
-        var rowLabel = NewLabel(labelTemplate, frame, "LabelTemplate", "");
+        var rowLabel = palette.Label(frame, "LabelTemplate", "");
         rowLabel.horizontalAlignment = HorizontalAlignmentOptions.Left;
         rowLabel.gameObject.SetActive(false);
 
-        var dropdown = NewDropdown(startup, frame);
+        var dropdown = palette.Dropdown(frame, "DropdownTemplate");
         dropdown.gameObject.SetActive(false);
 
-        var textField = NewTextField(startup.m_newWorldSeed, frame);
+        var textField = palette.TextField(frame, "TextField");
         textField.gameObject.SetActive(false);
 
         var settings = overlay.AddComponent<SettingsDialog>();
@@ -334,8 +321,8 @@ public static class WorldCreationDialogBuilder
         settings.title = title;
         settings.rows = rows;
         settings.error = error;
-        settings.okButton = NewButton(cancel, frame, "Ok", "$wh_settings_ok", 1f, GAMEPAD_CONFIRM);
-        settings.cancelButton = NewButton(cancel, frame, "Cancel", "$wh_settings_cancel", 1f, GAMEPAD_BACK);
+        settings.okButton = palette.Button(frame, "Ok", "$wh_settings_ok", GAMEPAD_CONFIRM);
+        settings.cancelButton = palette.Button(frame, "Cancel", "$wh_settings_cancel", GAMEPAD_BACK);
         settings.group = NewOverlayGroup(overlay);
         settings.labelTemplate = rowLabel;
         settings.dropdownTemplate = dropdown;
@@ -352,13 +339,13 @@ public static class WorldCreationDialogBuilder
     }
 
     // Created after its label so it draws above it and gets the clicks the full-width label would otherwise take
-    private static Button NewEditableLabel(TMP_Text labelTemplate, Button buttonTemplate, RectTransform panel, string name, string text, ref float y)
+    private static Button NewEditableLabel(GuiElementPalette palette, RectTransform panel, string name, string text, ref float y)
     {
         var top = y;
-        var label = NewLabel(labelTemplate, panel, name, text);
+        var label = palette.Label(panel, name, text);
         PlaceLabel(label.transform, ref y);
 
-        var button = NewButton(buttonTemplate, panel, name + "Edit", "$wh_edit", 1f);
+        var button = palette.Button(panel, name + "Edit", "$wh_edit");
         Place(button.transform, COLUMN1_X + (COLUMN1_WIDTH - EDIT_BUTTON_WIDTH) / 2f, top, EDIT_BUTTON_WIDTH, LABEL_HEIGHT);
 
         var buttonText = button.GetComponentInChildren<TMP_Text>(true);
@@ -396,36 +383,6 @@ public static class WorldCreationDialogBuilder
         rect.offsetMin = rect.offsetMax = Vector2.zero;
     }
 
-    private static void DestroyChild(Transform parent, string name)
-    {
-        if (parent.Find(name) is { } child)
-            Object.DestroyImmediate(child.gameObject);
-    }
-
-    private static void StripLocalization(GameObject gameObject)
-    {
-        foreach (var localize in gameObject.GetComponentsInChildren<Localize>(true))
-            Object.DestroyImmediate(localize);
-    }
-
-    private static void SetText(TMP_Text label, string text)
-    {
-        label.text = text;
-        if (text.StartsWith("$"))
-            label.gameObject.AddComponent<Localize>();
-    }
-
-    private static TMP_Text NewLabel(TMP_Text template, Transform parent, string name, string text)
-    {
-        var label = Object.Instantiate(template.gameObject, parent);
-        label.name = name;
-        StripLocalization(label);
-
-        var component = label.GetComponent<TMP_Text>();
-        SetText(component, text);
-        return component;
-    }
-
     private static RawImage NewRawImage(Transform parent, string name, Texture texture, bool raycastTarget)
     {
         var gameObject = new GameObject(name, typeof(RectTransform), typeof(RawImage));
@@ -435,18 +392,6 @@ public static class WorldCreationDialogBuilder
         image.texture = texture;
         image.raycastTarget = raycastTarget;
         return image;
-    }
-
-    private static Button GetRefreshButton(FejdStartup startup)
-    {
-        return startup.m_serverListPanel.GetComponentInChildren<ServerListGui>(true).m_serverRefreshButton;
-    }
-
-    private static Button NewIconButton(FejdStartup startup, Transform parent, string name, Sprite icon)
-    {
-        var button = NewButton(GetRefreshButton(startup), parent, name, null, 1f);
-        button.transform.Find(REFRESH_ICON_CHILD).GetComponent<Image>().sprite = icon;
-        return button;
     }
 
     private static ColorBlock ShownWhenSelected(ColorBlock colors)
@@ -466,181 +411,29 @@ public static class WorldCreationDialogBuilder
         return group;
     }
 
-    // The template must carry a UIGamePad when a gamepad button is given; its hint is relabelled for that button
-    private static Button NewButton(Button template, Transform parent, string name, string? text, float fontScale, string? gamepadButton = null)
+    private static TMP_Text NewSummary(GuiElementPalette palette, RectTransform panel, string name, ref float y)
     {
-        var gameObject = Object.Instantiate(template.gameObject, parent);
-        gameObject.name = name;
-        StripLocalization(gameObject);
-
-        foreach (var gamePad in gameObject.GetComponentsInChildren<UIGamePad>(true))
-        {
-            if (gamepadButton != null)
-            {
-                SetGamepadButton(gamePad, gamepadButton);
-                continue;
-            }
-
-            if (gamePad.m_hint != null)
-                Object.DestroyImmediate(gamePad.m_hint);
-            Object.DestroyImmediate(gamePad);
-        }
-
-        foreach (var tooltip in gameObject.GetComponentsInChildren<UITooltip>(true))
-            Object.DestroyImmediate(tooltip);
-
-        var button = gameObject.GetComponent<Button>();
-        button.onClick = new Button.ButtonClickedEvent();
-
-        if (text == null)
-            return button;
-
-        var label = gameObject.GetComponentInChildren<TMP_Text>(true);
-        SetText(label, text);
-        label.fontSize *= fontScale;
-        label.fontSizeMax *= fontScale;
-        label.fontSizeMin *= fontScale;
-        return button;
-    }
-
-    // Hints read "$KEY_<button>", which Localization resolves to the "Joy<button>" binding while a gamepad is active
-    private static void SetGamepadButton(UIGamePad gamePad, string button)
-    {
-        gamePad.m_zinputKey = "Joy" + button;
-        gamePad.m_keyCode = KeyCode.None;
-        if (gamePad.m_hint == null)
-            return;
-
-        foreach (var hint in gamePad.m_hint.GetComponentsInChildren<TMP_Text>(true))
-            hint.text = "$KEY_" + button;
-        foreach (var hint in gamePad.m_hint.GetComponentsInChildren<Text>(true))
-            hint.text = "$KEY_" + button;
-        gamePad.m_hint.AddComponent<Localize>();
-    }
-
-    private static TMP_Text NewSummary(TMP_InputField fieldTemplate, RectTransform panel, string name, ref float y)
-    {
-        var text = NewTextBox(fieldTemplate, panel, name, SUMMARY_HEIGHT, ref y);
-        text.overflowMode = TextOverflowModes.Ellipsis;
+        var text = palette.TextBox(panel, name);
+        PlaceBox(panel, text, SUMMARY_HEIGHT, ref y);
         return text;
     }
 
-    private static ScrollRect NewDescription(FejdStartup startup, TMP_InputField fieldTemplate, RectTransform panel, ref float y)
+    private static ScrollRect NewDescription(GuiElementPalette palette, RectTransform panel, ref float y)
     {
-        var text = NewTextBox(fieldTemplate, panel, "GeneratorDescription", DESCRIPTION_HEIGHT, ref y);
-        text.overflowMode = TextOverflowModes.Overflow;
+        var scroll = palette.ScrollingTextBox(panel, "GeneratorDescription");
+        var text = scroll.content.GetComponent<TMP_Text>();
         text.richText = false;
-
-        var content = text.rectTransform;
-        content.anchorMin = new Vector2(0f, 1f);
-        content.anchorMax = Vector2.one;
-        content.pivot = new Vector2(0.5f, 1f);
-        content.offsetMin = content.offsetMax = Vector2.zero;
-        text.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        var viewport = (RectTransform)content.parent;
-        if (viewport.GetComponent<RectMask2D>() == null)
-            viewport.gameObject.AddComponent<RectMask2D>();
-
-        var box = viewport.parent;
-        var scrollbar = Object.Instantiate(startup.m_patchLogScroll.gameObject, box).GetComponent<Scrollbar>();
-        scrollbar.name = "Scrollbar";
-        StripLocalization(scrollbar.gameObject);
-        scrollbar.onValueChanged = new Scrollbar.ScrollEvent();
-        scrollbar.navigation = new Navigation { mode = Navigation.Mode.None };
-        scrollbar.direction = Scrollbar.Direction.BottomToTop;
-
-        var scrollbarRect = (RectTransform)scrollbar.transform;
-        var scrollbarWidth = scrollbarRect.rect.width;
-        scrollbarRect.anchorMin = new Vector2(1f, 0f);
-        scrollbarRect.anchorMax = Vector2.one;
-        scrollbarRect.pivot = new Vector2(1f, 0.5f);
-        scrollbarRect.sizeDelta = new Vector2(scrollbarWidth, 0f);
-        scrollbarRect.anchoredPosition = Vector2.zero;
-        text.margin += new Vector4(0f, 0f, scrollbarWidth, 0f);
-
-        var scroll = box.gameObject.AddComponent<ScrollRect>();
-        scroll.viewport = viewport;
-        scroll.content = content;
-        scroll.horizontal = false;
-        scroll.vertical = true;
-        scroll.movementType = ScrollRect.MovementType.Clamped;
-        scroll.inertia = false;
-        scroll.scrollSensitivity = text.fontSize;
-        scroll.verticalScrollbar = scrollbar;
-        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        PlaceBox(panel, text, DESCRIPTION_HEIGHT, ref y);
         return scroll;
     }
 
-    private static TMP_Text NewTextBox(TMP_InputField fieldTemplate, RectTransform panel, string name, float height, ref float y)
+    private static void PlaceBox(Transform panel, Component content, float height, ref float y)
     {
-        var gameObject = Object.Instantiate(fieldTemplate.gameObject, panel);
-        gameObject.name = name;
-        StripLocalization(gameObject);
+        var box = content.transform;
+        while (box.parent != panel)
+            box = box.parent;
 
-        var inputField = gameObject.GetComponent<TMP_InputField>();
-        var text = inputField.textComponent;
-        if (inputField.placeholder != null)
-            Object.DestroyImmediate(inputField.placeholder.gameObject);
-        Object.DestroyImmediate(inputField);
-
-        text.text = "";
-        text.textWrappingMode = TextWrappingModes.Normal;
-        text.horizontalAlignment = HorizontalAlignmentOptions.Left;
-        text.verticalAlignment = VerticalAlignmentOptions.Top;
-        text.enableAutoSizing = false;
-        text.fontSize *= SUMMARY_FONT_SCALE;
-
-        Place(gameObject.transform, COLUMN1_X, y, COLUMN1_WIDTH, height);
+        Place(box, COLUMN1_X, y, COLUMN1_WIDTH, height);
         y -= height + ROW_GAP;
-        return text;
-    }
-
-    private static TMP_Dropdown NewDropdown(FejdStartup startup, Transform panel)
-    {
-        var template = startup.m_settingsPrefab.GetComponentInChildren<TMP_Dropdown>(true);
-        var gameObject = Object.Instantiate(template.gameObject, panel);
-        gameObject.name = "GeneratorDropdown";
-        StripLocalization(gameObject);
-
-        var dropdown = gameObject.GetComponent<TMP_Dropdown>();
-        RemoveExternalCaption(dropdown);
-        dropdown.captionText.overflowMode = TextOverflowModes.Ellipsis;
-        dropdown.itemText.overflowMode = TextOverflowModes.Ellipsis;
-        dropdown.captionText.richText = true;
-        dropdown.itemText.richText = true;
-        dropdown.onValueChanged = new TMP_Dropdown.DropdownEvent();
-        return dropdown;
-    }
-
-    private static GuiInputField NewTextField(GuiInputField template, Transform parent)
-    {
-        var gameObject = Object.Instantiate(template.gameObject, parent);
-        gameObject.name = "TextField";
-        StripLocalization(gameObject);
-
-        var field = gameObject.GetComponent<GuiInputField>();
-        if (field.placeholder != null)
-            Object.DestroyImmediate(field.placeholder.gameObject);
-
-        field.onValueChanged = new TMP_InputField.OnChangeEvent();
-        field.onEndEdit = new TMP_InputField.SubmitEvent();
-        field.onSubmit = new TMP_InputField.SubmitEvent();
-        field.OnInputSubmit = new OnInputSubmitEvent();
-        field.contentType = TMP_InputField.ContentType.Standard;
-        field.lineType = TMP_InputField.LineType.SingleLine;
-        field.characterLimit = 0;
-        field.text = "";
-        return field;
-    }
-
-    // Settings menu dropdowns may carry a side caption next to the box, besides the one showing the selected value
-    private static void RemoveExternalCaption(TMP_Dropdown dropdown)
-    {
-        foreach (var child in dropdown.transform.Cast<Transform>().ToList())
-        {
-            if (child.GetComponent<TMP_Text>() != null && child != dropdown.captionText.transform)
-                Object.DestroyImmediate(child.gameObject);
-        }
     }
 }
