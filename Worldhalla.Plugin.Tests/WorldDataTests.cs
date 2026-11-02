@@ -13,6 +13,7 @@ public class WorldDataTests
     private const string WORLDGEN = "dev.test.worldgen";
     private const string SETTINGLESS_WORLDGEN = "dev.test.settingless";
     private const string LEGACY_WORLDGEN = "dev.gurebu.riverheim.stable";
+    private const string MIGRATED_WORLDGEN = "dev.gurebu.riverheim";
     private const string VANILLA_DATA = "the world name vanilla reads next";
 
     /*
@@ -32,7 +33,7 @@ public class WorldDataTests
     public void Setup()
     {
         Registry.RegisterGenerator(WORLDGEN, Generator);
-        Registry.RegisterGenerator(LEGACY_WORLDGEN, LegacyGenerator);
+        Registry.RegisterGenerator(MIGRATED_WORLDGEN, LegacyGenerator);
         Registry.RegisterGenerator(SETTINGLESS_WORLDGEN, SettinglessGenerator);
     }
 
