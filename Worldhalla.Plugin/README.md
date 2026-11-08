@@ -72,3 +72,7 @@ If you're interested in rolling your own world generator for Worldhalla, there's
 project in [Worldhalla's GitHub repository](https://github.com/Gurebu/worldhalla).
 
 You can also ask questions and suggest improvements in [Riverheim's discord server](https://discord.gg/ES3J7mu6kW).
+
+## AI disclaimer
+
+A coding agent has been used to help write code for the plugin. All core features (file IO, networking, patching) have been extensively tested manually and all the code facilitating those features has been meticulously reviewed.
