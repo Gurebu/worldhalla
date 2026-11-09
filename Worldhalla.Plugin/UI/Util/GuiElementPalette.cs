@@ -4,18 +4,21 @@ using UnityEngine;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
-namespace Worldhalla.Plugin.UI;
+namespace Worldhalla.Plugin.UI.Util;
 
 // Copies of the start menu's own controls, cleared of the behaviour they carry in vanilla's menus. The templates are
 // copied once, at construction, onto an inactive shelf, so what is handed out doesn't depend on what vanilla, other
 // mods or our own dialogs do to the originals afterwards.
 public sealed class GuiElementPalette
 {
-    public const float SMALL_FONT_SCALE = 0.75f;
+    public const string GAMEPAD_BACK = "ButtonB";
+    public const string GAMEPAD_CONFIRM = "ButtonX";
+    public const string GAMEPAD_ACTION = "ButtonY";
 
     private const string ICON_CHILD = "Image";
     private const string LABEL_SOURCE = "seed";
     private const string BACKGROUND = "bkg";
+    private const int OVERLAY_GROUP_PRIORITY = 2;
 
     private readonly TMP_Text label;
     private readonly Button button;
@@ -146,10 +149,51 @@ public sealed class GuiElementPalette
         return scroll;
     }
 
-    public void Background(Transform parent)
+    // A screen-covering dimmer for a pop-up to sit on
+    public GameObject Overlay(Transform root, string name)
     {
+        var overlay = new GameObject(name, typeof(RectTransform), typeof(Image));
+        overlay.transform.SetParent(root, false);
+        Rects.Stretch((RectTransform)overlay.transform);
+        overlay.GetComponent<Image>().color = Theme.Overlay;
+        return overlay;
+    }
+
+    public RectTransform Frame(GameObject overlay)
+    {
+        var frame = (RectTransform)new GameObject("Frame", typeof(RectTransform)).transform;
+        frame.SetParent(overlay.transform, false);
         if (background != null)
-            Object.Instantiate(background, parent).name = BACKGROUND;
+            Object.Instantiate(background, frame).name = BACKGROUND;
+        return frame;
+    }
+
+    // Outranks the screen beneath the overlay, which then turns off its hotkeys and stops taking focus
+    public static UIGroupHandler OverlayGroup(GameObject overlay)
+    {
+        overlay.AddComponent<CanvasGroup>();
+        var group = overlay.AddComponent<UIGroupHandler>();
+        group.m_groupPriority = OVERLAY_GROUP_PRIORITY;
+        return group;
+    }
+
+    public static RawImage RawImage(Transform parent, string name, Texture texture, bool raycastTarget = false)
+    {
+        var gameObject = new GameObject(name, typeof(RectTransform), typeof(RawImage));
+        gameObject.transform.SetParent(parent, false);
+
+        var image = gameObject.GetComponent<RawImage>();
+        image.texture = texture;
+        image.raycastTarget = raycastTarget;
+        return image;
+    }
+
+    public static ColorBlock ShownWhenSelected(ColorBlock colors)
+    {
+        colors.normalColor = colors.disabledColor = Color.clear;
+        colors.highlightedColor = colors.selectedColor = colors.pressedColor = Color.white;
+        colors.colorMultiplier = 1f;
+        return colors;
     }
 
     internal static Transform NewShelf(FejdStartup startup, string name)
@@ -205,7 +249,7 @@ public sealed class GuiElementPalette
         text.horizontalAlignment = HorizontalAlignmentOptions.Left;
         text.verticalAlignment = VerticalAlignmentOptions.Top;
         text.enableAutoSizing = false;
-        text.fontSize *= SMALL_FONT_SCALE;
+        text.fontSize *= Theme.SMALL_FONT_SCALE;
     }
 
     private static void SetGamepadButton(Button copy, string? gamepadButton)

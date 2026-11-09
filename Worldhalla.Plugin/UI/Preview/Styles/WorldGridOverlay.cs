@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Worldhalla.Plugin.UI.Preview;
+namespace Worldhalla.Plugin.UI.Preview.Styles;
 
 public static class WorldGridOverlay
 {

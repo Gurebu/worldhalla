@@ -1,7 +1,7 @@
 using UnityEngine;
 using Worldhalla.API.World;
 
-namespace Worldhalla.Plugin.UI.Preview;
+namespace Worldhalla.Plugin.UI.Preview.Styles;
 
 /*
  * Lit in linear light from one palette colour per biome: the sun shades slopes relative to flat ground, height sets the

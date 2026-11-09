@@ -1,6 +1,7 @@
 using UnityEngine;
+using Worldhalla.Plugin.UI.Preview.Styles;
 
-namespace Worldhalla.Plugin.UI.Preview;
+namespace Worldhalla.Plugin.UI.Preview.Rendering;
 
 public sealed class PreviewRender
 {

@@ -1,9 +1,10 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Worldhalla.Plugin.UI.Util;
 using Object = UnityEngine.Object;
 
-namespace Worldhalla.Plugin.UI;
+namespace Worldhalla.Plugin.UI.CreateWorld;
 
 // What the create-world dialog takes over from vanilla's own create-world panel. Like the palette it copies once, at
 // construction, and it must be constructed before the panel is first shown: its labels hold their localization keys

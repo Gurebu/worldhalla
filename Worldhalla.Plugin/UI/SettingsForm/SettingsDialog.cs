@@ -5,22 +5,22 @@ using UnityEngine.UI;
 using Worldhalla.API.Settings;
 using Worldhalla.API.Settings.Controls;
 using Worldhalla.Plugin.Localization;
+using Worldhalla.Plugin.UI.Util;
 
-namespace Worldhalla.Plugin.UI;
+namespace Worldhalla.Plugin.UI.SettingsForm;
 
 public class SettingsDialog : MonoBehaviour
 {
     private const float WIDTH = 560f;
     private const float PADDING = 16f;
     private const float TITLE_HEIGHT = 30f;
-    private const float LABEL_HEIGHT = 26f;
-    private const float FIELD_HEIGHT = 35f;
-    private const float ROW_GAP = 10f;
+    private const float LABEL_HEIGHT = Theme.LABEL_HEIGHT;
+    private const float FIELD_HEIGHT = Theme.FIELD_HEIGHT;
+    private const float ROW_GAP = Theme.ROW_GAP;
     private const float ERROR_HEIGHT = 40f;
-    private const float BUTTON_WIDTH = 136f;
-    private const float BUTTON_HEIGHT = 45f;
-    private const float BUTTON_GAP = 8f;
-    private const float SCREEN_FRACTION = 0.95f;
+    private const float BUTTON_WIDTH = Theme.BUTTON_WIDTH;
+    private const float BUTTON_HEIGHT = Theme.BUTTON_HEIGHT;
+    private const float BUTTON_GAP = Theme.BUTTON_GAP;
     private const string BUILD_FAILED = "$wh_settings_build_failed";
 
     public RectTransform frame = null!;
@@ -204,35 +204,20 @@ public class SettingsDialog : MonoBehaviour
         var rowsHeight = rowCount * (LABEL_HEIGHT + FIELD_HEIGHT + ROW_GAP);
         var height = PADDING + TITLE_HEIGHT + ROW_GAP + rowsHeight + ERROR_HEIGHT + BUTTON_HEIGHT + PADDING;
         frame.sizeDelta = new Vector2(WIDTH, height);
-
-        var available = ((RectTransform)transform).rect.size * SCREEN_FRACTION;
-        var scale = Mathf.Min(1f, available.x / WIDTH, available.y / height);
-        frame.localScale = new Vector3(scale, scale, 1f);
+        Rects.ScaleToFit(frame, (RectTransform)transform);
 
         Place(title.rectTransform, -PADDING, TITLE_HEIGHT);
         Place(error.rectTransform, -(PADDING + TITLE_HEIGHT + ROW_GAP + rowsHeight), ERROR_HEIGHT);
 
         var buttonsTop = -(height - PADDING - BUTTON_HEIGHT);
         var offset = (BUTTON_WIDTH + BUTTON_GAP) / 2f;
-        PlaceButton(okButton, -offset, buttonsTop);
-        PlaceButton(cancelButton, offset, buttonsTop);
+        Rects.PlaceFromTop(okButton.transform, -offset, buttonsTop, BUTTON_WIDTH, BUTTON_HEIGHT);
+        Rects.PlaceFromTop(cancelButton.transform, offset, buttonsTop, BUTTON_WIDTH, BUTTON_HEIGHT);
     }
 
     private static void Place(RectTransform rect, float top, float height)
     {
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
-        rect.pivot = new Vector2(0.5f, 1f);
-        rect.sizeDelta = new Vector2(WIDTH - 2f * PADDING, height);
-        rect.anchoredPosition = new Vector2(0f, top);
-    }
-
-    private static void PlaceButton(Button button, float x, float top)
-    {
-        var rect = (RectTransform)button.transform;
-        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
-        rect.pivot = new Vector2(0.5f, 1f);
-        rect.sizeDelta = new Vector2(BUTTON_WIDTH, BUTTON_HEIGHT);
-        rect.anchoredPosition = new Vector2(x, top);
+        Rects.PlaceFromTop(rect, 0f, top, WIDTH - 2f * PADDING, height);
     }
 
     private void OnDestroy()

@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Worldhalla.Plugin.UI;
+namespace Worldhalla.Plugin.UI.Util;
 
 // Explicit gamepad navigation over columns of rows, each row listed left to right. Disabled and hidden controls are
 // stepped over, so it has to be reapplied whenever they change. Crossing to another column lands on its control

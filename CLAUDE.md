@@ -57,14 +57,22 @@ Don't guard against behaviour changes in Harmony or BepInEx.
 `Worldhalla.sln` contains:
 
 - **Worldhalla.API** (assembly name **`Worldhalla`**) — the contract a worldgen mod implements: `IWorldGenerator`, `IWorldState`,
-  `Biome`, and the `[WorldhallaPlugin]` attribute generators are discovered by, plus the optional
+  `Biome`, and the `[WorldhallaWorldGenerator]` attribute generators are discovered by, plus the optional
   `ISettingsHandler`/`ISettings` (for generators that take settings) and `IWorldGeography`.
   Deliberately free of game, Unity and BepInEx dependencies so a consumer needs nothing else.
 - **Worldhalla.Plugin** (assembly name `Worldhalla.Plugin`, merged with the API into `Worldhalla.dll` for shipping) — the BepInEx plugin. `WorldhallaPlugin`
   wires logging and `PatchAll` in `Awake`, runs generator discovery in `Start`, and unpatches in
   `OnDestroy`. `Core/` holds what the README's Key ideas describe — the registry, the `.fwl` format, the
   query path, the handshake and dedicated-server world creation — with its patches under `Core/Patches/` and
-  Harmony and game-type helpers under `Core/Extensions/`. Patches for menus and dialogs live under `UI/Patches/`.
+  Harmony and game-type helpers under `Core/Extensions/`. `UI/` is what the player sees:
+  `UI/Patches/` for the menu and dialog patches, `UI/Util/` for controls copied from the game's own
+  (`GuiElementPalette`), placement (`Rects`) and shared metrics and colours (`Theme`), `UI/CreateWorld/` for the
+  create-world dialog and `UI/SettingsForm/` for the settings dialog. `UI/Preview/` renders the world previews those
+  dialogs show and holds no controls itself: generation and the types everything shares at its root, the two renderers
+  and their caches in `Rendering/`, what they paint with in `Styles/`, the vanilla river copy in `Vanilla/` and the
+  location simulation in `Locations/`.
+  A dialog is a `MonoBehaviour` holding behaviour plus a static builder that lays it out; a new one takes a
+  `GuiElementPalette` and never copies a vanilla control itself.
 - **Worldhalla.Plugin.Tests** — NUnit suite. Runs the transpilers over the game's real IL without
   launching it; skips rather than fails when no Valheim install is present.
 - **GeneratorSample** — a minimal generator mod (moniker `GS`): noise islands, distance-banded biomes and one
@@ -138,7 +146,7 @@ A mod references `Worldhalla.API`, implements `IWorldGenerator` and labels the c
 [BepInDependency("dev.gurebu.worldhalla")]
 public class MyPlugin : BaseUnityPlugin { }
 
-[WorldhallaPlugin("dev.you.mygen")]
+[WorldhallaWorldGenerator("dev.you.mygen")]
 public class MyGenerator : IWorldGenerator { }
 ```
 
@@ -207,7 +215,7 @@ each row's tooltip. It is cosmetic, so players can turn it off (`Compatibility.W
 BepInEx config) and `WorldhallaPlugin.Awake` skips the class when they do. A new patch that Worldhalla
 works without belongs behind that kind of switch; one it can't work without does not.
 
-`UI/Patches/CreateWorldPanelPatch` replaces the create-world dialog with `UI/WorldCreationDialog` (specified in
+`UI/Patches/CreateWorldPanelPatch` replaces the create-world dialog with `UI/CreateWorld/WorldCreationDialog` (specified in
 `Specs/CREATE_WORLD_DIALOG.md`) and, through a transpiler on `OnNewWorldDone`, assigns the selected generator
 right after `new World(name, seed)` — before the same method saves the `.fwl`, so a postfix would be too late.
 The dialog is built in `FejdStartup.Awake` inside the vanilla `m_createWorldPanel`, whose own inner panel is hidden;
@@ -215,7 +223,7 @@ vanilla's name and seed fields and its Done/Cancel buttons are moved into it rat
 validation, `OnNewWorldDone` and the panel's show/hide paths keep working unchanged. Moving them must happen before
 the panel is first activated.
 
-All new UI must be usable with a controller, following Valheim's model. `NewButton` strips the template's hotkey unless
+All new UI must be usable with a controller, following Valheim's model. `GuiElementPalette.Button` strips the template's hotkey unless
 it is given a gamepad button, and the detailed preview's pan and zoom have stick equivalents.
 
 Every world preview runs on a private `WorldGenerator` made by `UI/Preview/PreviewGeneration`, and samples it the way a
@@ -238,7 +246,7 @@ the patch routes through `__instance.GetWorld()`. A static they need gets a shar
 `GeneratedWorld.ForestFactor` is; calling the static would silently answer with vanilla's layout. The terrain shader
 carries its own copy of vanilla's Deep North boundary, so what it draws there doesn't follow `IWorldGeography`.
 
-Both previews take their colours from `UI/Preview/PreviewPalette`: one sRGB colour per biome and one for water, so a
+Both previews take their colours from `UI/Preview/Styles/PreviewPalette`: one sRGB colour per biome and one for water, so a
 new biome needs one entry there. The small preview paints them flat; the detailed one (`HdrPreviewStyle`) lights them
 in linear space with the knobs in `HdrPreviewSettings`. `Tools/PaletteLab/palette-lab.html` tunes those same values in
 a browser and mirrors their defaults, so a change to the style or its defaults goes into both. The lab's world data

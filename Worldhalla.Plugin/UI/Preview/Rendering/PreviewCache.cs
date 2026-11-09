@@ -1,7 +1,7 @@
 using UnityEngine;
 using Worldhalla.API.World;
 
-namespace Worldhalla.Plugin.UI.Preview;
+namespace Worldhalla.Plugin.UI.Preview.Rendering;
 
 // Samples on a fixed lattice of cells over the whole world, and finished pixels for every zoom, addressed by the view's
 // own pixel grid at that zoom

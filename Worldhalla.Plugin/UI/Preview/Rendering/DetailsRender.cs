@@ -1,7 +1,8 @@
 using UnityEngine;
 using Worldhalla.API.World;
+using Worldhalla.Plugin.UI.Preview.Styles;
 
-namespace Worldhalla.Plugin.UI.Preview;
+namespace Worldhalla.Plugin.UI.Preview.Rendering;
 
 // Passes go from coarse blocks to single pixels, each block painted from the sample at its south-west corner. Every
 // pixel remembers the block size it was painted at, and a pass only repaints pixels coarser than itself. Before any of

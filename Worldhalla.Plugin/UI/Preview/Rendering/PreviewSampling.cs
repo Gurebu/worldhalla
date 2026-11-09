@@ -1,7 +1,7 @@
 using Worldhalla.API.World;
 using Worldhalla.Plugin.Core.Extensions;
 
-namespace Worldhalla.Plugin.UI.Preview;
+namespace Worldhalla.Plugin.UI.Preview.Rendering;
 
 public static class PreviewSampling
 {

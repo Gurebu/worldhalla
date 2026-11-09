@@ -1,6 +1,9 @@
 using UnityEngine;
+using Worldhalla.Plugin.UI.Preview;
+using Worldhalla.Plugin.UI.Preview.Rendering;
+using Worldhalla.Plugin.UI.Util;
 
-namespace Worldhalla.Plugin.UI.Preview;
+namespace Worldhalla.Plugin.UI.CreateWorld;
 
 public sealed class PreviewTexture
 {

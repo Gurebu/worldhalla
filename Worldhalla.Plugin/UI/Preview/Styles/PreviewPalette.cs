@@ -1,7 +1,7 @@
 using UnityEngine;
 using Worldhalla.API.World;
 
-namespace Worldhalla.Plugin.UI.Preview;
+namespace Worldhalla.Plugin.UI.Preview.Styles;
 
 // One sRGB colour per biome and one for water, shared by the small and the detailed preview. Biomes without a colour
 // of their own are drawn as meadows. Biome.Ocean is the colour of the ground under the sea

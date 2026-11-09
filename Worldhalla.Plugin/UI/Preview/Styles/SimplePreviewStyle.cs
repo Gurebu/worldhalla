@@ -1,7 +1,7 @@
 using UnityEngine;
 using Worldhalla.API.World;
 
-namespace Worldhalla.Plugin.UI.Preview;
+namespace Worldhalla.Plugin.UI.Preview.Styles;
 
 public sealed class SimplePreviewStyle : IPreviewStyle
 {

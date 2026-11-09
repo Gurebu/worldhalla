@@ -1,4 +1,4 @@
-namespace Worldhalla.Plugin.UI.Preview;
+namespace Worldhalla.Plugin.UI.Preview.Rendering;
 
 // Square tiles allocated on first use. A value is written before its flag, so a reader on another thread sees it
 // either whole or not at all

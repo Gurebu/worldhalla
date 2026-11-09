@@ -1,3 +1,6 @@
+using Worldhalla.Plugin.UI.Preview.Rendering;
+using Worldhalla.Plugin.UI.Preview.Styles;
+
 namespace Worldhalla.Plugin.UI.Preview;
 
 public sealed class WorldPreview(int previewSize)

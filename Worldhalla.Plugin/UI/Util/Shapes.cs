@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Worldhalla.Plugin.UI.Preview;
+namespace Worldhalla.Plugin.UI.Util;
 
 public static class Shapes
 {

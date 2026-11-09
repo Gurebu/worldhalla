@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Worldhalla.Plugin.UI.Preview;
+namespace Worldhalla.Plugin.UI.Preview.Styles;
 
 // The detailed preview's look, beyond the palette. Tools/PaletteLab edits the same values on recorded world data
 public sealed class HdrPreviewSettings
