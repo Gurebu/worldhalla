@@ -6,6 +6,9 @@ public sealed class CommandLineOptions
 {
     public string? worldgenGuid;
     public string? settings;
+    public string origin = $"'{CommandLine.PREFIX}' options";
+
+    public bool IsEmpty { get; internal set; } = true;
 }
 
 public static class CommandLine
@@ -38,6 +41,7 @@ public static class CommandLine
                 throw new ServerStartupException($"'{PREFIX} {command}' is missing a value");
 
             apply(options, args[++i]);
+            options.IsEmpty = false;
         }
 
         return options is { settings: not null, worldgenGuid: null }

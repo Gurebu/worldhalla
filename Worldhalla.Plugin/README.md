@@ -57,6 +57,10 @@ generator it was made with, and -wh options are ignored for it (the server logs 
 start, rather than falling back to vanilla, if the GUID belongs to no installed generator, if the generator rejects
 the settings, or if a world with that name exists but can't be loaded.
 
+For hosts that don't let you pass command line options, the same two values can be set in the `[World creation]`
+section of `BepInEx/config/dev.gurebu.worldhalla.cfg`, as `Generator` and `Settings`. They are used only when the
+server is started without any `-wh` option. Like the command line options, these config entries apply only to newly created worlds.
+
 ## Mod compatibility
 
 - Broad compatibility with mods that don't touch terrain and biome generation (location mods are fine).

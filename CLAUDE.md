@@ -17,10 +17,6 @@ it. General knowledge should be acquired via a Valheim modding skill if you have
 Worlds written through Worldhalla must stay loadable forever. The format version in the header
 is a public compatibility surface, not an implementation detail — see "World format" below.
 
-World persistency and plugin interface concerns are only valid after worldhalla's public release.
-That comes with version 1.0.0 and higher. Until then, versions start with 0. and we're free to change
-the interfaces and formats as we like. This clause must be removed with 1.0.0 release.
-
 ## Relationship to Riverheim
 
 This repository is consumed by Riverheim as a git submodule mounted at `external/worldhalla`.
@@ -260,7 +256,10 @@ reason, with settings from `ISettingsHandler.BuildSettingsFromCommandLine` over 
 implement `ISettingsHandler` takes no settings, so passing `-wh settings` to it stops the server, and
 a `SettingsException` from the handler is reported along with its `CommandLineUsage`.
 `CommandLine` parses `-wh <command> <value>` pairs, and a new command is one entry in its
-table. Anything that should stop the server throws
+table. A server started without a single `-wh` option takes the same request from the `[World creation]` config
+instead (`NewWorldDefaults`); any option at all, present or future, replaces the config as a whole, never field by
+field. The create-world dialog preselects the configured generator and starts from the configured settings when it
+accepts them. Anything that should stop the server throws
 `ServerStartupException`, which a finalizer on `ParseServerArguments` turns into vanilla's own
 failure path (log, `Application.Quit`, return false) — the same one a bad password takes.
 

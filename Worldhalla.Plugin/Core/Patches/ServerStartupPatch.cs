@@ -12,6 +12,9 @@ public static class ServerStartupPatch
 {
     private static CommandLineOptions ParseCommandLine() => CommandLine.Parse(Environment.GetCommandLineArgs());
 
+    private static CommandLineOptions ReadRequest() =>
+        ParseCommandLine() is { IsEmpty: false } options ? options : NewWorldDefaults.ToOptions();
+
     private static (RegisteredGenerator worldgen, ISettings? settings)? ResolveRequest(CommandLineOptions options)
     {
         if (options.worldgenGuid == null)
@@ -20,20 +23,21 @@ public static class ServerStartupPatch
         if (!Registry.FindByGuid(options.worldgenGuid, out var worldgen))
         {
             var installed = string.Join(", ", Registry.Generators.Keys);
-            throw new ServerStartupException($"Unknown worldgen '{options.worldgenGuid}', installed: [{installed}]");
+            throw new ServerStartupException($"Unknown worldgen '{options.worldgenGuid}' in {options.origin}, installed: [{installed}]");
         }
 
-        return (worldgen, ParseSettings(worldgen, options.settings));
+        return (worldgen, ParseSettings(worldgen, options));
     }
 
-    private static ISettings? ParseSettings(RegisteredGenerator generator, string? text)
+    private static ISettings? ParseSettings(RegisteredGenerator generator, CommandLineOptions options)
     {
+        var text = options.settings;
         var guid = generator.Guid;
         if (generator.SettingsHandler is not { } handler)
         {
             return text == null
                 ? null
-                : throw new ServerStartupException($"Worldgen '{guid}' takes no settings, but '{CommandLine.PREFIX} settings' was given");
+                : throw new ServerStartupException($"Worldgen '{guid}' takes no settings, but {options.origin} give some");
         }
 
         if (text == null)
@@ -48,11 +52,11 @@ public static class ServerStartupPatch
         }
         catch (SettingsException e)
         {
-            throw new ServerStartupException($"Invalid settings '{text}' for worldgen '{guid}': {e.Message}\n{handler.CommandLineUsage}");
+            throw new ServerStartupException($"Invalid settings '{text}' in {options.origin} for worldgen '{guid}': {e.Message}\n{handler.CommandLineUsage}");
         }
         catch (Exception e)
         {
-            throw new ServerStartupException($"Worldgen '{guid}' failed to parse settings '{text}': {e}");
+            throw new ServerStartupException($"Worldgen '{guid}' failed to parse settings '{text}' in {options.origin}: {e}");
         }
     }
 
@@ -61,7 +65,7 @@ public static class ServerStartupPatch
         if (SaveSystem.TryGetSaveByName(world.m_name, SaveDataType.World, out var save) && !save.IsDeleted)
             throw new ServerStartupException($"World '{world.m_name}' exists but could not be loaded, refusing to replace it with a new one");
 
-        if (ResolveRequest(ParseCommandLine()) is not var (worldgen, settings))
+        if (ResolveRequest(ReadRequest()) is not var (worldgen, settings))
             return;
 
         world.SetGenerator(new CompatibleGeneratorBinding(worldgen, WorldhallaSettings.Default, settings));
@@ -75,7 +79,7 @@ public static class ServerStartupPatch
         // FejdStartup.Awake is not guaranteed to come after WorldhallaPlugin.Start, and both the
         // requested worldgen and an existing world's worldgen are looked up in the registry from here
         Registry.DiscoverGenerators();
-        ResolveRequest(ParseCommandLine());
+        ResolveRequest(ReadRequest());
     }
 
     [HarmonyFinalizer, HarmonyPatch(typeof(FejdStartup), nameof(FejdStartup.ParseServerArguments))]

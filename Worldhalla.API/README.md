@@ -136,8 +136,9 @@ maintain deserialization code.
 #### Command line deserialization
 
 If your generator can be parametrized, dedicated servers will need to specify what parameters to pass for your world's
-initial creation. Server owners will add `-wh settings "<settings>"` to the server's start script, and you will receive
-the `<settings>` string as input.
+initial creation. Server owners will add `-wh settings "<settings>"` to the server's start script, or put the same string
+into Worldhalla's config, and you will receive the `<settings>` string as input. The create-world dialog also starts
+from the configured string when your generator is the configured one.
 
 #### Game UI
 

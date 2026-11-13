@@ -91,7 +91,7 @@ public class WorldCreationDialog : MonoBehaviour
         generatorDropdown.AddOptions(new[] { VANILLA_OPTION }
             .Concat(generators.Select(generator => $"<noparse>{generator.Name}</noparse> <color={GUID_COLOR}>(<noparse>{generator.Guid}</noparse>)</color>"))
             .ToList());
-        generatorDropdown.SetValueWithoutNotify(0);
+        generatorDropdown.SetValueWithoutNotify(generators.FindIndex(generator => generator.Guid == NewWorldDefaults.WorldgenGuid) + 1);
         generatorDropdown.RefreshShownValue();
 
         ResetSession();
@@ -143,7 +143,7 @@ public class WorldCreationDialog : MonoBehaviour
     private void OnGeneratorChanged()
     {
         var worldgen = SelectedWorldgen;
-        settings = worldgen?.DefaultSettings;
+        settings = worldgen != null ? InitialSettings(worldgen) : null;
 
         generatorDescription.content.GetComponent<TMP_Text>().text = worldgen != null ? worldgen.Description : Translations.Get(VANILLA_DESCRIPTION);
         generatorDescription.content.anchoredPosition = Vector2.zero;
@@ -151,6 +151,25 @@ public class WorldCreationDialog : MonoBehaviour
         generatorSettingsSummary.text = settings?.Summary() ?? "";
 
         RequestPreviewIfRevealed();
+    }
+
+    private static ISettings? InitialSettings(RegisteredGenerator worldgen)
+    {
+        if (worldgen.Guid != NewWorldDefaults.WorldgenGuid || NewWorldDefaults.Settings is not { } text || worldgen.SettingsHandler is not { } handler)
+            return worldgen.DefaultSettings;
+
+        try
+        {
+            var configured = handler.BuildSettingsFromCommandLine(text);
+            WorldPayload.CheckSettings(configured);
+
+            return configured;
+        }
+        catch (Exception e)
+        {
+            Logger.LogWarning($"Configured settings '{text}' for worldgen '{worldgen.Guid}' can't be used, starting from its defaults: {e.Message}");
+            return worldgen.DefaultSettings;
+        }
     }
 
     private void OpenGeneratorSettings()

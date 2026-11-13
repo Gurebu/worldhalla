@@ -41,6 +41,13 @@ public class WorldhallaPlugin : BaseUnityPlugin
 
         var worldListPatch = Config.Bind("Compatibility", "WorldListPatch", true,
             "Shows the world generator in the world list and its tooltip. Disable to improve compatibility with mods that change the world list.");
+        var defaultGenerator = Config.Bind("World creation", "Generator", "",
+            "GUID of the generator new worlds are created with: preselected in the create-world dialog, and used by a dedicated " +
+            $"server creating its world without any '{CommandLine.PREFIX}' options. Empty for vanilla.");
+        var defaultSettings = Config.Bind("World creation", "Settings", "",
+            $"Settings for that generator, in its '{CommandLine.PREFIX} settings' format: the create-world dialog starts from them, " +
+            $"and a dedicated server without any '{CommandLine.PREFIX}' options creates its world with them. Empty for the generator's defaults.");
+        NewWorldDefaults.Set(defaultGenerator.Value, defaultSettings.Value);
 
         var harmony = new Harmony(GUID);
         foreach (var type in AccessTools.GetTypesFromAssembly(typeof(WorldhallaPlugin).Assembly))
